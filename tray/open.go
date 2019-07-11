@@ -1,7 +1,6 @@
-package server
+package tray
 
 import (
-	"fmt"
 	"os/exec"
 	"runtime"
 )
@@ -11,7 +10,7 @@ func Open(url string) error {
 	var cmd string
 	var args []string
 
-	fmt.Println(runtime.GOOS)
+	//fmt.Println(runtime.GOOS)
 
 	switch runtime.GOOS {
 	case "windows":
