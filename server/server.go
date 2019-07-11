@@ -9,6 +9,7 @@ import (
 
 	"github.com/HalalChain/qitmeer-lib/config"
 
+	"github.com/HalalChain/qitmeer-wallet/assets"
 	"github.com/HalalChain/qitmeer-wallet/rpc/server"
 	"github.com/HalalChain/qitmeer-wallet/tools"
 )
@@ -51,7 +52,14 @@ func run() {
 	}()
 
 	router := httprouter.New()
-	router.ServeFiles("/app/*filepath", http.Dir("../../electron/dist/"))
+
+	staticF, err := assets.GetStatic()
+	if err != nil {
+		log.Println("server run err: ", err)
+		return
+	}
+
+	router.ServeFiles("/app/*filepath", staticF)
 
 	router.GET("/", Index)
 
