@@ -1,0 +1,19 @@
+qitmeer-wallet
+build
+
+#golang
+go.sum
+
+#node
+front/node_modules/
+front/package-lock.json
+
+# Editor directories and files
+.DS_Store
+.idea
+.vscode
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
