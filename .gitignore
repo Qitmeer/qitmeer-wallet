@@ -1,6 +1,8 @@
 qitmeer-wallet
 build
 
+config/*.toml
+
 #golang
 go.sum
 
