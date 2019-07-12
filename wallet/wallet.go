@@ -9,5 +9,5 @@ import (
 func Start() {
 	server.Start()
 
-	tray.Open("http://127.0.0.1:1236")
+	tray.Open("http://127.0.0.1:38130")
 }
