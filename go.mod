@@ -3,10 +3,12 @@ module github.com/HalalChain/qitmeer-wallet
 go 1.12
 
 require (
+	github.com/BurntSushi/toml v0.3.1
 	github.com/HalalChain/qitmeer-lib v0.0.0-20190708060928-91b89dc718d2
 	github.com/deckarep/golang-set v1.7.1
 	github.com/julienschmidt/httprouter v1.2.0
 	github.com/rakyll/statik v0.1.6
+	github.com/sirupsen/logrus v1.4.2
 	golang.org/x/net v0.0.0-20190620200207-3b0461eec859
 )
 

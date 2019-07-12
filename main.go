@@ -1,12 +1,47 @@
 package main
 
 import (
+	"flag"
+	"os"
+
+	log "github.com/sirupsen/logrus"
+
+	"github.com/HalalChain/qitmeer-wallet/config"
+	"github.com/HalalChain/qitmeer-wallet/utils"
 	"github.com/HalalChain/qitmeer-wallet/wallet"
 )
 
-func main() {
+var (
+	configFile string
+)
 
-	wallet.Start()
+func init() {
+
+	log.SetLevel(log.TraceLevel)
+	log.SetOutput(os.Stdout)
+
+	defaultDataDir := utils.GetUserDataDir()
+	flag.StringVar(&configFile, "c", defaultDataDir+"/config.toml", "-c path/to/config.toml")
+	flag.Parse()
+}
+
+func main() {
+	cfg, err := config.Load(configFile)
+	if err != nil {
+		log.Printf("main: %s", err)
+		return
+	}
+	if err := cfg.Init(); err != nil {
+		log.Printf("main: %s", err)
+		return
+	}
+
+	w, err := wallet.NewWallet(cfg)
+	if err != nil {
+		log.Printf("main: %s", err)
+		return
+	}
+	w.Start()
 
 	ch := make(chan int)
 	<-ch
