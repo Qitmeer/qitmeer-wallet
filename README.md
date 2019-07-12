@@ -30,7 +30,7 @@ There are two ways to use it：RPC interface and Web interface.
 
 ./qitmeer-wallet
 
-# default RPC port is 18138
+# default RPC port is 38130
 
 # example
 
