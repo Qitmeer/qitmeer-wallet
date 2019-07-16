@@ -13,5 +13,5 @@ func TestUserDataDir(t *testing.T) {
 
 	t.Log(GetUserDataDir())
 
-	t.Log(MakeDir(GetUserDataDir()))
+	t.Log(MakeDirAll(GetUserDataDir()))
 }

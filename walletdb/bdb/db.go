@@ -7,7 +7,7 @@ package bdb
 import (
 	"io"
 	"os"
-	"qitmeer/qitmeer-wallet/walletdb"
+	"github.com/HalalChain/qitmeer-wallet/walletdb"
 	"github.com/coreos/bbolt"
 )
 

@@ -6,8 +6,8 @@ import (
 	chaincfg "github.com/HalalChain/qitmeer-lib/params"
 	"time"
 	"github.com/HalalChain/qitmeer-lib/log"
-	"qitmeer/qitmeer-wallet/walletdb"
-	"qitmeer/qitmeer-wallet/walletdb/migration"
+	"github.com/HalalChain/qitmeer-wallet/walletdb"
+	"github.com/HalalChain/qitmeer-wallet/walletdb/migration"
 )
 
 // versions is a list of the different database versions. The last entry should

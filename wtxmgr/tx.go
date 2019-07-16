@@ -9,7 +9,7 @@ import (
 	"github.com/HalalChain/qitmeer-lib/core/types"
 	"github.com/HalalChain/qitmeer-lib/log"
 	chaincfg "github.com/HalalChain/qitmeer-lib/params"
-	"qitmeer/qitmeer-wallet/walletdb"
+	"github.com/HalalChain/qitmeer-wallet/walletdb"
 )
 // Block contains the minimum amount of data to uniquely identify any block on
 // either the best or side chain.

@@ -9,8 +9,8 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"qitmeer/qitmeer-wallet/walletdb"
-	_ "qitmeer/qitmeer-wallet/walletdb/bdb"
+	"github.com/HalalChain/qitmeer-wallet/walletdb"
+	_ "github.com/HalalChain/qitmeer-wallet/walletdb/bdb"
 )
 
 // This example demonstrates creating a new database.

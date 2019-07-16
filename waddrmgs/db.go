@@ -10,7 +10,7 @@ import (
 	"errors"
 	"fmt"
 	chainhash "github.com/HalalChain/qitmeer-lib/common/hash"
-	"qitmeer-wallet/walletdb"
+	"github.com/HalalChain/qitmeer-wallet/walletdb"
 	"time"
 )
 

@@ -22,7 +22,7 @@ import (
 	btcec "github.com/HalalChain/qitmeer-lib/crypto/ecc/secp256k1"
 	"github.com/HalalChain/qitmeer-lib/engine/txscript"
 	chaincfg "github.com/HalalChain/qitmeer-lib/params"
-	 "qitmeer/qitmeer-wallet/util"
+	 "github.com/HalalChain/qitmeer-wallet/util"
 	"github.com/HalalChain/qitmeer-lib/common/hash"
 	"github.com/HalalChain/qitmeer-lib/core/address"
 	"io"
@@ -35,7 +35,7 @@ import (
 
 	"golang.org/x/crypto/ripemd160"
 
-	"qitmeer/qitmeer-wallet/internal/legacy/rename"
+	"github.com/HalalChain/qitmeer-wallet/internal/legacy/rename"
 )
 
 const (

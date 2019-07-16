@@ -6,7 +6,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/HalalChain/qitmeer-wallet/config"
+	cg"github.com/HalalChain/qitmeer-wallet/config"
 	"github.com/HalalChain/qitmeer-wallet/utils"
 	"github.com/HalalChain/qitmeer-wallet/wallet"
 )
@@ -26,7 +26,7 @@ func init() {
 }
 
 func main() {
-	cfg, err := config.Load(configFile)
+	cfg, err := cg.Load(configFile)
 	if err != nil {
 		log.Printf("main: %s", err)
 		return

@@ -8,7 +8,7 @@ package wtxmgr
 import (
 	"fmt"
 	"github.com/HalalChain/qitmeer-lib/core/types"
-	"qitmeer/qitmeer-wallet/walletdb"
+	"github.com/HalalChain/qitmeer-wallet/walletdb"
 	"github.com/HalalChain/qitmeer-lib/common/hash"
 )
 
