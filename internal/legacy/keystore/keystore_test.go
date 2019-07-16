@@ -15,7 +15,7 @@ import (
 	chaincfg "github.com/HalalChain/qitmeer-lib/params"
 	"github.com/HalalChain/qitmeer-lib/core/types"
 	"github.com/HalalChain/qitmeer-lib/engine/txscript"
-	"qitmeer/qitmeer-wallet/util"
+	"github.com/HalalChain/qitmeer-wallet/util"
 	"github.com/davecgh/go-spew/spew"
 	"github.com/HalalChain/qitmeer-lib/common/hash"
 )

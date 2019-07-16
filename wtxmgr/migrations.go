@@ -1,8 +1,8 @@
 package wtxmgr
 
 import (
-	"qitmeer/qitmeer-wallet/walletdb"
-	"qitmeer/qitmeer-wallet/walletdb/migration"
+	"github.com/HalalChain/qitmeer-wallet/walletdb"
+	"github.com/HalalChain/qitmeer-wallet/walletdb/migration"
 	"github.com/HalalChain/qitmeer-lib/log"
 )
 

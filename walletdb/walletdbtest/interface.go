@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"os"
 	"reflect"
-	"qitmeer/qitmeer-wallet/walletdb"
+	"github.com/HalalChain/qitmeer-wallet/walletdb"
 )
 
 // errSubTestFail is used to signal that a sub test returned false.

@@ -9,7 +9,7 @@ import (
 	"os"
 	"reflect"
 	"testing"
-	"qitmeer/qitmeer-wallet/walletdb"
+	"github.com/HalalChain/qitmeer-wallet/walletdb"
 )
 
 // dbType is the database type name for this driver.

@@ -7,7 +7,7 @@ package waddrmgr
 import (
 	"time"
 	chainhash "github.com/HalalChain/qitmeer-lib/common/hash"
-	"qitmeer/qitmeer-wallet/walletdb"
+	"github.com/HalalChain/qitmeer-wallet/walletdb"
 )
 
 // BlockStamp defines a block (by height and a unique hash) and is used to mark

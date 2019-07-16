@@ -6,8 +6,8 @@ import (
 	"reflect"
 	"testing"
 
-	"qitmeer/qitmeer-wallet/walletdb"
-	"qitmeer/qitmeer-wallet/walletdb/migration"
+	"github.com/HalalChain/qitmeer-wallet/walletdb"
+	"github.com/HalalChain/qitmeer-wallet/walletdb/migration"
 	"github.com/davecgh/go-spew/spew"
 )
 

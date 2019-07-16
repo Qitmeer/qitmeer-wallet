@@ -10,14 +10,14 @@ import (
 	btcec "github.com/HalalChain/qitmeer-lib/crypto/ecc/secp256k1"
 	"os"
 	"path/filepath"
-	"qitmeer/qitmeer-wallet/internal/legacy/keystore"
-	"qitmeer/qitmeer-wallet/internal/prompt"
-	"qitmeer/qitmeer-wallet/util"
+	"github.com/HalalChain/qitmeer-wallet/internal/legacy/keystore"
+	"github.com/HalalChain/qitmeer-wallet/internal/prompt"
+	"github.com/HalalChain/qitmeer-wallet/util"
 	"time"
 
 	chaincfg "github.com/HalalChain/qitmeer-lib/params"
-	"qitmeer/qitmeer-wallet/walletdb"
-	"qitmeer/qitmeer-wallet/wallet"
+	"github.com/HalalChain/qitmeer-wallet/walletdb"
+	"github.com/HalalChain/qitmeer-wallet/wallet"
 )
 
 // networkDir returns the directory name of a network directory to hold wallet
