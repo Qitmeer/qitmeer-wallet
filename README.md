@@ -68,9 +68,14 @@ you can also use [qitmeer-cli](https://github.com/HalalChain/qitmeer-cli) to acc
 ```
 listAccounts // list all keystore
 
-createAccount // create a key store
+createAccount // create a keystore (json key file and wallet database)
 
-delAccount //del a key store
+delAccount //del a keystore from keys dir and wallet database
+
+importAccount //import keystore from json
+
+exportAccount //export keysort json file
+
 
 getBalance // get account balance or address balance
 
@@ -99,7 +104,10 @@ getAllTx //get account or address all tx
 
 '''
 getRawTx
+
 createRawTx
+
 signRawTx
+
 sendRawTx
 '''
