@@ -58,3 +58,48 @@ you can also use [qitmeer-cli](https://github.com/HalalChain/qitmeer-cli) to acc
 ```
 
 ![Qitmeer Wallet](assets/wallet-info.png)
+
+
+
+# RPC API
+
+## account/key
+
+```
+listAccounts // list all keystore
+
+createAccount // create a key store
+
+delAccount //del a key store
+
+getBalance // get account balance or address balance
+
+```
+
+## address
+
+```
+
+listAddresses
+
+createAddress 
+
+```
+
+## tx
+
+```
+
+getAllTx //get account or address all tx
+
+```
+
+## RawTx
+> qitmeer rpc method
+
+'''
+getRawTx
+createRawTx
+signRawTx
+sendRawTx
+'''
