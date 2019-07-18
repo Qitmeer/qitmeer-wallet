@@ -102,7 +102,7 @@ getAllTx //get account or address all tx
 ## RawTx
 > qitmeer rpc method
 
-'''
+```
 getRawTx
 
 createRawTx
@@ -110,4 +110,4 @@ createRawTx
 signRawTx
 
 sendRawTx
-'''
+```
