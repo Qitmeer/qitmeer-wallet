@@ -395,6 +395,9 @@ func loadConfig() (*config, []string, error) {
 		return nil, nil, err
 	}
 
+	fmt.Println("----------------------------:",cfg.ConfigFile)
+	fmt.Println("TESTNET--------------------------:",cfg.TestNet)
+	fmt.Println("PrivNet--------------------------:",cfg.PrivNet)
 	if cfg.CreateTemp {
 		tempWalletExists := false
 

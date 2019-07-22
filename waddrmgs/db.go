@@ -6,6 +6,7 @@
 package waddrmgr
 
 import (
+	"crypto/sha256"
 	"encoding/binary"
 	"errors"
 	"fmt"
@@ -1244,7 +1245,7 @@ func managerExists(ns walletdb.ReadBucket) bool {
 // as the version and creation date. In addition to creating the key space for
 // the root address manager, we'll also create internal scopes for all the
 // default manager scope types.
-func createManagerNS(ns walletdb.ReadWriteBucket) error {
+func createManagerNS(ns walletdb.ReadWriteBucket,defaultScopes map[KeyScope]ScopeAddrSchema) error {
 
 	// First, we'll create all the relevant buckets that stem off of the
 	// main bucket.
@@ -1259,6 +1260,44 @@ func createManagerNS(ns walletdb.ReadWriteBucket) error {
 		return managerError(ErrDatabase, str, err)
 	}
 
+	// We'll also create the two top-level scope related buckets as
+	// preparation for the operations below.
+	scopeBucket, err := ns.CreateBucket(scopeBucketName)
+	if err != nil {
+		str := "failed to create scope bucket"
+		return managerError(ErrDatabase, str, err)
+	}
+	scopeSchemas, err := ns.CreateBucket(scopeSchemaBucketName)
+	if err != nil {
+		str := "failed to create scope schema bucket"
+		return managerError(ErrDatabase, str, err)
+	}
+
+	// Next, we'll create the namespace for each of the relevant default
+	// manager scopes.
+	for scope, scopeSchema := range defaultScopes {
+		// Before we create the entire namespace of this scope, we'll
+		// update the schema mapping to note what types of addresses it
+		// prefers.
+		scopeKey := scopeToBytes(&scope)
+		schemaBytes := scopeSchemaToBytes(&scopeSchema)
+		err := scopeSchemas.Put(scopeKey[:], schemaBytes)
+		if err != nil {
+			return err
+		}
+
+		err = createScopedManagerNS(scopeBucket, &scope)
+		if err != nil {
+			return err
+		}
+
+		err = putLastAccount(ns, &scope, DefaultAccountNum)
+		if err != nil {
+			return err
+		}
+	}
+
+
 	if err := putManagerVersion(ns, latestMgrVersion); err != nil {
 		return err
 	}
@@ -1272,5 +1311,739 @@ func createManagerNS(ns walletdb.ReadWriteBucket) error {
 		return managerError(ErrDatabase, str, err)
 	}
 
+	return nil
+}
+
+// putLastAccount stores the provided metadata - last account - to the
+// database.
+func putLastAccount(ns walletdb.ReadWriteBucket, scope *KeyScope,
+	account uint32) error {
+
+	scopedBucket, err := fetchWriteScopeBucket(ns, scope)
+	if err != nil {
+		return err
+	}
+
+	bucket := scopedBucket.NestedReadWriteBucket(metaBucketName)
+
+	err = bucket.Put(lastAccountName, uint32ToBytes(account))
+	if err != nil {
+		str := fmt.Sprintf("failed to update metadata '%s'", lastAccountName)
+		return managerError(ErrDatabase, str, err)
+	}
+	return nil
+}
+// createScopedManagerNS creates the namespace buckets for a new registered
+// manager scope within the top level bucket. All relevant sub-buckets that a
+// ScopedManager needs to perform its duties are also created.
+func createScopedManagerNS(ns walletdb.ReadWriteBucket, scope *KeyScope) error {
+	// First, we'll create the scope bucket itself for this particular
+	// scope.
+	scopeKey := scopeToBytes(scope)
+	scopeBucket, err := ns.CreateBucket(scopeKey[:])
+	if err != nil {
+		str := "failed to create sync bucket"
+		return managerError(ErrDatabase, str, err)
+	}
+
+	_, err = scopeBucket.CreateBucket(acctBucketName)
+	if err != nil {
+		str := "failed to create account bucket"
+		return managerError(ErrDatabase, str, err)
+	}
+
+	_, err = scopeBucket.CreateBucket(addrBucketName)
+	if err != nil {
+		str := "failed to create address bucket"
+		return managerError(ErrDatabase, str, err)
+	}
+
+	// usedAddrBucketName bucket was added after manager version 1 release
+	_, err = scopeBucket.CreateBucket(usedAddrBucketName)
+	if err != nil {
+		str := "failed to create used addresses bucket"
+		return managerError(ErrDatabase, str, err)
+	}
+
+	_, err = scopeBucket.CreateBucket(addrAcctIdxBucketName)
+	if err != nil {
+		str := "failed to create address index bucket"
+		return managerError(ErrDatabase, str, err)
+	}
+
+	_, err = scopeBucket.CreateBucket(acctNameIdxBucketName)
+	if err != nil {
+		str := "failed to create an account name index bucket"
+		return managerError(ErrDatabase, str, err)
+	}
+
+	_, err = scopeBucket.CreateBucket(acctIDIdxBucketName)
+	if err != nil {
+		str := "failed to create an account id index bucket"
+		return managerError(ErrDatabase, str, err)
+	}
+
+	_, err = scopeBucket.CreateBucket(metaBucketName)
+	if err != nil {
+		str := "failed to create a meta bucket"
+		return managerError(ErrDatabase, str, err)
+	}
+
+	return nil
+}
+
+// scopeSchemaToBytes encodes the passed scope schema as a set of bytes
+// suitable for storage within the database.
+func scopeSchemaToBytes(schema *ScopeAddrSchema) []byte {
+	var schemaBytes [2]byte
+	schemaBytes[0] = byte(schema.InternalAddrType)
+	schemaBytes[1] = byte(schema.ExternalAddrType)
+
+	return schemaBytes[:]
+}
+// fetchAccountName retrieves the account name given an account number from the
+// database.
+func fetchAccountName(ns walletdb.ReadBucket, scope *KeyScope,
+	account uint32) (string, error) {
+
+	scopedBucket, err := fetchReadScopeBucket(ns, scope)
+	if err != nil {
+		return "", err
+	}
+
+	acctIDxBucket := scopedBucket.NestedReadBucket(acctIDIdxBucketName)
+
+	val := acctIDxBucket.Get(uint32ToBytes(account))
+	if val == nil {
+		str := fmt.Sprintf("account %d not found", account)
+		return "", managerError(ErrAccountNotFound, str, nil)
+	}
+
+	offset := uint32(0)
+	nameLen := binary.LittleEndian.Uint32(val[offset : offset+4])
+	offset += 4
+	acctName := string(val[offset : offset+nameLen])
+
+	return acctName, nil
+}
+
+// fetchAccountByName retrieves the account number given an account name from
+// the database.
+func fetchAccountByName(ns walletdb.ReadBucket, scope *KeyScope,
+	name string) (uint32, error) {
+
+	scopedBucket, err := fetchReadScopeBucket(ns, scope)
+	if err != nil {
+		return 0, err
+	}
+
+	idxBucket := scopedBucket.NestedReadBucket(acctNameIdxBucketName)
+
+	val := idxBucket.Get(stringToBytes(name))
+	if val == nil {
+		str := fmt.Sprintf("account name '%s' not found", name)
+		return 0, managerError(ErrAccountNotFound, str, nil)
+	}
+
+	return binary.LittleEndian.Uint32(val), nil
+}
+
+func fetchReadScopeBucket(ns walletdb.ReadBucket, scope *KeyScope) (walletdb.ReadBucket, error) {
+	rootScopeBucket := ns.NestedReadBucket(scopeBucketName)
+
+	scopeKey := scopeToBytes(scope)
+	scopedBucket := rootScopeBucket.NestedReadBucket(scopeKey[:])
+	if scopedBucket == nil {
+		str := fmt.Sprintf("unable to find scope %v", scope)
+		return nil, managerError(ErrScopeNotFound, str, nil)
+	}
+
+	return scopedBucket, nil
+}
+
+func fetchWriteScopeBucket(ns walletdb.ReadWriteBucket,
+	scope *KeyScope) (walletdb.ReadWriteBucket, error) {
+
+	rootScopeBucket := ns.NestedReadWriteBucket(scopeBucketName)
+
+	scopeKey := scopeToBytes(scope)
+	scopedBucket := rootScopeBucket.NestedReadWriteBucket(scopeKey[:])
+	if scopedBucket == nil {
+		str := fmt.Sprintf("unable to find scope %v", scope)
+		return nil, managerError(ErrScopeNotFound, str, nil)
+	}
+
+	return scopedBucket, nil
+}
+// forEachAccount calls the given function with each account stored in the
+// manager, breaking early on error.
+func forEachAccount(ns walletdb.ReadBucket, scope *KeyScope,
+	fn func(account uint32) error) error {
+
+	scopedBucket, err := fetchReadScopeBucket(ns, scope)
+	if err != nil {
+		return err
+	}
+
+	acctBucket := scopedBucket.NestedReadBucket(acctBucketName)
+	return acctBucket.ForEach(func(k, v []byte) error {
+		// Skip buckets.
+		if v == nil {
+			return nil
+		}
+		return fn(binary.LittleEndian.Uint32(k))
+	})
+}
+// forEachAccountAddress calls the given function with each address of the
+// given account stored in the manager, breaking early on error.
+func forEachAccountAddress(ns walletdb.ReadBucket, scope *KeyScope,
+	account uint32, fn func(rowInterface interface{}) error) error {
+
+	scopedBucket, err := fetchReadScopeBucket(ns, scope)
+	if err != nil {
+		return err
+	}
+
+	bucket := scopedBucket.NestedReadBucket(addrAcctIdxBucketName).
+		NestedReadBucket(uint32ToBytes(account))
+
+	// If index bucket is missing the account, there hasn't been any
+	// address entries yet
+	if bucket == nil {
+		return nil
+	}
+
+	err = bucket.ForEach(func(k, v []byte) error {
+		// Skip buckets.
+		if v == nil {
+			return nil
+		}
+
+		addrRow, err := fetchAddressByHash(ns, scope, k)
+		if err != nil {
+			if merr, ok := err.(*ManagerError); ok {
+				desc := fmt.Sprintf("failed to fetch address hash '%s': %v",
+					k, merr.Description)
+				merr.Description = desc
+				return merr
+			}
+			return err
+		}
+
+		return fn(addrRow)
+	})
+	if err != nil {
+		return maybeConvertDbError(err)
+	}
+	return nil
+}
+// fetchAddressByHash loads address information for the provided address hash
+// from the database.  The returned value is one of the address rows for the
+// specific address type.  The caller should use type assertions to ascertain
+// the type.  The caller should prefix the error message with the address hash
+// which caused the failure.
+func fetchAddressByHash(ns walletdb.ReadBucket, scope *KeyScope,
+	addrHash []byte) (interface{}, error) {
+
+	scopedBucket, err := fetchReadScopeBucket(ns, scope)
+	if err != nil {
+		return nil, err
+	}
+
+	bucket := scopedBucket.NestedReadBucket(addrBucketName)
+
+	serializedRow := bucket.Get(addrHash[:])
+	if serializedRow == nil {
+		str := "address not found"
+		return nil, managerError(ErrAddressNotFound, str, nil)
+	}
+
+	row, err := deserializeAddressRow(serializedRow)
+	if err != nil {
+		return nil, err
+	}
+
+	switch row.addrType {
+	case adtChain:
+		return deserializeChainedAddress(row)
+	case adtImport:
+		return deserializeImportedAddress(row)
+	case adtScript:
+		return deserializeScriptAddress(row)
+	}
+
+	str := fmt.Sprintf("unsupported address type '%d'", row.addrType)
+	return nil, managerError(ErrDatabase, str, nil)
+}
+// fetchAddress loads address information for the provided address id from the
+// database.  The returned value is one of the address rows for the specific
+// address type.  The caller should use type assertions to ascertain the type.
+// The caller should prefix the error message with the address which caused the
+// failure.
+func fetchAddress(ns walletdb.ReadBucket, scope *KeyScope,
+	addressID []byte) (interface{}, error) {
+
+	addrHash := sha256.Sum256(addressID)
+	return fetchAddressByHash(ns, scope, addrHash[:])
+}
+// existsAddress returns whether or not the address id exists in the database.
+func existsAddress(ns walletdb.ReadBucket, scope *KeyScope, addressID []byte) bool {
+	scopedBucket, err := fetchReadScopeBucket(ns, scope)
+	if err != nil {
+		return false
+	}
+
+	bucket := scopedBucket.NestedReadBucket(addrBucketName)
+
+	addrHash := sha256.Sum256(addressID)
+	return bucket.Get(addrHash[:]) != nil
+}
+
+// putChainedAddress stores the provided chained address information to the
+// database.
+func putChainedAddress(ns walletdb.ReadWriteBucket, scope *KeyScope,
+	addressID []byte, account uint32, status syncStatus, branch,
+	index uint32, addrType addressType) error {
+
+	scopedBucket, err := fetchWriteScopeBucket(ns, scope)
+	if err != nil {
+		return err
+	}
+
+	addrRow := dbAddressRow{
+		addrType:   addrType,
+		account:    account,
+		addTime:    uint64(time.Now().Unix()),
+		syncStatus: status,
+		rawData:    serializeChainedAddress(branch, index),
+	}
+	if err := putAddress(ns, scope, addressID, &addrRow); err != nil {
+		return err
+	}
+
+	// Update the next index for the appropriate internal or external
+	// branch.
+	accountID := uint32ToBytes(account)
+	bucket := scopedBucket.NestedReadWriteBucket(acctBucketName)
+	serializedAccount := bucket.Get(accountID)
+
+	// Deserialize the account row.
+	row, err := deserializeAccountRow(accountID, serializedAccount)
+	if err != nil {
+		return err
+	}
+	arow, err := deserializeDefaultAccountRow(accountID, row)
+	if err != nil {
+		return err
+	}
+
+	// Increment the appropriate next index depending on whether the branch
+	// is internal or external.
+	nextExternalIndex := arow.nextExternalIndex
+	nextInternalIndex := arow.nextInternalIndex
+	if branch == InternalBranch {
+		nextInternalIndex = index + 1
+	} else {
+		nextExternalIndex = index + 1
+	}
+
+	// Reserialize the account with the updated index and store it.
+	row.rawData = serializeDefaultAccountRow(
+		arow.pubKeyEncrypted, arow.privKeyEncrypted, nextExternalIndex,
+		nextInternalIndex, arow.name,
+	)
+	err = bucket.Put(accountID, serializeAccountRow(row))
+	if err != nil {
+		str := fmt.Sprintf("failed to update next index for "+
+			"address %x, account %d", addressID, account)
+		return managerError(ErrDatabase, str, err)
+	}
+	return nil
+}
+
+// putScriptAddress stores the provided script address information to the
+// database.
+func putScriptAddress(ns walletdb.ReadWriteBucket, scope *KeyScope,
+	addressID []byte, account uint32, status syncStatus,
+	encryptedHash, encryptedScript []byte) error {
+
+	rawData := serializeScriptAddress(encryptedHash, encryptedScript)
+	addrRow := dbAddressRow{
+		addrType:   adtScript,
+		account:    account,
+		addTime:    uint64(time.Now().Unix()),
+		syncStatus: status,
+		rawData:    rawData,
+	}
+	if err := putAddress(ns, scope, addressID, &addrRow); err != nil {
+		return err
+	}
+
+	return nil
+}
+// putAddress stores the provided address information to the database.  This is
+// used a common base for storing the various address types.
+func putAddress(ns walletdb.ReadWriteBucket, scope *KeyScope,
+	addressID []byte, row *dbAddressRow) error {
+
+	scopedBucket, err := fetchWriteScopeBucket(ns, scope)
+	if err != nil {
+		return err
+	}
+
+	bucket := scopedBucket.NestedReadWriteBucket(addrBucketName)
+
+	// Write the serialized value keyed by the hash of the address.  The
+	// additional hash is used to conceal the actual address while still
+	// allowed keyed lookups.
+	addrHash := sha256.Sum256(addressID)
+	err = bucket.Put(addrHash[:], serializeAddressRow(row))
+	if err != nil {
+		str := fmt.Sprintf("failed to store address %x", addressID)
+		return managerError(ErrDatabase, str, err)
+	}
+
+	// Update address account index
+	return putAddrAccountIndex(ns, scope, row.account, addrHash[:])
+}
+// putAddrAccountIndex stores the given key to the address account index of the
+// database.
+func putAddrAccountIndex(ns walletdb.ReadWriteBucket, scope *KeyScope,
+	account uint32, addrHash []byte) error {
+
+	scopedBucket, err := fetchWriteScopeBucket(ns, scope)
+	if err != nil {
+		return err
+	}
+
+	bucket := scopedBucket.NestedReadWriteBucket(addrAcctIdxBucketName)
+
+	// Write account keyed by address hash
+	err = bucket.Put(addrHash, uint32ToBytes(account))
+	if err != nil {
+		return nil
+	}
+
+	bucket, err = bucket.CreateBucketIfNotExists(uint32ToBytes(account))
+	if err != nil {
+		return err
+	}
+
+	// In account bucket, write a null value keyed by the address hash
+	err = bucket.Put(addrHash, nullVal)
+	if err != nil {
+		str := fmt.Sprintf("failed to store address account index key %s", addrHash)
+		return managerError(ErrDatabase, str, err)
+	}
+	return nil
+}
+
+// fetchCoinTypeKeys loads the encrypted cointype keys which are in turn used
+// to derive the extended keys for all accounts. Each cointype key is
+// associated with a particular manager scoped.
+func fetchCoinTypeKeys(ns walletdb.ReadBucket, scope *KeyScope) ([]byte, []byte, error) {
+	scopedBucket, err := fetchReadScopeBucket(ns, scope)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	coinTypePubKeyEnc := scopedBucket.Get(coinTypePubKeyName)
+	if coinTypePubKeyEnc == nil {
+		str := "required encrypted cointype public key not stored in database"
+		return nil, nil, managerError(ErrDatabase, str, nil)
+	}
+
+	coinTypePrivKeyEnc := scopedBucket.Get(coinTypePrivKeyName)
+	if coinTypePrivKeyEnc == nil {
+		str := "required encrypted cointype private key not stored in database"
+		return nil, nil, managerError(ErrDatabase, str, nil)
+	}
+
+	return coinTypePubKeyEnc, coinTypePrivKeyEnc, nil
+}
+
+// fetchAddrAccount returns the account to which the given address belongs to.
+// It looks up the account using the addracctidx index which maps the address
+// hash to its corresponding account id.
+func fetchAddrAccount(ns walletdb.ReadBucket, scope *KeyScope,
+	addressID []byte) (uint32, error) {
+
+	scopedBucket, err := fetchReadScopeBucket(ns, scope)
+	if err != nil {
+		return 0, err
+	}
+
+	bucket := scopedBucket.NestedReadBucket(addrAcctIdxBucketName)
+
+	addrHash := sha256.Sum256(addressID)
+	val := bucket.Get(addrHash[:])
+	if val == nil {
+		str := "address not found"
+		return 0, managerError(ErrAddressNotFound, str, nil)
+	}
+	return binary.LittleEndian.Uint32(val), nil
+}
+// fetchAccountInfo loads information about the passed account from the
+// database.
+func fetchAccountInfo(ns walletdb.ReadBucket, scope *KeyScope,
+	account uint32) (interface{}, error) {
+
+	scopedBucket, err := fetchReadScopeBucket(ns, scope)
+	if err != nil {
+		return nil, err
+	}
+
+	acctBucket := scopedBucket.NestedReadBucket(acctBucketName)
+
+	accountID := uint32ToBytes(account)
+	serializedRow := acctBucket.Get(accountID)
+	if serializedRow == nil {
+		str := fmt.Sprintf("account %d not found", account)
+		return nil, managerError(ErrAccountNotFound, str, nil)
+	}
+
+	row, err := deserializeAccountRow(accountID, serializedRow)
+	if err != nil {
+		return nil, err
+	}
+
+	switch row.acctType {
+	case accountDefault:
+		return deserializeDefaultAccountRow(accountID, row)
+	}
+
+	str := fmt.Sprintf("unsupported account type '%d'", row.acctType)
+	return nil, managerError(ErrDatabase, str, nil)
+}
+
+// fetchAddressUsed returns true if the provided address id was flagged as used.
+func fetchAddressUsed(ns walletdb.ReadBucket, scope *KeyScope,
+	addressID []byte) bool {
+
+	scopedBucket, err := fetchReadScopeBucket(ns, scope)
+	if err != nil {
+		return false
+	}
+
+	bucket := scopedBucket.NestedReadBucket(usedAddrBucketName)
+
+	addrHash := sha256.Sum256(addressID)
+	return bucket.Get(addrHash[:]) != nil
+}
+// markAddressUsed flags the provided address id as used in the database.
+func markAddressUsed(ns walletdb.ReadWriteBucket, scope *KeyScope,
+	addressID []byte) error {
+
+	scopedBucket, err := fetchWriteScopeBucket(ns, scope)
+	if err != nil {
+		return err
+	}
+
+	bucket := scopedBucket.NestedReadWriteBucket(usedAddrBucketName)
+
+	addrHash := sha256.Sum256(addressID)
+	val := bucket.Get(addrHash[:])
+	if val != nil {
+		return nil
+	}
+
+	err = bucket.Put(addrHash[:], []byte{0})
+	if err != nil {
+		str := fmt.Sprintf("failed to mark address used %x", addressID)
+		return managerError(ErrDatabase, str, err)
+	}
+
+	return nil
+}
+// forEachActiveAddress calls the given function with each active address
+// stored in the manager, breaking early on error.
+func forEachActiveAddress(ns walletdb.ReadBucket, scope *KeyScope,
+	fn func(rowInterface interface{}) error) error {
+
+	scopedBucket, err := fetchReadScopeBucket(ns, scope)
+	if err != nil {
+		return err
+	}
+
+	bucket := scopedBucket.NestedReadBucket(addrBucketName)
+
+	err = bucket.ForEach(func(k, v []byte) error {
+		// Skip buckets.
+		if v == nil {
+			return nil
+		}
+
+		// Deserialize the address row first to determine the field
+		// values.
+		addrRow, err := fetchAddressByHash(ns, scope, k)
+		if merr, ok := err.(*ManagerError); ok {
+			desc := fmt.Sprintf("failed to fetch address hash '%s': %v",
+				k, merr.Description)
+			merr.Description = desc
+			return merr
+		}
+		if err != nil {
+			return err
+		}
+
+		return fn(addrRow)
+	})
+	if err != nil {
+		return maybeConvertDbError(err)
+	}
+	return nil
+}
+
+// fetchLastAccount retrieves the last account from the database.
+func fetchLastAccount(ns walletdb.ReadBucket, scope *KeyScope) (uint32, error) {
+	scopedBucket, err := fetchReadScopeBucket(ns, scope)
+	if err != nil {
+		return 0, err
+	}
+
+	metaBucket := scopedBucket.NestedReadBucket(metaBucketName)
+
+	val := metaBucket.Get(lastAccountName)
+	if len(val) != 4 {
+		str := fmt.Sprintf("malformed metadata '%s' stored in database",
+			lastAccountName)
+		return 0, managerError(ErrDatabase, str, nil)
+	}
+
+	account := binary.LittleEndian.Uint32(val[0:4])
+	return account, nil
+}
+
+
+// scopeToBytes transforms a manager's scope into the form that will be used to
+// retrieve the bucket that all information for a particular scope is stored
+// under
+func scopeToBytes(scope *KeyScope) [scopeKeySize]byte {
+	var scopeBytes [scopeKeySize]byte
+	binary.LittleEndian.PutUint32(scopeBytes[:], scope.Purpose)
+	binary.LittleEndian.PutUint32(scopeBytes[4:], scope.Coin)
+
+	return scopeBytes
+}
+
+// putCoinTypeKeys stores the encrypted cointype keys which are in turn used to
+// derive the extended keys for all accounts.  Either parameter can be nil in
+// which case no value is written for the parameter. Each cointype key is
+// associated with a particular manager scope.
+func putCoinTypeKeys(ns walletdb.ReadWriteBucket, scope *KeyScope,
+	coinTypePubKeyEnc []byte, coinTypePrivKeyEnc []byte) error {
+
+	scopedBucket, err := fetchWriteScopeBucket(ns, scope)
+	if err != nil {
+		return err
+	}
+
+	if coinTypePubKeyEnc != nil {
+		err := scopedBucket.Put(coinTypePubKeyName, coinTypePubKeyEnc)
+		if err != nil {
+			str := "failed to store encrypted cointype public key"
+			return managerError(ErrDatabase, str, err)
+		}
+	}
+
+	if coinTypePrivKeyEnc != nil {
+		err := scopedBucket.Put(coinTypePrivKeyName, coinTypePrivKeyEnc)
+		if err != nil {
+			str := "failed to store encrypted cointype private key"
+			return managerError(ErrDatabase, str, err)
+		}
+	}
+
+	return nil
+}
+// putAccountInfo stores the provided account information to the database.
+func putAccountInfo(ns walletdb.ReadWriteBucket, scope *KeyScope,
+	account uint32, encryptedPubKey, encryptedPrivKey []byte,
+	nextExternalIndex, nextInternalIndex uint32, name string) error {
+
+	rawData := serializeDefaultAccountRow(
+		encryptedPubKey, encryptedPrivKey, nextExternalIndex,
+		nextInternalIndex, name,
+	)
+
+	// TODO(roasbeef): pass scope bucket directly??
+
+	acctRow := dbAccountRow{
+		acctType: accountDefault,
+		rawData:  rawData,
+	}
+	if err := putAccountRow(ns, scope, account, &acctRow); err != nil {
+		return err
+	}
+
+	// Update account id index.
+	if err := putAccountIDIndex(ns, scope, account, name); err != nil {
+		return err
+	}
+
+	// Update account name index.
+	if err := putAccountNameIndex(ns, scope, account, name); err != nil {
+		return err
+	}
+
+	return nil
+}
+// putAccountRow stores the provided account information to the database.  This
+// is used a common base for storing the various account types.
+func putAccountRow(ns walletdb.ReadWriteBucket, scope *KeyScope,
+	account uint32, row *dbAccountRow) error {
+
+	scopedBucket, err := fetchWriteScopeBucket(ns, scope)
+	if err != nil {
+		return err
+	}
+
+	bucket := scopedBucket.NestedReadWriteBucket(acctBucketName)
+
+	// Write the serialized value keyed by the account number.
+	err = bucket.Put(uint32ToBytes(account), serializeAccountRow(row))
+	if err != nil {
+		str := fmt.Sprintf("failed to store account %d", account)
+		return managerError(ErrDatabase, str, err)
+	}
+	return nil
+}
+// putAccountIDIndex stores the given key to the account id index of the database.
+func putAccountIDIndex(ns walletdb.ReadWriteBucket, scope *KeyScope,
+	account uint32, name string) error {
+
+	scopedBucket, err := fetchWriteScopeBucket(ns, scope)
+	if err != nil {
+		return err
+	}
+
+	bucket := scopedBucket.NestedReadWriteBucket(acctIDIdxBucketName)
+
+	// Write the account number keyed by the account id.
+	err = bucket.Put(uint32ToBytes(account), stringToBytes(name))
+	if err != nil {
+		str := fmt.Sprintf("failed to store account id index key %s", name)
+		return managerError(ErrDatabase, str, err)
+	}
+	return nil
+}
+// putAccountNameIndex stores the given key to the account name index of the
+// database.
+func putAccountNameIndex(ns walletdb.ReadWriteBucket, scope *KeyScope,
+	account uint32, name string) error {
+
+	scopedBucket, err := fetchWriteScopeBucket(ns, scope)
+	if err != nil {
+		return err
+	}
+
+	bucket := scopedBucket.NestedReadWriteBucket(acctNameIdxBucketName)
+
+	// Write the account number keyed by the account name.
+	err = bucket.Put(stringToBytes(name), uint32ToBytes(account))
+	if err != nil {
+		str := fmt.Sprintf("failed to store account name index key %s", name)
+		return managerError(ErrDatabase, str, err)
+	}
 	return nil
 }

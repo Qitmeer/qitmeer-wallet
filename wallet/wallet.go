@@ -62,7 +62,38 @@ type Wallet struct {
 	chainParams *chaincfg.Params
 
 	Httpclient  *htpc
+
+	// Channels for the manager locker.
+	unlockRequests     chan unlockRequest
+	lockRequests       chan struct{}
+	lockState          chan bool
 }
+type (
+	unlockRequest struct {
+		passphrase []byte
+		lockAfter  <-chan time.Time // nil prevents the timeout.
+		err        chan error
+	}
+
+	changePassphraseRequest struct {
+		old, new []byte
+		private  bool
+		err      chan error
+	}
+
+	changePassphrasesRequest struct {
+		publicOld, publicNew   []byte
+		privateOld, privateNew []byte
+		err                    chan error
+	}
+
+	// heldUnlock is a tool to prevent the wallet from automatically
+	// locking after some timeout before an operation which needed
+	// the unlocked wallet has finished.  Any aquired heldUnlock
+	// *must* be released (preferably with a defer) or the wallet
+	// will forever remain unlocked.
+	heldUnlock chan struct{}
+)
 
 type balance struct {
 	TotalAmount float64 // 总数
@@ -246,7 +277,7 @@ func Open(db walletdb.DB, pubPass []byte, cbs *waddrmgr.OpenCallbacks,
 		if err != nil {
 			return err
 		}
-
+		fmt.Println("txmgr：",txMgr)
 		return nil
 	})
 	if err != nil {
@@ -575,27 +606,59 @@ func (w *Wallet) Updateblock(){
 		return
 	}
 }
+// NextAccount creates the next account and returns its account number.  The
+// name must be unique to the account.  In order to support automatic seed
+// restoring, new accounts may not be created when all of the previous 100
+// accounts have no transaction history (this is a deviation from the BIP0044
+// spec, which allows no unused account gaps).
+func (w *Wallet) NextAccount(scope waddrmgr.KeyScope, name string) (uint32, error) {
+	manager, err := w.Manager.FetchScopedKeyManager(scope)
+	if err != nil {
+		return 0, err
+	}
+
+	var (
+		account uint32
+		props   *waddrmgr.AccountProperties
+	)
+	err = walletdb.Update(w.db, func(tx walletdb.ReadWriteTx) error {
+		addrmgrNs := tx.ReadWriteBucket(waddrmgrNamespaceKey)
+		var err error
+		account, err = manager.NewAccount(addrmgrNs, name)
+		if err != nil {
+			return err
+		}
+		props, err = manager.AccountProperties(addrmgrNs, account)
+		fmt.Println("props：",props)
+		return err
+	})
+	if err != nil {
+		log.Errorf("Cannot fetch new account properties for notification "+
+			"after account creation: %v", err)
+	}
+	return account, err
+}
 
 // Unlock unlocks the wallet's address manager and relocks it after timeout has
 // expired.  If the wallet is already unlocked and the new passphrase is
 // correct, the current timeout is replaced with the new one.  The wallet will
 // be locked if the passphrase is incorrect or any other error occurs during the
 // unlock.
-//func (w *Wallet) Unlock(passphrase []byte, lock <-chan time.Time) error {
-//	err := make(chan error, 1)
-//	w.unlockRequests <- unlockRequest{
-//		passphrase: passphrase,
-//		lockAfter:  lock,
-//		err:        err,
-//	}
-//	return <-err
-//}
+func (w *Wallet) Unlock(passphrase []byte, lock <-chan time.Time) error {
+	err := make(chan error, 1)
+	w.unlockRequests <- unlockRequest{
+		passphrase: passphrase,
+		lockAfter:  lock,
+		err:        err,
+	}
+	return <-err
+}
 //// Lock locks the wallet's address manager.
-//func (w *Wallet) Lock() {
-//	w.lockRequests <- struct{}{}
-//}
-//
+func (w *Wallet) Lock() {
+	w.lockRequests <- struct{}{}
+}
+
 //// Locked returns whether the account manager for a wallet is locked.
-//func (w *Wallet) Locked() bool {
-//	return <-w.lockState
-//}
+func (w *Wallet) Locked() bool {
+	return <-w.lockState
+}
