@@ -4,7 +4,7 @@ The command-line wallet of the Qitmeer network
 
 # download or build
 
-you can download from [relase](https://github.com/HalalChain/qitmeer-wallet/releases)
+you can download from [release](https://github.com/HalalChain/qitmeer-wallet/releases)
 
 if you have golang environment, you can build it by yourself
 
@@ -18,7 +18,7 @@ go build
 
 ```
 
-# useage
+# usage
 
 There are two ways to use it：RPC interface and Web interface.
 
