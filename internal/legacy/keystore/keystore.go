@@ -14,17 +14,16 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"github.com/HalalChain/qitmeer-lib/common/hash"
 	chainhash "github.com/HalalChain/qitmeer-lib/common/hash"
+	"github.com/HalalChain/qitmeer-lib/core/address"
 	"github.com/HalalChain/qitmeer-lib/core/protocol"
 	"github.com/HalalChain/qitmeer-lib/core/types"
 	"github.com/HalalChain/qitmeer-lib/crypto/ecc"
-	"github.com/HalalChain/qitmeer-lib/crypto/ecc/secp256k1"
-	btcec "github.com/HalalChain/qitmeer-lib/crypto/ecc/secp256k1"
+	qitec "github.com/HalalChain/qitmeer-lib/crypto/ecc/secp256k1"
 	"github.com/HalalChain/qitmeer-lib/engine/txscript"
 	chaincfg "github.com/HalalChain/qitmeer-lib/params"
-	 "github.com/HalalChain/qitmeer-wallet/util"
-	"github.com/HalalChain/qitmeer-lib/common/hash"
-	"github.com/HalalChain/qitmeer-lib/core/address"
+	"github.com/HalalChain/qitmeer-wallet/util"
 	"io"
 	"io/ioutil"
 	"math/big"
@@ -189,7 +188,7 @@ func chainedPrivKey(privkey, pubkey, chaincode []byte) ([]byte, error) {
 			len(chaincode))
 	}
 	switch n := len(pubkey); n {
-	case secp256k1.PubKeyBytesLenUncompressed, secp256k1.PubKeyBytesLenCompressed:
+	case qitec.PubKeyBytesLenUncompressed, qitec.PubKeyBytesLenCompressed:
 		// Correct length
 	default:
 		return nil, fmt.Errorf("invalid pubkey length %d", n)
@@ -204,7 +203,7 @@ func chainedPrivKey(privkey, pubkey, chaincode []byte) ([]byte, error) {
 	privint := new(big.Int).SetBytes(privkey)
 
 	t := new(big.Int).Mul(chainXor, privint)
-	b := t.Mod(t, btcec.S256().N).Bytes()
+	b := t.Mod(t, qitec.S256().N).Bytes()
 	return pad(32, b), nil
 }
 
@@ -214,9 +213,9 @@ func chainedPrivKey(privkey, pubkey, chaincode []byte) ([]byte, error) {
 func chainedPubKey(pubkey, chaincode []byte) ([]byte, error) {
 	var compressed bool
 	switch n := len(pubkey); n {
-	case btcec.PubKeyBytesLenUncompressed:
+	case qitec.PubKeyBytesLenUncompressed:
 		compressed = false
-	case btcec.PubKeyBytesLenCompressed:
+	case qitec.PubKeyBytesLenCompressed:
 		compressed = true
 	default:
 		// Incorrect serialized pubkey length
@@ -233,16 +232,16 @@ func chainedPubKey(pubkey, chaincode []byte) ([]byte, error) {
 		xorbytes[i] = chainMod[i] ^ chaincode[i]
 	}
 
-	oldPk, err := btcec.ParsePubKey(pubkey)
+	oldPk, err := qitec.ParsePubKey(pubkey)
 	if err != nil {
 		return nil, err
 	}
-	newX, newY := btcec.S256().ScalarMult(oldPk.X, oldPk.Y, xorbytes)
+	newX, newY := qitec.S256().ScalarMult(oldPk.X, oldPk.Y, xorbytes)
 	if err != nil {
 		return nil, err
 	}
-	newPk := &btcec.PublicKey{
-		Curve: btcec.S256(),
+	newPk := &qitec.PublicKey{
+		Curve: qitec.S256(),
 		X:     newX,
 		Y:     newY,
 	}
@@ -2054,7 +2053,7 @@ type btcAddress struct {
 	chainDepth        int64 // unused
 	initVector        [16]byte
 	privKey           [32]byte
-	pubKey            *btcec.PublicKey
+	pubKey            *qitec.PublicKey
 	firstSeen         int64
 	lastSeen          int64
 	firstBlock        int32
@@ -2125,14 +2124,14 @@ func (k *publicKey) WriteTo(w io.Writer) (n int64, err error) {
 type PubKeyAddress interface {
 	WalletAddress
 	// PubKey returns the public key associated with the address.
-	PubKey() *btcec.PublicKey
+	PubKey() *qitec.PublicKey
 	// ExportPubKey returns the public key associated with the address
 	// serialised as a hex encoded string.
 	ExportPubKey() string
 	// PrivKey returns the private key for the address.
 	// It can fail if the key store is watching only, the key store is locked,
 	// or the address doesn't have any keys.
-	PrivKey() (*btcec.PrivateKey, error)
+	PrivKey() (*qitec.PrivateKey, error)
 	// ExportPrivKey exports the WIF private key.
 	ExportPrivKey() (*util.WIF, error)
 }
@@ -2165,9 +2164,9 @@ func newBtcAddress(wallet *Store, privkey, iv []byte, bs *BlockStamp, compressed
 func newBtcAddressWithoutPrivkey(s *Store, pubkey, iv []byte, bs *BlockStamp) (addr *btcAddress, err error) {
 	var compressed bool
 	switch n := len(pubkey); n {
-	case btcec.PubKeyBytesLenCompressed:
+	case qitec.PubKeyBytesLenCompressed:
 		compressed = true
-	case btcec.PubKeyBytesLenUncompressed:
+	case qitec.PubKeyBytesLenUncompressed:
 		compressed = false
 	default:
 		return nil, fmt.Errorf("invalid pubkey length %d", n)
@@ -2181,7 +2180,7 @@ func newBtcAddressWithoutPrivkey(s *Store, pubkey, iv []byte, bs *BlockStamp) (a
 		return nil, errors.New("init vector must be nil or 16 bytes large")
 	}
 
-	pk, err := btcec.ParsePubKey(pubkey)
+	pk, err := qitec.ParsePubKey(pubkey)
 	if err != nil {
 		return nil, err
 	}
@@ -2244,7 +2243,7 @@ func (a *btcAddress) verifyKeypairs() error {
 		return errors.New("private key unavailable")
 	}
 
-	privKey := &btcec.PrivateKey{
+	privKey := &qitec.PrivateKey{
 		PublicKey: *a.pubKey.ToECDSA(),
 		D:         new(big.Int).SetBytes(a.privKeyCT),
 	}
@@ -2328,7 +2327,7 @@ func (a *btcAddress) ReadFrom(r io.Reader) (n int64, err error) {
 	if !a.flags.hasPubKey {
 		return n, errors.New("read in an address without a public key")
 	}
-	pk, err := btcec.ParsePubKey(pubKey)
+	pk, err := qitec.ParsePubKey(pubKey)
 	if err != nil {
 		return n, err
 	}
@@ -2448,7 +2447,7 @@ func (a *btcAddress) unlock(key []byte) (privKeyCT []byte, err error) {
 		return privKeyCT, nil
 	}
 
-	x, y := btcec.S256().ScalarBaseMult(privkey)
+	x, y := qitec.S256().ScalarBaseMult(privkey)
 	if x.Cmp(a.pubKey.X) != 0 || y.Cmp(a.pubKey.Y) != 0 {
 		return nil, ErrWrongPassphrase
 	}
@@ -2541,7 +2540,7 @@ func (a *btcAddress) SyncStatus() SyncStatus {
 
 // PubKey returns the hex encoded pubkey for the address. Implementing
 // PubKeyAddress.
-func (a *btcAddress) PubKey() *btcec.PublicKey {
+func (a *btcAddress) PubKey() *qitec.PublicKey {
 	return a.pubKey
 }
 
@@ -2560,7 +2559,7 @@ func (a *btcAddress) ExportPubKey() string {
 
 // PrivKey implements PubKeyAddress by returning the private key, or an error
 // if the key store is locked, watching only or the private key is missing.
-func (a *btcAddress) PrivKey() (*btcec.PrivateKey, error) {
+func (a *btcAddress) PrivKey() (*qitec.PrivateKey, error) {
 	if a.store.flags.watchingOnly {
 		return nil, ErrWatchingOnly
 	}
@@ -2582,7 +2581,7 @@ func (a *btcAddress) PrivKey() (*btcec.PrivateKey, error) {
 		return nil, err
 	}
 
-	return &btcec.PrivateKey{
+	return &qitec.PrivateKey{
 		PublicKey: *a.pubKey.ToECDSA(),
 		D:         new(big.Int).SetBytes(privKeyCT),
 	}, nil
@@ -2599,7 +2598,7 @@ func (a *btcAddress) ExportPrivKey() (*util.WIF, error) {
 	// as our program's assumptions are so broken that this needs to be
 	// caught immediately, and a stack trace here is more useful than
 	// elsewhere.
-	wif, err := util.NewWIF((*btcec.PrivateKey)(pk), a.store.netParams(),
+	wif, err := util.NewWIF((*qitec.PrivateKey)(pk), a.store.netParams(),
 		a.Compressed())
 	if err != nil {
 		panic(err)

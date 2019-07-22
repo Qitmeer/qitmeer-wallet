@@ -5,12 +5,15 @@
 package waddrmgr
 
 import (
+	"crypto/rand"
 	"crypto/sha512"
 	"fmt"
 	chaincfg "github.com/HalalChain/qitmeer-lib/params"
 	"github.com/HalalChain/qitmeer-wallet/walletdb"
 	"sync"
 	"time"
+	"github.com/HalalChain/qitmeer-wallet/snacl"
+	"github.com/HalalChain/qitmeer-lib/crypto/bip32"
 )
 
 const (
@@ -19,18 +22,24 @@ const (
 	// exceed the hardened child range of extended keys and it provides a
 	// reserved account at the top of the range for supporting imported
 	// addresses.
-
+	MaxAccountNum = HardenedKeyStart - 2 // 2^31 - 2
 	// MaxAddressesPerAccount is the maximum allowed number of addresses
 	// per account number.  This value is based on the limitation of the
 	// underlying hierarchical deterministic key derivation.
-
+	MaxAddressesPerAccount = HardenedKeyStart - 1
 	// ImportedAddrAccount is the account number to use for all imported
 	// addresses.  This is useful since normal accounts are derived from
 	// the root hierarchical deterministic key and imported addresses do
 	// not fit into that model.
-
+	ImportedAddrAccount = MaxAccountNum + 1 // 2^31 - 1
 	// ImportedAddrAccountName is the name of the imported account.
 	ImportedAddrAccountName = "imported"
+
+	// HardenedKeyStart is the index at which a hardended key starts.  Each
+	// extended key has 2^31 normal child keys and 2^31 hardned child keys.
+	// Thus the range for normal child keys is [0, 2^31 - 1] and the range
+	// for hardened child keys is [2^31, 2^32 - 1].
+	HardenedKeyStart = 0x80000000 // 2^31
 
 	// DefaultAccountNum is the number of the default account.
 	DefaultAccountNum = 0
@@ -83,7 +92,24 @@ func isReservedAccountName(name string) bool {
 type ScryptOptions struct {
 	N, R, P int
 }
-
+// AccountProperties contains properties associated with each account, such as
+// the account name, number, and the nubmer of derived and imported keys.
+type AccountProperties struct {
+	AccountNumber    uint32
+	AccountName      string
+	ExternalKeyCount uint32
+	InternalKeyCount uint32
+	ImportedKeyCount uint32
+}
+// unlockDeriveInfo houses the information needed to derive a private key for a
+// managed address when the address manager is unlocked.  See the
+// deriveOnUnlock field in the Manager struct for more details on how this is
+// used.
+type unlockDeriveInfo struct {
+	managedAddr ManagedAddress
+	branch      uint32
+	index       uint32
+}
 // OpenCallbacks houses caller-provided callbacks that may be called when
 // opening an existing manager.  The open blocks on the execution of these
 // functions.
@@ -98,6 +124,27 @@ type OpenCallbacks struct {
 	// private passphrase from the user (or any other mechanism the caller
 	// deems fit).
 	ObtainPrivatePass ObtainUserInputFunc
+}
+
+type accountInfo struct {
+	acctName string
+
+	// The account key is used to derive the branches which in turn derive
+	// the internal and external addresses.  The accountKeyPriv will be nil
+	// when the address manager is locked.
+	acctKeyEncrypted []byte
+	acctKeyPriv      *bip32.Key
+	acctKeyPub       *bip32.Key
+
+	// The external branch is used for all addresses which are intended for
+	// external use.
+	nextExternalIndex uint32
+	lastExternalAddr  ManagedAddress
+
+	// The internal branch is used for all adddresses which are only
+	// intended for internal wallet use such as change addresses.
+	nextInternalIndex uint32
+	lastInternalAddr  ManagedAddress
 }
 
 // DefaultScryptOptions is the default options used with scrypt.
@@ -162,11 +209,26 @@ const (
 // function used so tests can provide a version that fails for testing error
 // paths.
 
+var newCryptoKey = defaultNewCryptoKey
+
+// defaultNewCryptoKey returns a new CryptoKey.  See newCryptoKey.
+func defaultNewCryptoKey() (EncryptorDecryptor, error) {
+	key, err := snacl.GenerateCryptoKey()
+	if err != nil {
+		return nil, err
+	}
+	return &cryptoKey{*key}, nil
+}
 // Manager represents a concurrency safe crypto currency address manager and
 // key store.
 type Manager struct {
 	mtx sync.RWMutex
+	// scopedManager is a mapping of scope of scoped manager, the manager
+	// itself loaded into memory.
+	scopedManagers map[KeyScope]*ScopedKeyManager
 
+	externalAddrSchemas map[AddressType][]KeyScope
+	internalAddrSchemas map[AddressType][]KeyScope
 	syncState    syncState
 	watchingOnly bool
 	birthday     time.Time
@@ -206,6 +268,21 @@ type Manager struct {
 	// manager is already unlocked.  The hash is zeroed each lock.
 	privPassphraseSalt   [saltSize]byte
 	hashedPrivPassphrase [sha512.Size]byte
+}
+
+// cryptoKey extends snacl.CryptoKey to implement EncryptorDecryptor.
+type cryptoKey struct {
+	snacl.CryptoKey
+}
+
+// Bytes returns a copy of this crypto key's byte slice.
+func (ck *cryptoKey) Bytes() []byte {
+	return ck.CryptoKey[:]
+}
+
+// CopyBytes copies the bytes from the given slice into this CryptoKey.
+func (ck *cryptoKey) CopyBytes(from []byte) {
+	copy(ck.CryptoKey[:], from)
 }
 
 // WatchOnly returns true if the root manager is in watch only mode, and false
@@ -261,13 +338,13 @@ func (m *Manager) Close() {
 	}
 
 	// Remove clear text public master and crypto keys from memory.
-	m.cryptoKeyPub.Zero()
+	//m.cryptoKeyPub.Zero()
 
 	m.closed = true
 	return
 }
 
-// NewScopedKeyManager creates a new scoped key manager from the root manager. A
+// NewScopedKeyManager creates a newgo bu scoped key manager from the root manager. A
 // scoped key manager is a sub-manager that only has the coin type key of a
 // particular coin type and BIP0043 purpose. This is useful as it enables
 // callers to create an arbitrary BIP0043 like schema with a stand alone
@@ -288,16 +365,143 @@ func Create(ns walletdb.ReadWriteBucket, seed, pubPassphrase, privPassphrase []b
 		return managerError(ErrAlreadyExists, errAlreadyExists, nil)
 	}
 
+	// Ensure the private passphrase is not empty.
+	if len(privPassphrase) == 0 {
+		str := "private passphrase may not be empty"
+		return managerError(ErrEmptyPassphrase, str, nil)
+	}
+
 	// Perform the initial bucket creation and database namespace setup.
-	if err := createManagerNS(ns); err != nil {
+	if err := createManagerNS(ns,ScopeAddrMap); err != nil {
+		return maybeConvertDbError(err)
+	}
+
+	if config == nil {
+		config = &DefaultScryptOptions
+	}
+
+	// Generate new master keys.  These master keys are used to protect the
+	// crypto keys that will be generated next.
+	masterKeyPub, err :=  newSecretKey(&pubPassphrase, config)
+	if err != nil {
+		str := "failed to master public key"
+		return managerError(ErrCrypto, str, err)
+	}
+	masterKeyPriv, err := newSecretKey(&privPassphrase, config)
+	if err != nil {
+		str := "failed to master private key"
+		return managerError(ErrCrypto, str, err)
+	}
+	defer masterKeyPriv.Zero()
+
+	// Generate the private passphrase salt.  This is used when hashing
+	// passwords to detect whether an unlock can be avoided when the manager
+	// is already unlocked.
+	var privPassphraseSalt [saltSize]byte
+	_, err = rand.Read(privPassphraseSalt[:])
+	if err != nil {
+		str := "failed to read random source for passphrase salt"
+		return managerError(ErrCrypto, str, err)
+	}
+
+	// Generate new crypto public, private, and script keys.  These keys are
+	// used to protect the actual public and private data such as addresses,
+	// extended keys, and scripts.
+	cryptoKeyPub, err := newCryptoKey()
+	if err != nil {
+		str := "failed to generate crypto public key"
+		return managerError(ErrCrypto, str, err)
+	}
+	cryptoKeyPriv, err := newCryptoKey()
+	if err != nil {
+		str := "failed to generate crypto private key"
+		return managerError(ErrCrypto, str, err)
+	}
+	defer cryptoKeyPriv.Zero()
+	cryptoKeyScript, err := newCryptoKey()
+	if err != nil {
+		str := "failed to generate crypto script key"
+		return managerError(ErrCrypto, str, err)
+	}
+	defer cryptoKeyScript.Zero()
+
+	// Encrypt the crypto keys with the associated master keys.
+	cryptoKeyPubEnc, err := masterKeyPub.Encrypt(cryptoKeyPub.Bytes())
+	if err != nil {
+		str := "failed to encrypt crypto public key"
+		return managerError(ErrCrypto, str, err)
+	}
+	cryptoKeyPrivEnc, err := masterKeyPriv.Encrypt(cryptoKeyPriv.Bytes())
+	if err != nil {
+		str := "failed to encrypt crypto private key"
+		return managerError(ErrCrypto, str, err)
+	}
+	cryptoKeyScriptEnc, err := masterKeyPriv.Encrypt(cryptoKeyScript.Bytes())
+	if err != nil {
+		str := "failed to encrypt crypto script key"
+		return managerError(ErrCrypto, str, err)
+	}
+	createdAt := &BlockStamp{Hash: *chainParams.GenesisHash, Height: 0}
+	// Create the initial sync state.
+	syncInfo := newSyncState(createdAt, createdAt)
+
+	// Save the master key params to the database.
+	pubParams := masterKeyPub.Marshal()
+	privParams := masterKeyPriv.Marshal()
+	err = putMasterKeyParams(ns, pubParams, privParams)
+	if err != nil {
+		return maybeConvertDbError(err)
+	}
+	// Derive the master extended key from the seed.
+	rootKey, err :=bip32.NewMasterKey(seed)
+	if err != nil {
+		str := "failed to derive master extended key"
+		return managerError(ErrKeyChain, str, err)
+	}
+	rootPubKey:= rootKey.PublicKey()
+
+	// Next, for each registers default manager scope, we'll create the
+	// hardened cointype key for it, as well as the first default account.
+	for _, defaultScope := range DefaultKeyScopes {
+		err := createManagerKeyScope(
+			ns, defaultScope, rootKey, cryptoKeyPub, cryptoKeyPriv,
+		)
+		if err != nil {
+			return maybeConvertDbError(err)
+		}
+	}
+
+	// Before we proceed, we'll also store the root master private key
+	// within the database in an encrypted format. This is required as in
+	// the future, we may need to create additional scoped key managers.
+	masterHDPrivKeyEnc, err := cryptoKeyPriv.Encrypt([]byte(rootKey.String()))
+	if err != nil {
+		return maybeConvertDbError(err)
+	}
+	masterHDPubKeyEnc, err := cryptoKeyPub.Encrypt([]byte(rootPubKey.String()))
+	if err != nil {
+		return maybeConvertDbError(err)
+	}
+	err = putMasterHDKeys(ns, masterHDPrivKeyEnc, masterHDPubKeyEnc)
+	if err != nil {
+		return maybeConvertDbError(err)
+	}
+
+	// Save the encrypted crypto keys to the database.
+	err = putCryptoKeys(ns, cryptoKeyPubEnc, cryptoKeyPrivEnc,
+		cryptoKeyScriptEnc)
+	if err != nil {
+		return maybeConvertDbError(err)
+	}
+
+	// Save the fact this is not a watching-only address manager to the
+	// database.
+	err = putWatchingOnly(ns, false)
+	if err != nil {
 		return maybeConvertDbError(err)
 	}
 
 
-	createdAt := &BlockStamp{Hash: *chainParams.GenesisHash, Height: 0}
-	// Create the initial sync state.
-	syncInfo := newSyncState(createdAt, createdAt)
-	var err error
 	// Save the initial synced to state.
 	fmt.Println("&syncInfo.syncedTo ：",&syncInfo.syncedTo)
 	err = PutSyncedTo(ns, &syncInfo.syncedTo)
@@ -311,6 +515,7 @@ func Create(ns walletdb.ReadWriteBucket, seed, pubPassphrase, privPassphrase []b
 	// Use 48 hours as margin of safety for wallet birthday.
 	return putBirthday(ns, birthday.Add(-48*time.Hour))
 }
+
 func Open(ns walletdb.ReadBucket, pubPassphrase []byte,
 	chainParams *chaincfg.Params) (*Manager, error) {
 
@@ -324,6 +529,31 @@ func Open(ns walletdb.ReadBucket, pubPassphrase []byte,
 
 	return loadManager(ns, pubPassphrase, chainParams)
 }
+
+// newSecretKey generates a new secret key using the active secretKeyGen.
+func newSecretKey(passphrase *[]byte,
+	config *ScryptOptions) (*snacl.SecretKey, error) {
+
+	secretKeyGenMtx.RLock()
+	defer secretKeyGenMtx.RUnlock()
+	return secretKeyGen(passphrase, config)
+}
+// defaultNewSecretKey returns a new secret key.  See newSecretKey.
+func defaultNewSecretKey(passphrase *[]byte,
+	config *ScryptOptions) (*snacl.SecretKey, error) {
+	return snacl.NewSecretKey(passphrase, config.N, config.R, config.P)
+}
+
+var (
+	// secretKeyGen is the inner method that is executed when calling
+	// newSecretKey.
+	secretKeyGen = defaultNewSecretKey
+
+	// secretKeyGenMtx protects access to secretKeyGen, so that it can be
+	// replaced in testing.
+	secretKeyGenMtx sync.RWMutex
+)
+
 
 func loadManager(ns walletdb.ReadBucket, pubPassphrase []byte,
 	chainParams *chaincfg.Params) (*Manager, error) {
@@ -406,4 +636,164 @@ func newManager(chainParams *chaincfg.Params, syncInfo *syncState,
 	}
 
 	return m
+}
+
+// IsLocked returns whether or not the address managed is locked.  When it is
+// unlocked, the decryption key needed to decrypt private keys used for signing
+// is in memory.
+func (m *Manager) IsLocked() bool {
+	m.mtx.RLock()
+	defer m.mtx.RUnlock()
+
+	return m.isLocked()
+}
+
+// isLocked is an internal method returning whether or not the address manager
+// is locked via an unprotected read.
+//
+// NOTE: The caller *MUST* acquire the Manager's mutex before invocation to
+// avoid data races.
+func (m *Manager) isLocked() bool {
+	return m.locked
+}
+// deriveAccountKey derives the extended key for an account according to the
+// hierarchy described by BIP0044 given the master node.
+//
+// In particular this is the hierarchical deterministic extended key path:
+//   m/purpose'/<coin type>'/<account>'
+func deriveAccountKey(coinTypeKey *bip32.Key,
+	account uint32) (*bip32.Key, error) {
+	return coinTypeKey.NewChildKey(account)
+}
+// ValidateAccountName validates the given account name and returns an error, if any.
+func ValidateAccountName(name string) error {
+	if name == "" {
+		str := "accounts may not be named the empty string"
+		return managerError(ErrInvalidAccount, str, nil)
+	}
+	if isReservedAccountName(name) {
+		str := "reserved account name"
+		return managerError(ErrInvalidAccount, str, nil)
+	}
+	return nil
+}
+// createManagerKeyScope creates a new key scoped for a target manager's scope.
+// This partitions key derivation for a particular purpose+coin tuple, allowing
+// multiple address derivation schems to be maintained concurrently.
+func createManagerKeyScope(ns walletdb.ReadWriteBucket,
+	scope KeyScope, root *bip32.Key,
+	cryptoKeyPub, cryptoKeyPriv EncryptorDecryptor) error {
+
+	// Derive the cointype key according to the passed scope.
+	coinTypeKeyPriv, err := deriveCoinTypeKey(root, scope)
+	if err != nil {
+		str := "failed to derive cointype extended key"
+		return managerError(ErrKeyChain, str, err)
+	}
+	// Derive the account key for the first account according our
+	// BIP0044-like derivation.
+	acctKeyPriv, err := deriveAccountKey(coinTypeKeyPriv, 0)
+	if err != nil {
+		return err
+	}
+
+	// The address manager needs the public extended key for the account.
+	acctKeyPub := acctKeyPriv.PublicKey()
+
+	// Encrypt the cointype keys with the associated crypto keys.
+	coinTypeKeyPub:= coinTypeKeyPriv.PublicKey()
+
+	coinTypePubEnc, err := cryptoKeyPub.Encrypt([]byte(coinTypeKeyPub.String()))
+	if err != nil {
+		str := "failed to encrypt cointype public key"
+		return managerError(ErrCrypto, str, err)
+	}
+	coinTypePrivEnc, err := cryptoKeyPriv.Encrypt([]byte(coinTypeKeyPriv.String()))
+	if err != nil {
+		str := "failed to encrypt cointype private key"
+		return managerError(ErrCrypto, str, err)
+	}
+
+	// Encrypt the default account keys with the associated crypto keys.
+	acctPubEnc, err := cryptoKeyPub.Encrypt([]byte(acctKeyPub.String()))
+	if err != nil {
+		str := "failed to  encrypt public key for account 0"
+		return managerError(ErrCrypto, str, err)
+	}
+	acctPrivEnc, err := cryptoKeyPriv.Encrypt([]byte(acctKeyPriv.String()))
+	if err != nil {
+		str := "failed to encrypt private key for account 0"
+		return managerError(ErrCrypto, str, err)
+	}
+
+	// Save the encrypted cointype keys to the database.
+	err = putCoinTypeKeys(ns, &scope, coinTypePubEnc, coinTypePrivEnc)
+	if err != nil {
+		return err
+	}
+
+	// Save the information for the default account to the database.
+	err = putAccountInfo(
+		ns, &scope, DefaultAccountNum, acctPubEnc, acctPrivEnc, 0, 0,
+		defaultAccountName,
+	)
+	if err != nil {
+		return err
+	}
+
+	return putAccountInfo(
+		ns, &scope, ImportedAddrAccount, nil, nil, 0, 0,
+		ImportedAddrAccountName,
+	)
+}
+
+// deriveCoinTypeKey derives the cointype key which can be used to derive the
+// extended key for an account according to the hierarchy described by BIP0044
+// given the coin type key.
+//
+// In particular this is the hierarchical deterministic extended key path:
+// m/purpose'/<coin type>'
+func deriveCoinTypeKey(masterNode *bip32.Key,
+	scope KeyScope) (*bip32.Key, error) {
+
+	// The hierarchy described by BIP0043 is:
+	//  m/<purpose>'/*
+	//
+	// This is further extended by BIP0044 to:
+	//  m/44'/<coin type>'/<account>'/<branch>/<address index>
+	//
+	// However, as this is a generic key store for any family for BIP0044
+	// standards, we'll use the custom scope to govern our key derivation.
+	//
+	// The branch is 0 for external addresses and 1 for internal addresses.
+
+	// Derive the purpose key as a child of the master node.
+	purpose, err := masterNode.NewChildKey(scope.Purpose + HardenedKeyStart)
+	if err != nil {
+		return nil, err
+	}
+
+	// Derive the coin type key as a child of the purpose key.
+	coinTypeKey, err := purpose.NewChildKey(scope.Coin + HardenedKeyStart)
+	if err != nil {
+		return nil, err
+	}
+
+	return coinTypeKey, nil
+}
+// FetchScopedKeyManager attempts to fetch an active scoped manager according to
+// its registered scope. If the manger is found, then a nil error is returned
+// along with the active scoped manager. Otherwise, a nil manager and a non-nil
+// error will be returned.
+func (m *Manager) FetchScopedKeyManager(scope KeyScope) (*ScopedKeyManager, error) {
+	m.mtx.RLock()
+	defer m.mtx.RUnlock()
+
+	sm, ok := m.scopedManagers[scope]
+	if !ok {
+		str := fmt.Sprintf("scope %v not found", scope)
+		return nil, managerError(ErrScopeNotFound, str, nil)
+	}
+
+	return sm, nil
 }
