@@ -167,7 +167,7 @@ func createWallet(cfg *config) error {
 	if err != nil {
 		return err
 	}
-
+	fmt.Println("pubPass:",string(pubPass))
 	// Ascertain the wallet generation seed.  This will either be an
 	// automatically generated value the user has already confirmed or a
 	// value the user has entered which has already been validated.
