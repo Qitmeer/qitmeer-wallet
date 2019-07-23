@@ -8,6 +8,7 @@ import (
 	"crypto/rand"
 	"crypto/sha512"
 	"fmt"
+	"github.com/HalalChain/qitmeer-lib/core/types"
 	chaincfg "github.com/HalalChain/qitmeer-lib/params"
 	"github.com/HalalChain/qitmeer-wallet/internal/zero"
 	"github.com/HalalChain/qitmeer-wallet/walletdb"
@@ -806,6 +807,51 @@ func ValidateAccountName(name string) error {
 	}
 	return nil
 }
+// Address returns a managed address given the passed address if it is known to
+// the address manager. A managed address differs from the passed address in
+// that it also potentially contains extra information needed to sign
+// transactions such as the associated private key for pay-to-pubkey and
+// pay-to-pubkey-hash addresses and the script associated with
+// pay-to-script-hash addresses.
+func (m *Manager) Address(ns walletdb.ReadBucket,
+	address types.Address) (ManagedAddress, error) {
+
+	m.mtx.RLock()
+	defer m.mtx.RUnlock()
+
+	// We'll iterate through each of the known scoped managers, and see if
+	// any of them now of the target address.
+	for _, scopedMgr := range m.scopedManagers {
+		addr, err := scopedMgr.Address(ns, address)
+		if err != nil {
+			continue
+		}
+
+		return addr, nil
+	}
+
+	// If the address wasn't known to any of the scoped managers, then
+	// we'll return an error.
+	str := fmt.Sprintf("unable to find key for addr %v", address)
+	return nil, managerError(ErrAddressNotFound, str, nil)
+}
+// ForEachAccountAddress calls the given function with each address of
+// the given account stored in the manager, breaking early on error.
+func (m *Manager) ForEachAccountAddress(ns walletdb.ReadBucket, account uint32,
+	fn func(maddr ManagedAddress) error) error {
+
+	m.mtx.RLock()
+	defer m.mtx.RUnlock()
+
+	for _, scopedMgr := range m.scopedManagers {
+		err := scopedMgr.ForEachAccountAddress(ns, account, fn)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
 // createManagerKeyScope creates a new key scoped for a target manager's scope.
 // This partitions key derivation for a particular purpose+coin tuple, allowing
 // multiple address derivation schems to be maintained concurrently.
@@ -875,7 +921,35 @@ func createManagerKeyScope(ns walletdb.ReadWriteBucket,
 		ImportedAddrAccountName,
 	)
 }
+// AddrAccount returns the account to which the given address belongs. We also
+// return the scoped manager that owns the addr+account combo.
+func (m *Manager) AddrAccount(ns walletdb.ReadBucket,
+	address types.Address) (*ScopedKeyManager, uint32, error) {
 
+	m.mtx.RLock()
+	defer m.mtx.RUnlock()
+
+	for _, scopedMgr := range m.scopedManagers {
+		if _, err := scopedMgr.Address(ns, address); err != nil {
+			continue
+		}
+
+		// We've found the manager that this address belongs to, so we
+		// can retrieve the address' account along with the manager
+		// that the addr belongs to.
+		accNo, err := scopedMgr.AddrAccount(ns, address)
+		if err != nil {
+			return nil, 0, err
+		}
+
+		return scopedMgr, accNo, err
+	}
+
+	// If we get to this point, then we weren't able to find the address in
+	// any of the managers, so we'll exit with an error.
+	str := fmt.Sprintf("unable to find key for addr %v", address)
+	return nil, 0, managerError(ErrAddressNotFound, str, nil)
+}
 // deriveCoinTypeKey derives the cointype key which can be used to derive the
 // extended key for an account according to the hierarchy described by BIP0044
 // given the coin type key.

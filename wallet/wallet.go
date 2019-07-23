@@ -2,6 +2,8 @@ package wallet
 
 import (
 	"fmt"
+	"github.com/HalalChain/qitmeer-lib/engine/txscript"
+	"github.com/HalalChain/qitmeer-wallet/wallet/txrules"
 	"net/http"
 	"sync"
 
@@ -17,17 +19,16 @@ import (
 	"github.com/HalalChain/qitmeer-wallet/services"
 	"github.com/HalalChain/qitmeer-wallet/utils"
 
-
 	"encoding/json"
 	"errors"
 	"github.com/HalalChain/qitmeer-lib/common/hash"
+	corejson "github.com/HalalChain/qitmeer-lib/core/json"
+	"github.com/HalalChain/qitmeer-lib/core/types"
 	chaincfg "github.com/HalalChain/qitmeer-lib/params"
 	clijson "github.com/HalalChain/qitmeer-wallet/json"
-	corejson "github.com/HalalChain/qitmeer-lib/core/json"
 	"github.com/HalalChain/qitmeer-wallet/waddrmgs"
 	"github.com/HalalChain/qitmeer-wallet/walletdb"
 	"github.com/HalalChain/qitmeer-wallet/wtxmgr"
-	"github.com/HalalChain/qitmeer-lib/core/types"
 	"strconv"
 	"time"
 )
@@ -108,6 +109,12 @@ type balance struct {
 	UnspendAmount float64 //未花费
 }
 
+// AccountBalanceResult is a single result for the Wallet.AccountBalances method.
+type AccountBalanceResult struct {
+	AccountNumber  uint32
+	AccountName    string
+	AccountBalance types.Amount
+}
 // Namespace bucket keys.
 var (
 	waddrmgrNamespaceKey = []byte("waddrmgr")
@@ -697,7 +704,7 @@ func (w *Wallet) AccountBalances(scope waddrmgr.KeyScope,
 				output.Height, syncBlock.Height) {
 				continue
 			}
-			_, addrs, _, err := txscript.ExtractPkScriptAddrs(output.PkScript, w.chainParams)
+			_, addrs, _, err := txscript.ExtractPkScriptAddrs(txscript.DefaultScriptVersion,output.PkScript, w.chainParams)
 			if err != nil || len(addrs) == 0 {
 				continue
 			}
@@ -719,7 +726,119 @@ func (w *Wallet) AccountBalances(scope waddrmgr.KeyScope,
 	})
 	return results, err
 }
+// AccountNumber returns the account number for an account name under a
+// particular key scope.
+func (w *Wallet) AccountNumber(scope waddrmgr.KeyScope, accountName string) (uint32, error) {
+	manager, err := w.Manager.FetchScopedKeyManager(scope)
+	if err != nil {
+		return 0, err
+	}
 
+	var account uint32
+	err = walletdb.View(w.db, func(tx walletdb.ReadTx) error {
+		addrmgrNs := tx.ReadBucket(waddrmgrNamespaceKey)
+		var err error
+		account, err = manager.LookupAccount(addrmgrNs, accountName)
+		return err
+	})
+	return account, err
+}
+// NewAddress returns the next external chained address for a wallet.
+func (w *Wallet) NewAddress(
+	scope waddrmgr.KeyScope,account uint32) (types.Address, error) {
+	//chainClient, err := w.requireChainClient()
+	//if err != nil {
+	//	return nil, err
+	//}
+
+	var (
+		addr  types.Address
+		props *waddrmgr.AccountProperties
+	)
+	err:= walletdb.Update(w.db, func(tx walletdb.ReadWriteTx) error {
+		addrmgrNs := tx.ReadWriteBucket(waddrmgrNamespaceKey)
+		var err error
+		addr, props, err = w.newAddress(addrmgrNs, account, scope)
+		return err
+	})
+	if err != nil {
+		return nil, err
+	}
+	fmt.Println("props:",props)
+	//// Notify the rpc server about the newly created address.
+	//err = chainClient.NotifyReceived([]btcutil.Address{addr})
+	//if err != nil {
+	//	return nil, err
+	//}
+	//
+	//w.NtfnServer.notifyAccountProperties(props)
+
+	return addr, nil
+}
+
+func (w *Wallet) newAddress(addrmgrNs walletdb.ReadWriteBucket, account uint32,
+	scope waddrmgr.KeyScope) (types.Address, *waddrmgr.AccountProperties, error) {
+
+	manager, err := w.Manager.FetchScopedKeyManager(scope)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	// Get next address from wallet.
+	addrs, err := manager.NextExternalAddresses(addrmgrNs, account, 1)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	props, err := manager.AccountProperties(addrmgrNs, account)
+	if err != nil {
+		log.Errorf("Cannot fetch account properties for notification "+
+			"after deriving next external address: %v", err)
+		return nil, nil, err
+	}
+
+	return addrs[0].Address(), props, nil
+}
+// DumpWIFPrivateKey returns the WIF encoded private key for a
+// single wallet address.
+func (w *Wallet) DumpWIFPrivateKey(addr types.Address) (string, error) {
+	var maddr waddrmgr.ManagedAddress
+	err := walletdb.View(w.db, func(tx walletdb.ReadTx) error {
+		waddrmgrNs := tx.ReadBucket(waddrmgrNamespaceKey)
+		// Get private key from wallet if it exists.
+		var err error
+		maddr, err = w.Manager.Address(waddrmgrNs, addr)
+		return err
+	})
+	if err != nil {
+		return "", err
+	}
+
+	pka, ok := maddr.(waddrmgr.ManagedPubKeyAddress)
+	if !ok {
+		return "", fmt.Errorf("address %s is not a key type", addr)
+	}
+
+	wif, err := pka.ExportPrivKey()
+	if err != nil {
+		return "", err
+	}
+	return wif.String(), nil
+}
+func confirmed(minconf, txHeight, curHeight int32) bool {
+	return confirms(txHeight, curHeight) >= minconf
+}
+// confirms returns the number of confirmations for a transaction in a block at
+// height txHeight (or -1 for an unconfirmed tx) given the chain height
+// curHeight.
+func confirms(txHeight, curHeight int32) int32 {
+	switch {
+	case txHeight == -1, txHeight > curHeight:
+		return 0
+	default:
+		return curHeight - txHeight + 1
+	}
+}
 // Unlock unlocks the wallet's address manager and relocks it after timeout has
 // expired.  If the wallet is already unlocked and the new passphrase is
 // correct, the current timeout is replaced with the new one.  The wallet will
@@ -750,6 +869,18 @@ func (w *Wallet) quitChan() <-chan struct{} {
 	w.quitMu.Unlock()
 	return c
 }
+
+func (w *Wallet) UnLockManager(passphrase []byte) error{
+	err := walletdb.View(w.db, func(tx walletdb.ReadTx) error {
+		addrmgrNs := tx.ReadBucket(waddrmgrNamespaceKey)
+		return w.Manager.Unlock(addrmgrNs, passphrase)
+	})
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 // walletLocker manages the locked/unlocked state of a wallet.
 func (w *Wallet) walletLocker() {
 	var timeout <-chan time.Time
@@ -848,4 +979,81 @@ out:
 		}
 	}
 	w.wg.Done()
+}
+
+// AccountAddresses returns the addresses for every created address for an
+// account.
+func (w *Wallet) AccountAddresses(account uint32) (addrs []types.Address, err error) {
+	err = walletdb.View(w.db, func(tx walletdb.ReadTx) error {
+		addrmgrNs := tx.ReadBucket(waddrmgrNamespaceKey)
+		return w.Manager.ForEachAccountAddress(addrmgrNs, account, func(maddr waddrmgr.ManagedAddress) error {
+			addrs = append(addrs, maddr.Address())
+			return nil
+		})
+	})
+	return
+}
+// AccountOfAddress finds the account that an address is associated with.
+func (w *Wallet) AccountOfAddress(a types.Address) (uint32, error) {
+	var account uint32
+	err := walletdb.View(w.db, func(tx walletdb.ReadTx) error {
+		addrmgrNs := tx.ReadBucket(waddrmgrNamespaceKey)
+		var err error
+		_, account, err = w.Manager.AddrAccount(addrmgrNs, a)
+		return err
+	})
+	return account, err
+}
+// AccountName returns the name of an account.
+func (w *Wallet) AccountName(scope waddrmgr.KeyScope, accountNumber uint32) (string, error) {
+	manager, err := w.Manager.FetchScopedKeyManager(scope)
+	if err != nil {
+		return "", err
+	}
+
+	var accountName string
+	err = walletdb.View(w.db, func(tx walletdb.ReadTx) error {
+		addrmgrNs := tx.ReadBucket(waddrmgrNamespaceKey)
+		var err error
+		accountName, err = manager.AccountName(addrmgrNs, accountNumber)
+		return err
+	})
+	return accountName, err
+}
+// SendOutputs creates and sends payment transactions. It returns the
+// transaction upon success.
+func (w *Wallet) SendOutputs(outputs []*types.TxOutput, account uint32,
+	minconf int32, satPerKb types.Amount) (*types.Transaction, error) {
+
+	// Ensure the outputs to be created adhere to the network's consensus
+	// rules.
+	for _, output := range outputs {
+		if err := txrules.CheckOutput(output, satPerKb); err != nil {
+			return nil, err
+		}
+	}
+
+	// Create the transaction and broadcast it to the network. The
+	// transaction will be added to the database in order to ensure that we
+	// continue to re-broadcast the transaction upon restarts until it has
+	// been confirmed.
+	//createdTx, err := w.CreateSimpleTx(
+	//	account, outputs, minconf, satPerKb, false,
+	//)
+	//if err != nil {
+	//	return nil, err
+	//}
+	//
+	//txHash, err := w.reliablyPublishTransaction(createdTx.Tx)
+	//if err != nil {
+	//	return nil, err
+	//}
+	//
+	//// Sanity check on the returned tx hash.
+	//if *txHash != createdTx.Tx.TxHash() {
+	//	return nil, errors.New("tx hash mismatch")
+	//}
+	//
+	//return createdTx.Tx, nil
+	return nil,nil
 }
