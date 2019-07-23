@@ -106,7 +106,7 @@ var (
 	// it.
 	KeyScopeBIP0044 = KeyScope{
 		Purpose: 44,
-		Coin:    11,
+		Coin:    0,
 	}
 
 	// DefaultKeyScopes is the set of default key scopes that will be
@@ -468,22 +468,22 @@ func (s *ScopedKeyManager) AccountProperties(ns walletdb.ReadBucket,
 //	return s.keyToManaged(extKey, kp.Account, kp.Branch, kp.Index)
 //}
 //
-//// deriveKeyFromPath returns either a public or private derived extended key
-//// based on the private flag for the given an account, branch, and index.
-////
-//// This function MUST be called with the manager lock held for writes.
-//func (s *ScopedKeyManager) deriveKeyFromPath(ns walletdb.ReadBucket, account, branch,
-//	index uint32, private bool) (*hdkeychain.ExtendedKey, error) {
+// deriveKeyFromPath returns either a public or private derived extended key
+// based on the private flag for the given an account, branch, and index.
 //
-//	// Look up the account key information.
-//	acctInfo, err := s.loadAccountInfo(ns, account)
-//	if err != nil {
-//		return nil, err
-//	}
-//
-//	return s.deriveKey(acctInfo, branch, index, private)
-//}
-//
+// This function MUST be called with the manager lock held for writes.
+func (s *ScopedKeyManager) deriveKeyFromPath(ns walletdb.ReadBucket, account, branch,
+	index uint32, private bool) (*bip32.Key, error) {
+
+	// Look up the account key information.
+	acctInfo, err := s.loadAccountInfo(ns, account)
+	if err != nil {
+		return nil, err
+	}
+
+	return s.deriveKey(acctInfo, branch, index, private)
+}
+
 //// chainAddressRowToManaged returns a new managed address based on chained
 //// address data loaded from the database.
 ////

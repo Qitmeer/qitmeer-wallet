@@ -9,11 +9,13 @@ import (
 	"crypto/sha512"
 	"fmt"
 	chaincfg "github.com/HalalChain/qitmeer-lib/params"
+	"github.com/HalalChain/qitmeer-wallet/internal/zero"
 	"github.com/HalalChain/qitmeer-wallet/walletdb"
 	"sync"
 	"time"
 	"github.com/HalalChain/qitmeer-wallet/snacl"
 	"github.com/HalalChain/qitmeer-lib/crypto/bip32"
+	ecc "github.com/HalalChain/qitmeer-lib/crypto/ecc/secp256k1"
 )
 
 const (
@@ -245,6 +247,10 @@ type Manager struct {
 	// NOTE: This is not the same thing as BIP0032 master node extended
 	// key.
 	//
+	// The underlying master private key will be zeroed when the address
+	// manager is locked.
+	masterKeyPub  *snacl.SecretKey
+	masterKeyPriv *snacl.SecretKey
 
 	// cryptoKeyPub is the key used to encrypt public extended keys and
 	// addresses.
@@ -301,7 +307,28 @@ func (m *Manager) WatchOnly() bool {
 func (m *Manager) watchOnly() bool {
 	return m.watchingOnly
 }
+// Lock performs a best try effort to remove and zero all secret keys associated
+// with the address manager.
+//
+// This function will return an error if invoked on a watching-only address
+// manager.
+func (m *Manager) Lock() error {
+	// A watching-only address manager can't be locked.
+	if m.watchingOnly {
+		return managerError(ErrWatchingOnly, errWatchingOnly, nil)
+	}
 
+	m.mtx.Lock()
+	defer m.mtx.Unlock()
+
+	// Error on attempt to lock an already locked manager.
+	if m.locked {
+		return managerError(ErrLocked, errLocked, nil)
+	}
+
+	m.lock()
+	return nil
+}
 // lock performs a best try effort to remove and zero all secret keys associated
 // with the address manager.
 //
@@ -573,17 +600,22 @@ func loadManager(ns walletdb.ReadBucket, pubPassphrase []byte,
 	}
 
 	// Load whether or not the manager is watching-only from the db.
-	//watchingOnly, err := fetchWatchingOnly(ns)
-	//if err != nil {
-	//	return nil, maybeConvertDbError(err)
-	//}
+	watchingOnly, err := fetchWatchingOnly(ns)
+	if err != nil {
+		return nil, maybeConvertDbError(err)
+	}
 
 	// Load the master key params from the db.
-	//masterKeyPubParams, masterKeyPrivParams, err := fetchMasterKeyParams(ns)
-	//if err != nil {
-	//	return nil, maybeConvertDbError(err)
-	//}
-
+	masterKeyPubParams, masterKeyPrivParams, err := fetchMasterKeyParams(ns)
+	if err != nil {
+		return nil, maybeConvertDbError(err)
+	}
+	// Load the crypto keys from the db.
+	cryptoKeyPubEnc, cryptoKeyPrivEnc, cryptoKeyScriptEnc, err :=
+		fetchCryptoKeys(ns)
+	if err != nil {
+		return nil, maybeConvertDbError(err)
+	}
 
 	// Load the sync state from the db.
 	syncedTo, err := fetchSyncedTo(ns)
@@ -601,38 +633,135 @@ func loadManager(ns walletdb.ReadBucket, pubPassphrase []byte,
 
 	// When not a watching-only manager, set the master private key params,
 	// but don't derive it now since the manager starts off locked.
-	//var masterKeyPriv snacl.SecretKey
-	//if !watchingOnly {
-	//	err := masterKeyPriv.Unmarshal(masterKeyPrivParams)
-	//	if err != nil {
-	//		str := "failed to unmarshal master private key"
-	//		return nil, managerError(ErrCrypto, str, err)
-	//	}
-	//}
+	var masterKeyPriv snacl.SecretKey
+	if !watchingOnly {
+		err := masterKeyPriv.Unmarshal(masterKeyPrivParams)
+		if err != nil {
+			str := "failed to unmarshal master private key"
+			return nil, managerError(ErrCrypto, str, err)
+		}
+	}
+	// Derive the master public key using the serialized params and provided
+	// passphrase.
+	var masterKeyPub snacl.SecretKey
+	if err := masterKeyPub.Unmarshal(masterKeyPubParams); err != nil {
+		str := "failed to unmarshal master public key"
+		return nil, managerError(ErrCrypto, str, err)
+	}
+	if err := masterKeyPub.DeriveKey(&pubPassphrase); err != nil {
+		str := "invalid passphrase for master public key"
+		return nil, managerError(ErrWrongPassphrase, str, nil)
+	}
+
+	// Use the master public key to decrypt the crypto public key.
+	cryptoKeyPub := &cryptoKey{snacl.CryptoKey{}}
+	cryptoKeyPubCT, err := masterKeyPub.Decrypt(cryptoKeyPubEnc)
+	if err != nil {
+		str := "failed to decrypt crypto public key"
+		return nil, managerError(ErrCrypto, str, err)
+	}
+	cryptoKeyPub.CopyBytes(cryptoKeyPubCT)
 
 
 	// Create the sync state struct.
 	syncInfo := newSyncState(startBlock, syncedTo)
 
+	// Generate private passphrase salt.
+	var privPassphraseSalt [saltSize]byte
+	_, err = rand.Read(privPassphraseSalt[:])
+	if err != nil {
+		str := "failed to read random source for passphrase salt"
+		return nil, managerError(ErrCrypto, str, err)
+	}
+
+	// Next, we'll need to load all known manager scopes from disk. Each
+	// scope is on a distinct top-level path within our HD key chain.
+	scopedManagers := make(map[KeyScope]*ScopedKeyManager)
+	err = forEachKeyScope(ns, func(scope KeyScope) error {
+		scopeSchema, err := fetchScopeAddrSchema(ns, &scope)
+		if err != nil {
+			return err
+		}
+
+		scopedManagers[scope] = &ScopedKeyManager{
+			scope:      scope,
+			addrSchema: *scopeSchema,
+			addrs:      make(map[addrKey]ManagedAddress),
+			acctInfo:   make(map[uint32]*accountInfo),
+		}
+
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
 
 	// Create new address manager with the given parameters.  Also,
 	// override the defaults for the additional fields which are not
 	// specified in the call to new with the values loaded from the
 	// database.
-	mgr := newManager(chainParams, syncInfo,birthday)
-	//mgr.watchingOnly = watchingOnly
+	mgr := newManager(
+		chainParams, &masterKeyPub, &masterKeyPriv,
+		cryptoKeyPub, cryptoKeyPrivEnc, cryptoKeyScriptEnc, syncInfo,
+		birthday, privPassphraseSalt, scopedManagers,
+	)
+	mgr.watchingOnly = watchingOnly
+
+	for _, scopedManager := range scopedManagers {
+		scopedManager.rootManager = mgr
+	}
 	return mgr, nil
 }
 
 // newManager returns a new locked address manager with the given parameters.
-func newManager(chainParams *chaincfg.Params, syncInfo *syncState,
-	birthday time.Time) *Manager {
+//func newManager(chainParams *chaincfg.Params, syncInfo *syncState,
+//	birthday time.Time) *Manager {
+//
+//	m := &Manager{
+//		chainParams:              chainParams,
+//		syncState:                *syncInfo,
+//		locked:                   true,
+//		birthday:                 birthday,
+//	}
+//
+//	return m
+//}
+// newManager returns a new locked address manager with the given parameters.
+func newManager(chainParams *chaincfg.Params, masterKeyPub *snacl.SecretKey,
+	masterKeyPriv *snacl.SecretKey, cryptoKeyPub EncryptorDecryptor,
+	cryptoKeyPrivEncrypted, cryptoKeyScriptEncrypted []byte, syncInfo *syncState,
+	birthday time.Time, privPassphraseSalt [saltSize]byte,
+	scopedManagers map[KeyScope]*ScopedKeyManager) *Manager {
 
 	m := &Manager{
 		chainParams:              chainParams,
 		syncState:                *syncInfo,
 		locked:                   true,
 		birthday:                 birthday,
+		masterKeyPub:             masterKeyPub,
+		masterKeyPriv:            masterKeyPriv,
+		cryptoKeyPub:             cryptoKeyPub,
+		cryptoKeyPrivEncrypted:   cryptoKeyPrivEncrypted,
+		cryptoKeyPriv:            &cryptoKey{},
+		cryptoKeyScriptEncrypted: cryptoKeyScriptEncrypted,
+		cryptoKeyScript:          &cryptoKey{},
+		privPassphraseSalt:       privPassphraseSalt,
+		scopedManagers:           scopedManagers,
+		externalAddrSchemas:      make(map[AddressType][]KeyScope),
+		internalAddrSchemas:      make(map[AddressType][]KeyScope),
+	}
+
+	for _, sMgr := range m.scopedManagers {
+		externalType := sMgr.AddrSchema().ExternalAddrType
+		internalType := sMgr.AddrSchema().InternalAddrType
+		scope := sMgr.Scope()
+
+		m.externalAddrSchemas[externalType] = append(
+			m.externalAddrSchemas[externalType], scope,
+		)
+		m.internalAddrSchemas[internalType] = append(
+			m.internalAddrSchemas[internalType], scope,
+		)
 	}
 
 	return m
@@ -781,6 +910,131 @@ func deriveCoinTypeKey(masterNode *bip32.Key,
 
 	return coinTypeKey, nil
 }
+
+// Unlock derives the master private key from the specified passphrase.  An
+// invalid passphrase will return an error.  Otherwise, the derived secret key
+// is stored in memory until the address manager is locked.  Any failures that
+// occur during this function will result in the address manager being locked,
+// even if it was already unlocked prior to calling this function.
+//
+// This function will return an error if invoked on a watching-only address
+// manager.
+func (m *Manager) Unlock(ns walletdb.ReadBucket, passphrase []byte) error {
+	// A watching-only address manager can't be unlocked.
+	if m.watchingOnly {
+		return managerError(ErrWatchingOnly, errWatchingOnly, nil)
+	}
+
+	m.mtx.Lock()
+	defer m.mtx.Unlock()
+
+	// Avoid actually unlocking if the manager is already unlocked
+	// and the passphrases match.
+	if !m.locked {
+		saltedPassphrase := append(m.privPassphraseSalt[:],
+			passphrase...)
+		hashedPassphrase := sha512.Sum512(saltedPassphrase)
+		zero.Bytes(saltedPassphrase)
+		if hashedPassphrase != m.hashedPrivPassphrase {
+			m.lock()
+			str := "invalid passphrase for master private key"
+			return managerError(ErrWrongPassphrase, str, nil)
+		}
+		return nil
+	}
+
+	// Derive the master private key using the provided passphrase.
+	if err := m.masterKeyPriv.DeriveKey(&passphrase); err != nil {
+		m.lock()
+		if err == snacl.ErrInvalidPassword {
+			str := "invalid passphrase for master private key"
+			return managerError(ErrWrongPassphrase, str, nil)
+		}
+
+		str := "failed to derive master private key"
+		return managerError(ErrCrypto, str, err)
+	}
+
+	// Use the master private key to decrypt the crypto private key.
+	decryptedKey, err := m.masterKeyPriv.Decrypt(m.cryptoKeyPrivEncrypted)
+	if err != nil {
+		m.lock()
+		str := "failed to decrypt crypto private key"
+		return managerError(ErrCrypto, str, err)
+	}
+	m.cryptoKeyPriv.CopyBytes(decryptedKey)
+	zero.Bytes(decryptedKey)
+
+	// Use the crypto private key to decrypt all of the account private
+	// extended keys.
+	for _, manager := range m.scopedManagers {
+		for account, acctInfo := range manager.acctInfo {
+			decrypted, err := m.cryptoKeyPriv.Decrypt(acctInfo.acctKeyEncrypted)
+			if err != nil {
+				m.lock()
+				str := fmt.Sprintf("failed to decrypt account %d "+
+					"private key", account)
+				return managerError(ErrCrypto, str, err)
+			}
+
+			acctKeyPriv, err := bip32.B58Deserialize(string(decrypted),bip32.DefaultBip32Version)
+			zero.Bytes(decrypted)
+			if err != nil {
+				m.lock()
+				str := fmt.Sprintf("failed to regenerate account %d "+
+					"extended key", account)
+				return managerError(ErrKeyChain, str, err)
+			}
+			acctInfo.acctKeyPriv = acctKeyPriv
+		}
+
+		// We'll also derive any private keys that are pending due to
+		// them being created while the address manager was locked.
+		for _, info := range manager.deriveOnUnlock {
+			addressKey, err := manager.deriveKeyFromPath(
+				ns, info.managedAddr.Account(), info.branch,
+				info.index, true,
+			)
+			if err != nil {
+				m.lock()
+				return err
+			}
+
+			// It's ok to ignore the error here since it can only
+			// fail if the extended key is not private, however it
+			// was just derived as a private key.
+			privKey, _ := ecc.PrivKeyFromBytes(addressKey.Key)
+
+			privKeyBytes := privKey.Serialize()
+			privKeyEncrypted, err := m.cryptoKeyPriv.Encrypt(privKeyBytes)
+			zero.BigInt(privKey.D)
+			if err != nil {
+				m.lock()
+				str := fmt.Sprintf("failed to encrypt private key for "+
+					"address %s", info.managedAddr.Address())
+				return managerError(ErrCrypto, str, err)
+			}
+
+			switch a := info.managedAddr.(type) {
+			case *managedAddress:
+				a.privKeyEncrypted = privKeyEncrypted
+				a.privKeyCT = privKeyBytes
+			case *scriptAddress:
+			}
+
+			// Avoid re-deriving this key on subsequent unlocks.
+			manager.deriveOnUnlock[0] = nil
+			manager.deriveOnUnlock = manager.deriveOnUnlock[1:]
+		}
+	}
+
+	m.locked = false
+	saltedPassphrase := append(m.privPassphraseSalt[:], passphrase...)
+	m.hashedPrivPassphrase = sha512.Sum512(saltedPassphrase)
+	zero.Bytes(saltedPassphrase)
+	return nil
+}
+
 // FetchScopedKeyManager attempts to fetch an active scoped manager according to
 // its registered scope. If the manger is found, then a nil error is returned
 // along with the active scoped manager. Otherwise, a nil manager and a non-nil

@@ -3,6 +3,7 @@ package wallet
 import (
 	"fmt"
 	"net/http"
+	"sync"
 
 	log "github.com/sirupsen/logrus"
 
@@ -67,6 +68,12 @@ type Wallet struct {
 	unlockRequests     chan unlockRequest
 	lockRequests       chan struct{}
 	lockState          chan bool
+
+	wg          sync.WaitGroup
+
+	started bool
+	quit    chan struct{}
+	quitMu  sync.Mutex
 }
 type (
 	unlockRequest struct {
@@ -639,6 +646,80 @@ func (w *Wallet) NextAccount(scope waddrmgr.KeyScope, name string) (uint32, erro
 	return account, err
 }
 
+// AccountBalances returns all accounts in the wallet and their balances.
+// Balances are determined by excluding transactions that have not met
+// requiredConfs confirmations.
+func (w *Wallet) AccountBalances(scope waddrmgr.KeyScope,
+	requiredConfs int32) ([]AccountBalanceResult, error) {
+
+	manager, err := w.Manager.FetchScopedKeyManager(scope)
+	if err != nil {
+		return nil, err
+	}
+
+	var results []AccountBalanceResult
+	err = walletdb.View(w.db, func(tx walletdb.ReadTx) error {
+		addrmgrNs := tx.ReadBucket(waddrmgrNamespaceKey)
+		txmgrNs := tx.ReadBucket(wtxmgrNamespaceKey)
+
+		syncBlock := w.Manager.SyncedTo()
+
+		// Fill out all account info except for the balances.
+		lastAcct, err := manager.LastAccount(addrmgrNs)
+		if err != nil {
+			return err
+		}
+		results = make([]AccountBalanceResult, lastAcct+2)
+		for i := range results[:len(results)-1] {
+			accountName, err := manager.AccountName(addrmgrNs, uint32(i))
+			if err != nil {
+				return err
+			}
+			results[i].AccountNumber = uint32(i)
+			results[i].AccountName = accountName
+		}
+		results[len(results)-1].AccountNumber = waddrmgr.ImportedAddrAccount
+		results[len(results)-1].AccountName = waddrmgr.ImportedAddrAccountName
+
+		// Fetch all unspent outputs, and iterate over them tallying each
+		// account's balance where the output script pays to an account address
+		// and the required number of confirmations is met.
+		unspentOutputs, err := w.TxStore.UnspentOutputs(txmgrNs)
+		if err != nil {
+			return err
+		}
+		for i := range unspentOutputs {
+			output := &unspentOutputs[i]
+			if !confirmed(requiredConfs, output.Height, syncBlock.Height) {
+				continue
+			}
+			if output.FromCoinBase && !confirmed(int32(w.ChainParams().CoinbaseMaturity),
+				output.Height, syncBlock.Height) {
+				continue
+			}
+			_, addrs, _, err := txscript.ExtractPkScriptAddrs(output.PkScript, w.chainParams)
+			if err != nil || len(addrs) == 0 {
+				continue
+			}
+			outputAcct, err := manager.AddrAccount(addrmgrNs, addrs[0])
+			if err != nil {
+				continue
+			}
+			switch {
+			case outputAcct == waddrmgr.ImportedAddrAccount:
+				results[len(results)-1].AccountBalance += output.Amount
+			case outputAcct > lastAcct:
+				return errors.New("waddrmgr.Manager.AddrAccount returned account " +
+					"beyond recorded last account")
+			default:
+				results[outputAcct].AccountBalance += output.Amount
+			}
+		}
+		return nil
+	})
+	return results, err
+}
+
 // Unlock unlocks the wallet's address manager and relocks it after timeout has
 // expired.  If the wallet is already unlocked and the new passphrase is
 // correct, the current timeout is replaced with the new one.  The wallet will
@@ -661,4 +742,110 @@ func (w *Wallet) Lock() {
 //// Locked returns whether the account manager for a wallet is locked.
 func (w *Wallet) Locked() bool {
 	return <-w.lockState
+}
+// quitChan atomically reads the quit channel.
+func (w *Wallet) quitChan() <-chan struct{} {
+	w.quitMu.Lock()
+	c := w.quit
+	w.quitMu.Unlock()
+	return c
+}
+// walletLocker manages the locked/unlocked state of a wallet.
+func (w *Wallet) walletLocker() {
+	var timeout <-chan time.Time
+	//holdChan := make(heldUnlock)
+	quit := w.quitChan()
+out:
+	for {
+		select {
+		case req := <-w.unlockRequests:
+			err := walletdb.View(w.db, func(tx walletdb.ReadTx) error {
+				addrmgrNs := tx.ReadBucket(waddrmgrNamespaceKey)
+				return w.Manager.Unlock(addrmgrNs, req.passphrase)
+			})
+			if err != nil {
+				req.err <- err
+				continue
+			}
+			timeout = req.lockAfter
+			if timeout == nil {
+				log.Info("The wallet has been unlocked without a time limit")
+			} else {
+				log.Info("The wallet has been temporarily unlocked")
+			}
+			req.err <- nil
+			continue
+
+		//case req := <-w.changePassphrase:
+		//	err := walletdb.Update(w.db, func(tx walletdb.ReadWriteTx) error {
+		//		addrmgrNs := tx.ReadWriteBucket(waddrmgrNamespaceKey)
+		//		return w.Manager.ChangePassphrase(
+		//			addrmgrNs, req.old, req.new, req.private,
+		//			&waddrmgr.DefaultScryptOptions,
+		//		)
+		//	})
+		//	req.err <- err
+		//	continue
+		//
+		//case req := <-w.changePassphrases:
+		//	err := walletdb.Update(w.db, func(tx walletdb.ReadWriteTx) error {
+		//		addrmgrNs := tx.ReadWriteBucket(waddrmgrNamespaceKey)
+		//		err := w.Manager.ChangePassphrase(
+		//			addrmgrNs, req.publicOld, req.publicNew,
+		//			false, &waddrmgr.DefaultScryptOptions,
+		//		)
+		//		if err != nil {
+		//			return err
+		//		}
+		//
+		//		return w.Manager.ChangePassphrase(
+		//			addrmgrNs, req.privateOld, req.privateNew,
+		//			true, &waddrmgr.DefaultScryptOptions,
+		//		)
+		//	})
+		//	req.err <- err
+		//	continue
+		//
+		//case req := <-w.holdUnlockRequests:
+		//	if w.Manager.IsLocked() {
+		//		close(req)
+		//		continue
+		//	}
+		//
+		//	req <- holdChan
+		//	<-holdChan // Block until the lock is released.
+		//
+		//	// If, after holding onto the unlocked wallet for some
+		//	// time, the timeout has expired, lock it now instead
+		//	// of hoping it gets unlocked next time the top level
+		//	// select runs.
+		//	select {
+		//	case <-timeout:
+		//		// Let the top level select fallthrough so the
+		//		// wallet is locked.
+		//	default:
+		//		continue
+		//	}
+
+		case w.lockState <- w.Manager.IsLocked():
+			continue
+
+		case <-quit:
+			break out
+
+		case <-w.lockRequests:
+		case <-timeout:
+		}
+
+		// Select statement fell through by an explicit lock or the
+		// timer expiring.  Lock the manager here.
+		timeout = nil
+		err := w.Manager.Lock()
+		if err != nil && !waddrmgr.IsError(err, waddrmgr.ErrLocked) {
+			log.Errorf("Could not lock wallet: %v", err)
+		} else {
+			log.Info("The wallet has been locked")
+		}
+	}
+	w.wg.Done()
 }
