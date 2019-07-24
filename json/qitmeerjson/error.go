@@ -147,6 +147,7 @@ const (
 	ErrRPCWalletWrongEncState       RPCErrorCode = -15
 	ErrRPCWalletEncryptionFailed    RPCErrorCode = -16
 	ErrRPCWalletAlreadyUnlocked     RPCErrorCode = -17
+	ErrRPCInvalidAddressOrKey RPCErrorCode = -18
 
 )
 // RPCErrorCode represents an error code to be used as a part of an RPCError
