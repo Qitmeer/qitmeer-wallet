@@ -1,9 +1,12 @@
 package walletrpc
 import (
+	"encoding/hex"
 	"fmt"
 	"github.com/HalalChain/qitmeer-lib/params"
 	"github.com/HalalChain/qitmeer-wallet/json/qitmeerjson"
+	"github.com/HalalChain/qitmeer-wallet/util"
 	"github.com/HalalChain/qitmeer-wallet/wallet"
+	"github.com/HalalChain/qitmeer-lib/crypto/ecc/secp256k1"
 	"testing"
 	//"time"
 
@@ -74,11 +77,25 @@ func test_wallet_getAddressesByAccount(w *wallet.Wallet)( interface{}, error){
 	return msg,nil
 }
 func test_wallet_getAccountByAddress(w *wallet.Wallet)( interface{}, error){
-	address:="TmT5dipuqvrWR2cSF4rFgRDsAAQXLh6qw3S"
+	address:="TmbsdsjwzuGboFQ9GcKg6EUmrr3tokzozyF"
 	cmd:=&qitmeerjson.GetAccountCmd{
 		Address:address,
 	}
 	msg,err:=getAccountByAddress(cmd,w)
+	if(err!=nil){
+		fmt.Println("errr:",err.Error())
+		return nil,err
+	}
+	return msg,nil
+}
+func test_wallet_importPrivKey(w *wallet.Wallet)( interface{}, error){
+	v:=false
+	cmd:=&qitmeerjson.ImportPrivKeyCmd{
+		PrivKey :"9QwXzXVQBFNm1fxP8jCqHJG9jZKjqrUKjYiTvaRxEbFobiNrvzhgZ",
+		Rescan:&v,
+		//PrivKey :"7e445aa5ffd834cb2d3b2db50f8997dd21af29bec3d296aaa066d902b93f484b",
+	}
+	msg,err:=importPrivKey(cmd,w)
 	if(err!=nil){
 		fmt.Println("errr:",err.Error())
 		return nil,err
@@ -96,6 +113,27 @@ func test_wallet_dumpPrivKey(w *wallet.Wallet)( interface{}, error){
 		return nil,err
 	}
 	return msg,nil
+}
+
+func test_wif(w *wallet.Wallet) error{
+	pri:="7e445aa5ffd834cb2d3b2db50f8997dd21af29bec3d296aaa066d902b93f484b"
+	data, err := hex.DecodeString(pri)
+	if err!=nil {
+		return err
+	}
+	privkey, _ := secp256k1.PrivKeyFromBytes(data)
+	wif,err:=util.NewWIF(privkey,w.ChainParams(),true)
+	if err!=nil {
+		return err
+	}
+	fmt.Println("wif:",wif)
+	wif1,err:=util.DecodeWIF(wif.String(),w.ChainParams())
+	if err!=nil {
+		return err
+	}
+	fmt.Println("wif1:",wif1)
+	fmt.Printf("wif1:%x\n",wif1.PrivKey.SerializeSecret())
+	return nil
 }
 
 func TestWallet_Method(t *testing.T) {
@@ -129,18 +167,28 @@ func TestWallet_Method(t *testing.T) {
 	//	fmt.Println("test_wallet_getAddressesByAccount :",adds)
 	//}
 
-	//account,err:=test_wallet_getAccountByAddress(w)
-	//if(err!=nil){
-	//	fmt.Errorf("test_wallet_getAccountByAddress err:%s",err.Error())
-	//}else{
-	//	fmt.Println("test_wallet_getAccountByAddress :",account)
-	//}
-
-	pri,err:=test_wallet_dumpPrivKey(w)
+	account,err:=test_wallet_getAccountByAddress(w)
 	if(err!=nil){
-		fmt.Errorf("test_wallet_dumpPrivKey err:%s",err.Error())
+		fmt.Errorf("test_wallet_getAccountByAddress err:%s",err.Error())
 	}else{
-		fmt.Println("test_wallet_dumpPrivKey :",pri)
+		fmt.Println("test_wallet_getAccountByAddress :",account)
 	}
+
+	//pri,err:=test_wallet_dumpPrivKey(w)
+	//if(err!=nil){
+	//	fmt.Errorf("test_wallet_dumpPrivKey err:%s",err.Error())
+	//}else{
+	//	fmt.Println("test_wallet_dumpPrivKey :",pri)
+	//}
+	//result,err:=test_wallet_importPrivKey(w)
+	//if(err!=nil){
+	//	fmt.Errorf("test_wallet_importPrivKey err:%s",err.Error())
+	//}else{
+	//	fmt.Println("test_wallet_importPrivKey :",result)
+	//}
+	//err=test_wif(w)
+	//if(err!=nil){
+	//	fmt.Println("test_wif err:",err.Error())
+	//}
 
 }

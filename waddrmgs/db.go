@@ -292,6 +292,23 @@ func stringToBytes(s string) []byte {
 // scopeKeySize is the size of a scope as stored within the database.
 const scopeKeySize = 8
 
+// putImportedAddress stores the provided imported address information to the
+// database.
+func putImportedAddress(ns walletdb.ReadWriteBucket, scope *KeyScope,
+	addressID []byte, account uint32, status syncStatus,
+	encryptedPubKey, encryptedPrivKey []byte) error {
+
+	rawData := serializeImportedAddress(encryptedPubKey, encryptedPrivKey)
+	addrRow := dbAddressRow{
+		addrType:   adtImport,
+		account:    account,
+		addTime:    uint64(time.Now().Unix()),
+		syncStatus: status,
+		rawData:    rawData,
+	}
+	return putAddress(ns, scope, addressID, &addrRow)
+}
+
 // fetchManagerVersion fetches the current manager version from the database.
 func fetchManagerVersion(ns walletdb.ReadBucket) (uint32, error) {
 	mainBucket := ns.NestedReadBucket(mainBucketName)

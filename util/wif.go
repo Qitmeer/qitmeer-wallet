@@ -3,9 +3,12 @@ package util
 import (
 	"bytes"
 	"errors"
-	btcec "github.com/HalalChain/qitmeer-lib/crypto/ecc/secp256k1"
+	"fmt"
+
+	//"fmt"
+	"github.com/HalalChain/qitmeer-lib/crypto/ecc/secp256k1"
 	chaincfg "github.com/HalalChain/qitmeer-lib/params"
-	chainhash "github.com/HalalChain/qitmeer-lib/common/hash"
+	"github.com/HalalChain/qitmeer-lib/common/hash"
 	"github.com/HalalChain/qitmeer-lib/common/encode/base58"
 )
 
@@ -31,7 +34,7 @@ const compressMagic byte = 0x01
 // by calling NewWIF.
 type WIF struct {
 	// PrivKey is the private key being imported or exported.
-	PrivKey *btcec.PrivateKey
+	PrivKey *secp256k1.PrivateKey
 
 	// CompressPubKey specifies whether the address controlled by the
 	// imported or exported private key was created by hashing a
@@ -48,7 +51,7 @@ type WIF struct {
 // as a string encoded in the Wallet Import Format.  The compress argument
 // specifies whether the address intended to be imported or exported was created
 // by serializing the public key compressed rather than uncompressed.
-func NewWIF(privKey *btcec.PrivateKey, net *chaincfg.Params, compress bool) (*WIF, error) {
+func NewWIF(privKey *secp256k1.PrivateKey, net *chaincfg.Params, compress bool) (*WIF, error) {
 	if net == nil {
 		return nil, errors.New("no network")
 	}
@@ -81,44 +84,43 @@ func (w *WIF) IsForNet(net *chaincfg.Params) bool {
 // is of an impossible length or the expected compressed pubkey magic number
 // does not equal the expected value of 0x01.  ErrChecksumMismatch is returned
 // if the expected WIF checksum does not match the calculated checksum.
-func DecodeWIF(wif string) (*WIF, error) {
-	decoded ,netID,err:= base58.NoxCheckDecode(wif)
-	if(err!=nil){
-		return nil,ErrNoxCheckDecode
-	}
+func DecodeWIF(wif string,net *chaincfg.Params) (*WIF, error) {
+
+	decoded := base58.Decode(wif)
 	decodedLen := len(decoded)
 	var compress bool
-
+	netID:=[2]byte{decoded[0],decoded[1]}
+	if(netID!=net.PrivateKeyID){
+		return nil,fmt.Errorf("net is err ")
+	}
 	// Length of base58 decoded WIF must be 32 bytes + an optional 1 byte
 	// (0x01) if compressed, plus 1 byte for netID + 4 bytes of checksum.
 	switch decodedLen {
-	case 1 + btcec.PrivKeyBytesLen + 1 + 4:
-		if decoded[33] != compressMagic {
+	case 2 + secp256k1.PrivKeyBytesLen + 1 + 4:
+		if decoded[34] != compressMagic {
 			return nil, ErrMalformedPrivateKey
 		}
 		compress = true
-	case 1 + btcec.PrivKeyBytesLen + 4:
+	case 2 + secp256k1.PrivKeyBytesLen + 4:
 		compress = false
 	default:
 		return nil, ErrMalformedPrivateKey
 	}
-
 	// Checksum is first four bytes of double SHA256 of the identifier byte
 	// and privKey.  Verify this matches the final 4 bytes of the decoded
 	// private key.
 	var tosum []byte
 	if compress {
-		tosum = decoded[:1+btcec.PrivKeyBytesLen+1]
+		tosum = decoded[:2+secp256k1.PrivKeyBytesLen+1]
 	} else {
-		tosum = decoded[:1+btcec.PrivKeyBytesLen]
+		tosum = decoded[:2+secp256k1.PrivKeyBytesLen]
 	}
-	cksum := chainhash.DoubleHashB(tosum)[:4]
+	cksum := hash.DoubleHashB(tosum)[:4]
 	if !bytes.Equal(cksum, decoded[decodedLen-4:]) {
 		return nil, ErrChecksumMismatch
 	}
-
-	privKeyBytes := decoded[1 : 1+btcec.PrivKeyBytesLen]
-	privKey, _ := btcec.PrivKeyFromBytes(privKeyBytes)
+	privKeyBytes := decoded[2 : 2+secp256k1.PrivKeyBytesLen]
+	privKey, _ := secp256k1.PrivKeyFromBytes(privKeyBytes)
 	return &WIF{privKey, compress, netID}, nil
 }
 
@@ -130,7 +132,7 @@ func (w *WIF) String() string {
 	// is one byte for the network, 32 bytes of private key, possibly one
 	// extra byte if the pubkey is to be compressed, and finally four
 	// bytes of checksum.
-	encodeLen := 1 + btcec.PrivKeyBytesLen + 4
+	encodeLen := 2 + secp256k1.PrivKeyBytesLen + 4
 	if w.CompressPubKey {
 		encodeLen++
 	}
@@ -140,12 +142,13 @@ func (w *WIF) String() string {
 	a = append(a, w.netID[1])
 	// Pad and append bytes manually, instead of using Serialize, to
 	// avoid another call to make.
-	a = paddedAppend(btcec.PrivKeyBytesLen, a, w.PrivKey.D.Bytes())
+	a = paddedAppend(secp256k1.PrivKeyBytesLen, a, w.PrivKey.D.Bytes())
 	if w.CompressPubKey {
 		a = append(a, compressMagic)
 	}
-	cksum := chainhash.DoubleHashB(a)[:4]
+	cksum := hash.DoubleHashB(a)[:4]
 	a = append(a, cksum...)
+	fmt.Println("a:",a)
 	return base58.Encode(a)
 }
 
@@ -153,7 +156,7 @@ func (w *WIF) String() string {
 // exported private key in either a compressed or uncompressed format.  The
 // serialization format chosen depends on the value of w.CompressPubKey.
 func (w *WIF) SerializePubKey() []byte {
-	pk := (*btcec.PublicKey)(&w.PrivKey.PublicKey)
+	pk := (*secp256k1.PublicKey)(&w.PrivKey.PublicKey)
 	if w.CompressPubKey {
 		return pk.SerializeCompressed()
 	}

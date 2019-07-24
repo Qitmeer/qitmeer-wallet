@@ -2,8 +2,10 @@ package waddrmgr
 
 import (
 	"fmt"
+	"github.com/HalalChain/qitmeer-lib/common/hash"
 	"github.com/HalalChain/qitmeer-lib/crypto/bip32"
 	"github.com/HalalChain/qitmeer-wallet/internal/zero"
+	"github.com/HalalChain/qitmeer-wallet/util"
 
 	"github.com/HalalChain/qitmeer-lib/core/types"
 	"sync"
@@ -610,20 +612,20 @@ func (s *ScopedKeyManager) loadAndCacheAddress(ns walletdb.ReadBucket,
 	return managedAddr, nil
 }
 
-//// existsAddress returns whether or not the passed address is known to the
-//// address manager.
-////
-//// This function MUST be called with the manager lock held for reads.
-//func (s *ScopedKeyManager) existsAddress(ns walletdb.ReadBucket, addressID []byte) bool {
-//	// Check the in-memory map first since it's faster than a db access.
-//	if _, ok := s.addrs[addrKey(addressID)]; ok {
-//		return true
-//	}
+// existsAddress returns whether or not the passed address is known to the
+// address manager.
 //
-//	// Check the database if not already found above.
-//	return existsAddress(ns, &s.scope, addressID)
-//}
-//
+// This function MUST be called with the manager lock held for reads.
+func (s *ScopedKeyManager) existsAddress(ns walletdb.ReadBucket, addressID []byte) bool {
+	// Check the in-memory map first since it's faster than a db access.
+	if _, ok := s.addrs[addrKey(addressID)]; ok {
+		return true
+	}
+
+	// Check the database if not already found above.
+	return existsAddress(ns, &s.scope, addressID)
+}
+
 // Address returns a managed address given the passed address if it is known to
 // the address manager.  A managed address differs from the passed address in
 // that it also potentially contains extra information needed to sign
@@ -1389,138 +1391,138 @@ func (s *ScopedKeyManager) newAccount(ns walletdb.ReadWriteBucket,
 //	return err
 //}
 //
-//// ImportPrivateKey imports a WIF private key into the address manager.  The
-//// imported address is created using either a compressed or uncompressed
-//// serialized public key, depending on the CompressPubKey bool of the WIF.
-////
-//// All imported addresses will be part of the account defined by the
-//// ImportedAddrAccount constant.
-////
-//// NOTE: When the address manager is watching-only, the private key itself will
-//// not be stored or available since it is private data.  Instead, only the
-//// public key will be stored.  This means it is paramount the private key is
-//// kept elsewhere as the watching-only address manager will NOT ever have access
-//// to it.
-////
-//// This function will return an error if the address manager is locked and not
-//// watching-only, or not for the same network as the key trying to be imported.
-//// It will also return an error if the address already exists.  Any other
-//// errors returned are generally unexpected.
-//func (s *ScopedKeyManager) ImportPrivateKey(ns walletdb.ReadWriteBucket,
-//	wif *btcutil.WIF, bs *BlockStamp) (ManagedPubKeyAddress, error) {
+// ImportPrivateKey imports a WIF private key into the address manager.  The
+// imported address is created using either a compressed or uncompressed
+// serialized public key, depending on the CompressPubKey bool of the WIF.
 //
-//	// Ensure the address is intended for network the address manager is
-//	// associated with.
-//	if !wif.IsForNet(s.rootManager.chainParams) {
-//		str := fmt.Sprintf("private key is not for the same network the "+
-//			"address manager is configured for (%s)",
-//			s.rootManager.chainParams.Name)
-//		return nil, managerError(ErrWrongNet, str, nil)
-//	}
+// All imported addresses will be part of the account defined by the
+// ImportedAddrAccount constant.
 //
-//	s.mtx.Lock()
-//	defer s.mtx.Unlock()
+// NOTE: When the address manager is watching-only, the private key itself will
+// not be stored or available since it is private data.  Instead, only the
+// public key will be stored.  This means it is paramount the private key is
+// kept elsewhere as the watching-only address manager will NOT ever have access
+// to it.
 //
-//	// The manager must be unlocked to encrypt the imported private key.
-//	if s.rootManager.IsLocked() && !s.rootManager.WatchOnly() {
-//		return nil, managerError(ErrLocked, errLocked, nil)
-//	}
-//
-//	// Prevent duplicates.
-//	serializedPubKey := wif.SerializePubKey()
-//	pubKeyHash := btcutil.Hash160(serializedPubKey)
-//	alreadyExists := s.existsAddress(ns, pubKeyHash)
-//	if alreadyExists {
-//		str := fmt.Sprintf("address for public key %x already exists",
-//			serializedPubKey)
-//		return nil, managerError(ErrDuplicateAddress, str, nil)
-//	}
-//
-//	// Encrypt public key.
-//	encryptedPubKey, err := s.rootManager.cryptoKeyPub.Encrypt(
-//		serializedPubKey,
-//	)
-//	if err != nil {
-//		str := fmt.Sprintf("failed to encrypt public key for %x",
-//			serializedPubKey)
-//		return nil, managerError(ErrCrypto, str, err)
-//	}
-//
-//	// Encrypt the private key when not a watching-only address manager.
-//	var encryptedPrivKey []byte
-//	if !s.rootManager.WatchOnly() {
-//		privKeyBytes := wif.PrivKey.Serialize()
-//		encryptedPrivKey, err = s.rootManager.cryptoKeyPriv.Encrypt(privKeyBytes)
-//		zero.Bytes(privKeyBytes)
-//		if err != nil {
-//			str := fmt.Sprintf("failed to encrypt private key for %x",
-//				serializedPubKey)
-//			return nil, managerError(ErrCrypto, str, err)
-//		}
-//	}
-//
-//	// The start block needs to be updated when the newly imported address
-//	// is before the current one.
-//	s.rootManager.mtx.Lock()
-//	updateStartBlock := bs.Height < s.rootManager.syncState.startBlock.Height
-//	s.rootManager.mtx.Unlock()
-//
-//	// Save the new imported address to the db and update start block (if
-//	// needed) in a single transaction.
-//	err = putImportedAddress(
-//		ns, &s.scope, pubKeyHash, ImportedAddrAccount, ssNone,
-//		encryptedPubKey, encryptedPrivKey,
-//	)
-//	if err != nil {
-//		return nil, err
-//	}
-//
-//	if updateStartBlock {
-//		err := putStartBlock(ns, bs)
-//		if err != nil {
-//			return nil, err
-//		}
-//	}
-//
-//	// Now that the database has been updated, update the start block in
-//	// memory too if needed.
-//	if updateStartBlock {
-//		s.rootManager.mtx.Lock()
-//		s.rootManager.syncState.startBlock = *bs
-//		s.rootManager.mtx.Unlock()
-//	}
-//
-//	// The full derivation path for an imported key is incomplete as we
-//	// don't know exactly how it was derived.
-//	importedDerivationPath := DerivationPath{
-//		Account: ImportedAddrAccount,
-//	}
-//
-//	// Create a new managed address based on the imported address.
-//	var managedAddr *managedAddress
-//	if !s.rootManager.WatchOnly() {
-//		managedAddr, err = newManagedAddress(
-//			s, importedDerivationPath, wif.PrivKey,
-//			wif.CompressPubKey, s.addrSchema.ExternalAddrType,
-//		)
-//	} else {
-//		pubKey := (*btcec.PublicKey)(&wif.PrivKey.PublicKey)
-//		managedAddr, err = newManagedAddressWithoutPrivKey(
-//			s, importedDerivationPath, pubKey, wif.CompressPubKey,
-//			s.addrSchema.ExternalAddrType,
-//		)
-//	}
-//	if err != nil {
-//		return nil, err
-//	}
-//	managedAddr.imported = true
-//
-//	// Add the new managed address to the cache of recent addresses and
-//	// return it.
-//	s.addrs[addrKey(managedAddr.Address().ScriptAddress())] = managedAddr
-//	return managedAddr, nil
-//}
-//
+// This function will return an error if the address manager is locked and not
+// watching-only, or not for the same network as the key trying to be imported.
+// It will also return an error if the address already exists.  Any other
+// errors returned are generally unexpected.
+func (s *ScopedKeyManager) ImportPrivateKey(ns walletdb.ReadWriteBucket,
+	wif *util.WIF, bs *BlockStamp) (ManagedPubKeyAddress, error) {
+
+	// Ensure the address is intended for network the address manager is
+	// associated with.
+	if !wif.IsForNet(s.rootManager.chainParams) {
+		str := fmt.Sprintf("private key is not for the same network the "+
+			"address manager is configured for (%s)",
+			s.rootManager.chainParams.Name)
+		return nil, managerError(ErrWrongNet, str, nil)
+	}
+
+	s.mtx.Lock()
+	defer s.mtx.Unlock()
+
+	// The manager must be unlocked to encrypt the imported private key.
+	if s.rootManager.IsLocked() && !s.rootManager.WatchOnly() {
+		return nil, managerError(ErrLocked, errLocked, nil)
+	}
+
+	// Prevent duplicates.
+	serializedPubKey := wif.SerializePubKey()
+	pubKeyHash := hash.Hash160(serializedPubKey)
+	alreadyExists := s.existsAddress(ns, pubKeyHash)
+	if alreadyExists {
+		str := fmt.Sprintf("address for public key %x already exists",
+			serializedPubKey)
+		return nil, managerError(ErrDuplicateAddress, str, nil)
+	}
+
+	// Encrypt public key.
+	encryptedPubKey, err := s.rootManager.cryptoKeyPub.Encrypt(
+		serializedPubKey,
+	)
+	if err != nil {
+		str := fmt.Sprintf("failed to encrypt public key for %x",
+			serializedPubKey)
+		return nil, managerError(ErrCrypto, str, err)
+	}
+
+	// Encrypt the private key when not a watching-only address manager.
+	var encryptedPrivKey []byte
+	if !s.rootManager.WatchOnly() {
+		privKeyBytes := wif.PrivKey.Serialize()
+		encryptedPrivKey, err = s.rootManager.cryptoKeyPriv.Encrypt(privKeyBytes)
+		zero.Bytes(privKeyBytes)
+		if err != nil {
+			str := fmt.Sprintf("failed to encrypt private key for %x",
+				serializedPubKey)
+			return nil, managerError(ErrCrypto, str, err)
+		}
+	}
+
+	// The start block needs to be updated when the newly imported address
+	// is before the current one.
+	//s.rootManager.mtx.Lock()
+	//updateStartBlock := bs.Height < s.rootManager.syncState.startBlock.Height
+	//s.rootManager.mtx.Unlock()
+
+	// Save the new imported address to the db and update start block (if
+	// needed) in a single transaction.
+	err = putImportedAddress(
+		ns, &s.scope, pubKeyHash, ImportedAddrAccount, ssNone,
+		encryptedPubKey, encryptedPrivKey,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	//if updateStartBlock {
+	//	err := putStartBlock(ns, bs)
+	//	if err != nil {
+	//		return nil, err
+	//	}
+	//}
+
+	// Now that the database has been updated, update the start block in
+	// memory too if needed.
+	//if updateStartBlock {
+	//	s.rootManager.mtx.Lock()
+	//	s.rootManager.syncState.startBlock = *bs
+	//	s.rootManager.mtx.Unlock()
+	//}
+
+	// The full derivation path for an imported key is incomplete as we
+	// don't know exactly how it was derived.
+	importedDerivationPath := DerivationPath{
+		Account: ImportedAddrAccount,
+	}
+
+	// Create a new managed address based on the imported address.
+	var managedAddr *managedAddress
+	if !s.rootManager.WatchOnly() {
+		managedAddr, err = newManagedAddress(
+			s, importedDerivationPath, wif.PrivKey,
+			wif.CompressPubKey, s.addrSchema.ExternalAddrType,
+		)
+	} else {
+		pubKey := (*ecc.PublicKey)(&wif.PrivKey.PublicKey)
+		managedAddr, err = newManagedAddressWithoutPrivKey(
+			s, importedDerivationPath, pubKey, wif.CompressPubKey,
+			s.addrSchema.ExternalAddrType,
+		)
+	}
+	if err != nil {
+		return nil, err
+	}
+	managedAddr.imported = true
+
+	// Add the new managed address to the cache of recent addresses and
+	// return it.
+	s.addrs[addrKey(managedAddr.Address().ScriptAddress())] = managedAddr
+	return managedAddr, nil
+}
+
 //// ImportScript imports a user-provided script into the address manager.  The
 //// imported script will act as a pay-to-script-hash address.
 ////
