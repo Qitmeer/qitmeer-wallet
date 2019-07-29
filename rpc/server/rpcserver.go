@@ -21,7 +21,7 @@ import (
 	"golang.org/x/net/context"
 
 	"github.com/HalalChain/qitmeer-lib/common/util"
-	"github.com/HalalChain/qitmeer-lib/config"
+	// "github.com/HalalChain/qitmeer-lib/config"
 	"github.com/HalalChain/qitmeer-lib/log"
 )
 
@@ -38,7 +38,7 @@ type RpcServer struct {
 	quit       chan int
 	statusLock sync.RWMutex
 
-	config *config.Config
+	config *Config
 
 	rpcSvcRegistry serviceRegistry
 
@@ -99,7 +99,7 @@ type serverRequest struct {
 }
 
 // newRPCServer returns a new instance of the rpcServer struct.
-func NewRPCServer(cfg *config.Config) (*RpcServer, error) {
+func NewRPCServer(cfg *Config) (*RpcServer, error) {
 	rpc := RpcServer{
 
 		config: cfg,
