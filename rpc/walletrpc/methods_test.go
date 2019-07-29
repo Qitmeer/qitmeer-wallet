@@ -27,6 +27,8 @@ func open_wallet() (*wallet.Wallet,error) {
 		fmt.Errorf("UnLockManager err:%s",err.Error())
 		return nil,err
 	}
+	w.Httpclient=wallet.NewHtpc("admin" ,"123456"  ,"47.88.220.44:8131" ,
+		"" ,true ,true ,"" ,"","" )
 	return w,nil
 }
 func test_wallet_createNewAccount(w *wallet.Wallet) error{
@@ -91,11 +93,25 @@ func test_wallet_getAccountByAddress(w *wallet.Wallet)( interface{}, error){
 func test_wallet_importPrivKey(w *wallet.Wallet)( interface{}, error){
 	v:=false
 	cmd:=&qitmeerjson.ImportPrivKeyCmd{
-		PrivKey :"9QwXzXVQBFNm1fxP8jCqHJG9jZKjqrUKjYiTvaRxEbFobiNrvzhgZ",
+		PrivKey :"7e445aa5ffd834cb2d3b2db50f8997dd21af29bec3d296aaa066d902b93f484b",
 		Rescan:&v,
 		//PrivKey :"7e445aa5ffd834cb2d3b2db50f8997dd21af29bec3d296aaa066d902b93f484b",
 	}
 	msg,err:=importPrivKey(cmd,w)
+	if(err!=nil){
+		fmt.Println("errr:",err.Error())
+		return nil,err
+	}
+	return msg,nil
+}
+func test_wallet_importWifPrivKey(w *wallet.Wallet)( interface{}, error){
+	v:=false
+	cmd:=&qitmeerjson.ImportPrivKeyCmd{
+		PrivKey :"9QwXzXVQBFNm1fxP8jCqHJG9jZKjqrUKjYiTvaRxEbFobiNrvzhgZ",
+		Rescan:&v,
+		//PrivKey :"7e445aa5ffd834cb2d3b2db50f8997dd21af29bec3d296aaa066d902b93f484b",
+	}
+	msg,err:=importWifPrivKey(cmd,w)
 	if(err!=nil){
 		fmt.Println("errr:",err.Error())
 		return nil,err
@@ -124,7 +140,8 @@ func test_wallet_getAccountAndAddress(w *wallet.Wallet)( interface{}, error){
 }
 func test_wallet_sendToAddress(w *wallet.Wallet)( interface{}, error){
 	cmd:=&qitmeerjson.SendToAddressCmd{
-		Address:"TmbsdsjwzuGboFQ9GcKg6EUmrr3tokzozyF",
+		Address:"TmbCBKbZF8PeSdj5Chm22T4hZRMJY5D8XyX",
+		//Address:"TmbsdsjwzuGboFQ9GcKg6EUmrr3tokzozyF",
 		Amount :   float64(10),
 	}
 	msg,err:=sendToAddress(cmd,w)
@@ -133,6 +150,17 @@ func test_wallet_sendToAddress(w *wallet.Wallet)( interface{}, error){
 		return nil,err
 	}
 	return msg,nil
+}
+func test_wallet_updateblock(w *wallet.Wallet)(  error){
+	cmd:=&qitmeerjson.UpdateBlockToCmd{
+		Toheight:2200,
+	}
+	err:=updateblock(cmd,w)
+	if(err!=nil){
+		fmt.Println("errr:",err.Error())
+		return err
+	}
+	return nil
 }
 
 func test_wif(w *wallet.Wallet) error{
@@ -210,12 +238,20 @@ func TestWallet_Method(t *testing.T) {
 	//	fmt.Println("test_wallet_importPrivKey :",result)
 	//}
 
-	result,err:=test_wallet_sendToAddress(w)
-	if(err!=nil){
-		fmt.Errorf("test_wallet_sendToAddress err:%s",err.Error())
-	}else{
-		fmt.Println("test_wallet_sendToAddress :",result)
-	}
+	//err=test_wallet_updateblock(w)
+	//if(err!=nil){
+	//	fmt.Errorf("test_wallet_sendToAddress err:%s",err.Error())
+	//}else{
+	//	fmt.Println("test_wallet_sendToAddress :",err)
+	//}
+
+
+	//result,err:=test_wallet_sendToAddress(w)
+	//if(err!=nil){
+	//	fmt.Errorf("test_wallet_sendToAddress err:%s",err.Error())
+	//}else{
+	//	fmt.Println("test_wallet_sendToAddress :",result)
+	//}
 
 
 	//err=test_wif(w)

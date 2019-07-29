@@ -604,6 +604,9 @@ type SendToAddressCmd struct {
 	Comment   *string
 	CommentTo *string
 }
+type UpdateBlockToCmd struct {
+	Toheight   int64
+}
 
 // NewSendToAddressCmd returns a new instance which can be used to issue a
 // sendtoaddress JSON-RPC command.
