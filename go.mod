@@ -5,9 +5,12 @@ go 1.12
 require (
 	github.com/BurntSushi/toml v0.3.1
 	github.com/HalalChain/qitmeer-lib v0.0.0-20190708060928-91b89dc718d2
+	github.com/btcsuite/btcd v0.0.0-20190629003639-c26ffa870fd8
 	github.com/btcsuite/go-socks v0.0.0-20170105172521-4720035b7bfd
 	github.com/coreos/bbolt v1.3.2
+	github.com/davecgh/go-spew v1.1.1
 	github.com/deckarep/golang-set v1.7.1
+	github.com/decred/dcrwallet/wallet v1.3.0
 	github.com/jessevdk/go-flags v1.4.0
 	github.com/julienschmidt/httprouter v1.2.0
 	github.com/rakyll/statik v0.1.6

@@ -3,6 +3,8 @@ package wserver
 import (
 	"fmt"
 	"net/http"
+	"os"
+	"path/filepath"
 
 	"github.com/julienschmidt/httprouter"
 	log "github.com/sirupsen/logrus"
@@ -10,6 +12,7 @@ import (
 	"github.com/HalalChain/qitmeer-wallet/assets"
 	"github.com/HalalChain/qitmeer-wallet/config"
 	"github.com/HalalChain/qitmeer-wallet/rpc/server"
+	"github.com/HalalChain/qitmeer-wallet/services"
 	"github.com/HalalChain/qitmeer-wallet/utils"
 	"github.com/HalalChain/qitmeer-wallet/wallet"
 )
@@ -18,13 +21,19 @@ import (
 type WalletServer struct {
 	cfg *config.Config
 
+	wt *wallet.Wallet
+
 	RPCSvr *server.RpcServer
+
+	exitCh chan bool
 }
 
 //NewWalletServer make a wallet api server
-func NewWalletServer(cfg *config.Config, wt *wallet.Wallet) (wSvr *WalletServer, err error) {
+func NewWalletServer(cfg *config.Config) (wSvr *WalletServer, err error) {
 	wSvr = &WalletServer{
-		cfg: cfg,
+		cfg:    cfg,
+		wt:     &wallet.Wallet{},
+		exitCh: make(chan bool),
 	}
 
 	RPCSvrCfg := &server.Config{
@@ -45,25 +54,47 @@ func NewWalletServer(cfg *config.Config, wt *wallet.Wallet) (wSvr *WalletServer,
 	for _, api := range cfg.APIs {
 		switch api {
 		case "account":
-			//wSvr.RPCSvr.RegisterService("account", wallet.NewAPI(wt))
+			wSvr.RPCSvr.RegisterService("account", &services.AccountAPI{})
 		case "tx":
 			//wSvr.RPCSvr.RegisterService("tx", &services.TxAPI{})
 		}
 	}
 
+	wSvr.RPCSvr.RegisterService("wallet", wallet.NewAPI(cfg))
+
+	activeNetParams := utils.GetNetParams(cfg.Network)
+	dbDir := filepath.Join(cfg.AppDataDir, cfg.Network)
+	wtLoader := wallet.NewLoader(activeNetParams, dbDir, 250)
+	wtExist, err := wtLoader.WalletExists()
+	if err != nil {
+		return nil, fmt.Errorf("load wallet err: %s", err)
+	}
+	if !wtExist && !cfg.UI {
+		return nil, fmt.Errorf("not wallet exist,please run crate command")
+	}
+	// if !wtExist && cfg.UI {
+	// 	wSvr.RPCSvr.RegisterService("crate", wallet.NewCreateAPI(cfg, wSvr.wt))
+	// }
 	return
 }
 
 //
-func (wsvr *WalletServer) runSvr() {
+func (wsvr *WalletServer) run() {
 	defer func() {
 		if rev := recover(); rev != nil {
-			log.Println("server run recover: ", rev)
+			log.Println("WalletServer run recover: ", rev)
+			go wsvr.run()
 		}
-		go wsvr.runSvr()
 	}()
-
-	log.Trace("wallet runSvr")
+	go func() {
+		for {
+			select {
+			case <-wsvr.exitCh:
+				os.Exit(1)
+			}
+		}
+	}()
+	log.Trace("WalletServer run")
 
 	router := httprouter.New()
 
@@ -78,35 +109,56 @@ func (wsvr *WalletServer) runSvr() {
 		router.GET("/", func(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 			http.Redirect(w, r, "app/index.html", http.StatusMovedPermanently)
 		})
+
+		//ajx post options
+		router.OPTIONS("/api", func(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+			log.Trace("api OPTIONS")
+			w.Header().Set("Access-Control-Allow-Origin", "http://127.0.0.1:8080")
+			w.Header().Set("Access-Control-Allow-Credentials", "true")
+			w.Header().Set("Access-Control-Allow-Methods", "GET,HEAD,OPTIONS,POST,PUT")
+			w.Header().Set("Access-Control-Allow-Headers", "Access-Control-Allow-Headers, Origin, Accept, X-Requested-With, Content-Type, Access-Control-Request-Method, Access-Control-Request-Headers, Authorization")
+			return
+		})
 	}
 
 	router.POST("/api", wsvr.HandleAPI)
 
-	for _, lis := range wsvr.cfg.Listeners {
-
+	for _, addr := range wsvr.cfg.Listeners {
 		go func() {
-			log.Infof("Experimental RPC server listening on %s", lis)
-			err := http.ListenAndServe(":38130", router)
-			log.Tracef("Finished serving expimental RPC: %v", err)
+			log.Infof("WalletServer listening on %s", addr)
+			err := http.ListenAndServe(addr, router)
+			if err != nil {
+				log.Errorf("server listen err: %v", err)
+				wsvr.exitCh <- true
+				return
+			}
 		}()
 	}
 }
 
 // HandleAPI RPC Method
 func (wsvr *WalletServer) HandleAPI(ResW http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+
+	ResW.Header().Set("Access-Control-Allow-Origin", "http://127.0.0.1:8080")
+	ResW.Header().Set("Access-Control-Allow-Credentials", "true")
+	ResW.Header().Set("Access-Control-Allow-Methods", "GET,HEAD,OPTIONS,POST,PUT")
+	ResW.Header().Set("Access-Control-Allow-Headers", "Access-Control-Allow-Headers, Origin, Accept, X-Requested-With, Content-Type, Access-Control-Request-Method, Access-Control-Request-Headers, Authorization")
+
 	wsvr.RPCSvr.HandleFunc(ResW, r)
 }
 
 // Start routine
 func (wsvr *WalletServer) Start() error {
-
-	log.Trace("wallet server start")
+	log.Trace("WalletServer start")
 
 	wsvr.RPCSvr.Start()
 
-	//open home in web browser
+	go wsvr.run()
 
-	utils.OpenBrowser("http://" + wsvr.cfg.Listeners[0])
+	//open home in web browser
+	if wsvr.cfg.UI {
+		utils.OpenBrowser("http://" + wsvr.cfg.Listeners[0])
+	}
 
 	return nil
 }

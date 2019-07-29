@@ -21,6 +21,9 @@ const (
 func validateRequest(r *http.Request) (int, error) {
 
 	if r.Method == http.MethodPut || r.Method == http.MethodDelete {
+
+		fmt.Println(r.Method, "++++++")
+
 		return http.StatusMethodNotAllowed, errors.New("method not allowed")
 	}
 	if r.ContentLength > maxRequestContentLength {

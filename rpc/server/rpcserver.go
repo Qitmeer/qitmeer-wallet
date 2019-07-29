@@ -17,12 +17,14 @@ import (
 	"sync/atomic"
 	"time"
 
+	log "github.com/sirupsen/logrus"
+
 	mapset "github.com/deckarep/golang-set"
 	"golang.org/x/net/context"
 
 	"github.com/HalalChain/qitmeer-lib/common/util"
 	// "github.com/HalalChain/qitmeer-lib/config"
-	"github.com/HalalChain/qitmeer-lib/log"
+	//"github.com/HalalChain/qitmeer-lib/log"
 )
 
 // API describes the set of methods offered over the RPC interface
@@ -263,8 +265,8 @@ func (s *RpcServer) checkAuth(r *http.Request, require bool) (bool, error) {
 	authhdr := r.Header["Authorization"]
 	if len(authhdr) <= 0 {
 		if require {
-			log.Warn("RPC authentication failure", "from", r.RemoteAddr,
-				"error", "no authorization header")
+			log.Warn("RPC authentication failure", " from ", r.RemoteAddr,
+				" error ", "no authorization header")
 			return false, fmt.Errorf("auth failure")
 		}
 
