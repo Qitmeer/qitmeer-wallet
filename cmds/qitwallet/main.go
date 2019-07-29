@@ -81,8 +81,8 @@ func newCmd() (cmd *cobra.Command) {
 
 	gFlags.BoolVar(&cfg.UI, "ui", true, "Start Wallet with RPC and webUI interface")
 	gFlags.StringArrayVar(&cfg.Listeners, "listens", cfg.Listeners, "rpc listens")
-	gFlags.StringVar(&cfg.RPCUser, "user", cfg.RPCUser, "rpc user")
-	gFlags.StringVar(&cfg.RPCPass, "pass", cfg.RPCPass, "rpc pass")
+	gFlags.StringVar(&cfg.RPCUser, "rpcUser", cfg.RPCUser, "rpc user")
+	gFlags.StringVar(&cfg.RPCPass, "rpcPass", cfg.RPCPass, "rpc pass")
 
 	return
 }
