@@ -42,7 +42,7 @@ import (
 
 	"github.com/HalalChain/qitmeer-lib/common/network"
 	"github.com/HalalChain/qitmeer-lib/common/util"
-	"github.com/HalalChain/qitmeer-lib/config"
+
 	"github.com/HalalChain/qitmeer-lib/crypto/certgen"
 	"github.com/HalalChain/qitmeer-lib/log"
 )
@@ -254,7 +254,7 @@ func NewID() ID {
 // listeners on the correct interface "tcp4" and "tcp6".  It also properly
 // detects addresses which apply to "all interfaces" and adds the address to
 // both slices.
-func parseListeners(cfg *config.Config, addrs []string) ([]net.Listener, error) {
+func parseListeners(cfg *Config, addrs []string) ([]net.Listener, error) {
 
 	ipv4ListenAddrs, ipv6ListenAddrs, _, err := network.ParseListeners(addrs)
 	if err != nil {

@@ -20,7 +20,7 @@ import (
 const (
 	defaultCAFilename       = "qit.cert"
 	defaultConfigFilename   = "wallet.toml"
-	defaultLogLevel         = "info"
+	defaultLogLevel         = "debug"
 	defaultLogDirname       = "logs"
 	defaultLogFilename      = "wallet.log"
 	defaultRPCMaxClients    = 10
@@ -53,6 +53,7 @@ type Config struct {
 	Network string // mainnet testnet simnet
 
 	//WalletRPC
+	UI            bool     // local web server UI
 	Listeners     []string // ["127.0.0.1:18131"]
 	RPCUser       string
 	RPCPass       string
@@ -61,6 +62,9 @@ type Config struct {
 	RPCMaxClients int64
 	DisableRPC    bool
 	DisableTLS    bool
+
+	//walletAPI
+	APIs []string // rpc support api list
 
 	//Qitmeerd
 	isLocal        bool
@@ -80,10 +84,11 @@ type Config struct {
 }
 
 // LoadConfig load config from file
-func LoadConfig(configFile string, isCreate bool) (cfg *Config, err error) {
-	cfg = NewDefaultConfig()
+func LoadConfig(configFile string, isCreate bool, preCfg *Config) (cfg *Config, err error) {
 
 	if isCreate {
+		cfg = NewDefaultConfig()
+
 		//save default
 		buf := new(bytes.Buffer)
 		if err = toml.NewEncoder(buf).Encode(cfg); err != nil {
@@ -103,22 +108,17 @@ func LoadConfig(configFile string, isCreate bool) (cfg *Config, err error) {
 		return nil, fmt.Errorf("LoadConfig err: %s", err)
 	}
 	if !fileExist && configFile == DefaultConfigFile {
-		return cfg, nil
+		return preCfg, nil
 	}
 
-	_, err = toml.DecodeFile(configFile, cfg)
+	_, err = toml.DecodeFile(configFile, preCfg)
 	if err != nil {
 		return nil, fmt.Errorf("LoadConfig err: %s", err)
 	}
 
-	//check rules
-	if !validLogLevel(cfg.DebugLevel) {
-		return nil, fmt.Errorf("LoadConfig validLogLevel err: %s", cfg.DebugLevel)
-	}
+	preCfg.ConfigFile = configFile
 
-	cfg.ConfigFile = configFile
-
-	return
+	return preCfg, nil
 }
 
 // NewDefaultConfig make config by default value
@@ -152,23 +152,4 @@ func NewDefaultConfig() (cfg *Config) {
 		QProxyPass:     "",
 	}
 	return
-}
-
-// validLogLevel returns whether or not logLevel is a valid debug log level.
-func validLogLevel(logLevel string) bool {
-	switch logLevel {
-	case "trace":
-		fallthrough
-	case "debug":
-		fallthrough
-	case "info":
-		fallthrough
-	case "warn":
-		fallthrough
-	case "error":
-		fallthrough
-	case "critical":
-		return true
-	}
-	return false
 }

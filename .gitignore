@@ -2,6 +2,7 @@ qitmeer-wallet
 build
 
 config/*.toml
+cmds/qitwallet/qitwallet
 
 #golang
 go.sum

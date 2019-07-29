@@ -73,6 +73,20 @@ type Wallet struct {
 	quit    chan struct{}
 	quitMu  sync.Mutex
 }
+
+// NewWallet make wallet
+func NewWallet(cfg *config.Config)(wt *Wallet,err error){
+
+
+	return
+}
+
+// Start wallet routine
+func (wt *Wallet) Start(){
+	log.Trace("wallet start")
+}
+
+
 type (
 	unlockRequest struct {
 		passphrase []byte
