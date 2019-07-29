@@ -13,7 +13,7 @@ type BlockHttpResult struct {
 	StateRoot     string         `json:"stateRoot"`
 	Bits          string        `json:"bits"`
 	Difficulty    float64       `json:"difficulty"`
-	Nonce         uint32        `json:"nonce"`
+	Nonce         uint64        `json:"nonce"`
 	Timestamp     string     `json:"timestamp"`
 	Parents       []string     `json:"parents"`
 	Children       []string     `json:"children"`

@@ -1,8 +1,10 @@
 package walletrpc
 
 import (
+	"encoding/hex"
 	"fmt"
 	"github.com/HalalChain/qitmeer-lib/core/address"
+	"github.com/HalalChain/qitmeer-lib/crypto/ecc/secp256k1"
 	"github.com/HalalChain/qitmeer-lib/params"
 	"github.com/HalalChain/qitmeer-wallet/util"
 	"github.com/HalalChain/qitmeer-wallet/wallet/txrules"
@@ -189,7 +191,7 @@ func dumpPrivKey(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
 
 // importPrivKey handles an importprivkey request by parsing
 // a WIF-encoded private key and adding it to an account.
-func importPrivKey(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
+func importWifPrivKey(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
 	cmd := icmd.(*qitmeerjson.ImportPrivKeyCmd)
 
 	// Ensure that private keys are only imported to the correct account.
@@ -224,6 +226,46 @@ func importPrivKey(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
 	}
 
 	return nil, err
+}
+func importPrivKey(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
+	cmd := icmd.(*qitmeerjson.ImportPrivKeyCmd)
+	// Ensure that private keys are only imported to the correct account.
+	//
+	// Yes, Label is the account name.
+	if cmd.Label != nil && *cmd.Label != waddrmgr.ImportedAddrAccountName {
+		return nil, &qitmeerjson.ErrNotImportedAccount
+	}
+
+	prihash,err:=hex.DecodeString(cmd.PrivKey)
+	if(err!=nil){
+		return nil,err
+	}
+	pri,_:=secp256k1.PrivKeyFromBytes(prihash)
+	wif,err:=util.NewWIF(pri,w.ChainParams(),true)
+	if err != nil {
+		return nil, &qitmeerjson.RPCError{
+			Code:    qitmeerjson.ErrRPCInvalidAddressOrKey,
+			Message: "private key decode failed: " + err.Error(),
+		}
+	}
+	if !wif.IsForNet(w.ChainParams()) {
+		return nil, &qitmeerjson.RPCError{
+			Code:    qitmeerjson.ErrRPCInvalidAddressOrKey,
+			Message: "Key is not intended for " + w.ChainParams().Name,
+		}
+	}
+
+	// Import the private key, handling any errors.
+	_, err = w.ImportPrivateKey(waddrmgr.KeyScopeBIP0044, wif, nil, *cmd.Rescan)
+	switch {
+	case waddrmgr.IsError(err, waddrmgr.ErrDuplicateAddress):
+		// Do not return duplicate key errors to the client.
+		return nil, nil
+	case waddrmgr.IsError(err, waddrmgr.ErrLocked):
+		return nil, &qitmeerjson.ErrWalletUnlockNeeded
+	}
+
+	return "ok", err
 }
 //sendToAddress handles a sendtoaddress RPC request by creating a new
 //transaction spending unspent transaction outputs for a wallet to another
@@ -261,6 +303,16 @@ func sendToAddress(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
 	return sendPairs(w, pairs, waddrmgr.DefaultAccountNum, 1, txrules.DefaultRelayFeePerKb)
 }
 
+func updateblock(icmd interface{},w *wallet.Wallet) error {
+	cmd := icmd.(*qitmeerjson.UpdateBlockToCmd)
+	err:=w.Updateblock(cmd.Toheight)
+	if(err!=nil){
+		fmt.Println("Updateblock err :",err.Error())
+		return err
+	}
+	return nil
+}
+
 //sendPairs creates and sends payment transactions.
 //It returns the transaction hash in string format upon success
 //All errors are returned in btcjson.RPCError format
@@ -289,7 +341,6 @@ func sendPairs(w *wallet.Wallet, amounts map[string]types.Amount,
 			Message: err.Error(),
 		}
 	}
-
 	txHashStr := tx.TxHash().String()
 	return txHashStr, nil
 }
