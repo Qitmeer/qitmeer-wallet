@@ -5,6 +5,8 @@ import (
 	"github.com/HalalChain/qitmeer-lib/core/address"
 	"github.com/HalalChain/qitmeer-lib/params"
 	"github.com/HalalChain/qitmeer-wallet/util"
+	"github.com/HalalChain/qitmeer-wallet/wallet/txrules"
+
 	//"github.com/HalalChain/qitmeer-wallet/wallet/txrules"
 
 	//"bytes"
@@ -81,6 +83,7 @@ func listAccounts(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
 	if err != nil {
 		return nil, err
 	}
+	fmt.Println("results:",results)
 	for _, result := range results {
 		accountBalances[result.AccountName] = result.AccountBalance.ToCoin()
 	}
@@ -132,6 +135,16 @@ func getAddressesByAccount(icmd interface{}, w *wallet.Wallet) (interface{}, err
 	}
 	return addrStrs, nil
 }
+
+func getAccountAndAddress( w *wallet.Wallet,
+	minconf int32) (interface{}, error)   {
+	a,err:=w.GetAccountAndAddress(waddrmgr.KeyScopeBIP0044,minconf)
+	if err != nil {
+		return nil, err
+	}
+	return a,nil
+}
+
 // getAccount handles a getaccount request by returning the account name
 // associated with a single address.
 func getAccountByAddress(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
@@ -212,74 +225,74 @@ func importPrivKey(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
 
 	return nil, err
 }
-// sendToAddress handles a sendtoaddress RPC request by creating a new
-// transaction spending unspent transaction outputs for a wallet to another
-// payment address.  Leftover inputs not sent to the payment address or a fee
-// for the miner are sent back to a new address in the wallet.  Upon success,
-// the TxID for the created transaction is returned.
-//func sendToAddress(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
-//	cmd := icmd.(*qitmeerjson.SendToAddressCmd)
-//
-//	// Transaction comments are not yet supported.  Error instead of
-//	// pretending to save them.
-//	if !isNilOrEmpty(cmd.Comment) || !isNilOrEmpty(cmd.CommentTo) {
-//		return nil, &qitmeerjson.RPCError{
-//			Code:    qitmeerjson.ErrRPCUnimplemented,
-//			Message: "Transaction comments are not yet supported",
-//		}
-//	}
-//
-//	amt, err := types.NewAmount(cmd.Amount)
-//	if err != nil {
-//		return nil, err
-//	}
-//
-//	// Check that signed integer parameters are positive.
-//	if amt < 0 {
-//		return nil, qitmeerjson.ErrNeedPositiveAmount
-//	}
-//
-//	// Mock up map of address and amount pairs.
-//	pairs := map[string]types.Amount{
-//		cmd.Address: amt,
-//	}
-//
-//	// sendtoaddress always spends from the default account, this matches bitcoind
-//	return sendPairs(w, pairs, waddrmgr.DefaultAccountNum, 1, txrules.DefaultRelayFeePerKb)
-//}
+//sendToAddress handles a sendtoaddress RPC request by creating a new
+//transaction spending unspent transaction outputs for a wallet to another
+//payment address.  Leftover inputs not sent to the payment address or a fee
+//for the miner are sent back to a new address in the wallet.  Upon success,
+//the TxID for the created transaction is returned.
+func sendToAddress(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
+	cmd := icmd.(*qitmeerjson.SendToAddressCmd)
 
-// sendPairs creates and sends payment transactions.
-// It returns the transaction hash in string format upon success
-// All errors are returned in btcjson.RPCError format
-//func sendPairs(w *wallet.Wallet, amounts map[string]types.Amount,
-//	account uint32, minconf int32, feeSatPerKb types.Amount) (string, error) {
-//
-//	outputs, err := makeOutputs(amounts, w.ChainParams())
-//	if err != nil {
-//		return "", err
-//	}
-//	tx, err := w.SendOutputs(outputs, account, minconf, feeSatPerKb)
-//	if err != nil {
-//		if err == txrules.ErrAmountNegative {
-//			return "", qitmeerjson.ErrNeedPositiveAmount
-//		}
-//		if waddrmgr.IsError(err, waddrmgr.ErrLocked) {
-//			return "", &qitmeerjson.ErrWalletUnlockNeeded
-//		}
-//		switch err.(type) {
-//		case qitmeerjson.RPCError:
-//			return "", err
-//		}
-//
-//		return "", &qitmeerjson.RPCError{
-//			Code:    qitmeerjson.ErrRPCInternal.Code,
-//			Message: err.Error(),
-//		}
-//	}
-//
-//	txHashStr := tx.TxHash().String()
-//	return txHashStr, nil
-//}
+	// Transaction comments are not yet supported.  Error instead of
+	// pretending to save them.
+	if !isNilOrEmpty(cmd.Comment) || !isNilOrEmpty(cmd.CommentTo) {
+		return nil, &qitmeerjson.RPCError{
+			Code:    qitmeerjson.ErrRPCUnimplemented,
+			Message: "Transaction comments are not yet supported",
+		}
+	}
+
+	amt, err := types.NewAmount(cmd.Amount)
+	if err != nil {
+		return nil, err
+	}
+
+	// Check that signed integer parameters are positive.
+	if amt < 0 {
+		return nil, qitmeerjson.ErrNeedPositiveAmount
+	}
+
+	// Mock up map of address and amount pairs.
+	pairs := map[string]types.Amount{
+		cmd.Address: amt,
+	}
+
+	// sendtoaddress always spends from the default account, this matches bitcoind
+	return sendPairs(w, pairs, waddrmgr.DefaultAccountNum, 1, txrules.DefaultRelayFeePerKb)
+}
+
+//sendPairs creates and sends payment transactions.
+//It returns the transaction hash in string format upon success
+//All errors are returned in btcjson.RPCError format
+func sendPairs(w *wallet.Wallet, amounts map[string]types.Amount,
+	account uint32, minconf int32, feeSatPerKb types.Amount) (string, error) {
+
+	outputs, err := makeOutputs(amounts, w.ChainParams())
+	if err != nil {
+		return "", err
+	}
+	tx, err := w.SendOutputs(outputs, account, minconf, feeSatPerKb)
+	if err != nil {
+		if err == txrules.ErrAmountNegative {
+			return "", qitmeerjson.ErrNeedPositiveAmount
+		}
+		if waddrmgr.IsError(err, waddrmgr.ErrLocked) {
+			return "", &qitmeerjson.ErrWalletUnlockNeeded
+		}
+		switch err.(type) {
+		case qitmeerjson.RPCError:
+			return "", err
+		}
+
+		return "", &qitmeerjson.RPCError{
+			Code:    qitmeerjson.ErrRPCInternal.Code,
+			Message: err.Error(),
+		}
+	}
+
+	txHashStr := tx.TxHash().String()
+	return txHashStr, nil
+}
 
 // makeOutputs creates a slice of transaction outputs from a pair of address
 // strings to amounts.  This is used to create the outputs to include in newly
