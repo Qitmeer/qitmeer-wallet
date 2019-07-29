@@ -13,10 +13,12 @@ import (
 	"runtime"
 	"strings"
 	"time"
-	"github.com/HalalChain/qitmeer-wallet/util"
-	"github.com/HalalChain/qitmeer-wallet/wallet"
-	netparams "github.com/HalalChain/qitmeer-lib/params"
+
 	"github.com/HalalChain/qitmeer-lib/log"
+	netparams "github.com/HalalChain/qitmeer-lib/params"
+	"github.com/HalalChain/qitmeer-wallet/util"
+	"github.com/HalalChain/qitmeer-wallet/version"
+	"github.com/HalalChain/qitmeer-wallet/wallet"
 	flags "github.com/jessevdk/go-flags"
 )
 
@@ -44,29 +46,29 @@ var (
 type config struct {
 	// General application behavior
 	ConfigFile    *util.ExplicitString `short:"C" long:"configfile" description:"Path to configuration file"`
-	ShowVersion   bool                    `short:"V" long:"version" description:"Display version information and exit"`
-	Create        bool                    `long:"create" description:"Create the wallet if it does not exist"`
-	CreateTemp    bool                    `long:"createtemp" description:"Create a temporary simulation wallet (pass=password) in the data directory indicated; must call with --datadir"`
+	ShowVersion   bool                 `short:"V" long:"version" description:"Display version information and exit"`
+	Create        bool                 `long:"create" description:"Create the wallet if it does not exist"`
+	CreateTemp    bool                 `long:"createtemp" description:"Create a temporary simulation wallet (pass=password) in the data directory indicated; must call with --datadir"`
 	AppDataDir    *util.ExplicitString `short:"A" long:"appdata" description:"Application data directory for wallet config, databases and logs"`
-	TestNet      bool                    `long:"testnet" description:"Use the test Bitcoin network (version 3) (default mainnet)"`
-	PrivNet        bool                    `long:"simnet" description:"Use the simulation test network (default mainnet)"`
-	NoInitialLoad bool                    `long:"noinitialload" description:"Defer wallet creation/opening on startup and enable loading wallets over RPC"`
-	DebugLevel    string                  `short:"d" long:"debuglevel" description:"Logging level {trace, debug, info, warn, error, critical}"`
-	LogDir        string                  `long:"logdir" description:"Directory to log output."`
-	Profile       string                  `long:"profile" description:"Enable HTTP profiling on given port -- NOTE port must be between 1024 and 65536"`
+	TestNet       bool                 `long:"testnet" description:"Use the test Bitcoin network (version 3) (default mainnet)"`
+	PrivNet       bool                 `long:"simnet" description:"Use the simulation test network (default mainnet)"`
+	NoInitialLoad bool                 `long:"noinitialload" description:"Defer wallet creation/opening on startup and enable loading wallets over RPC"`
+	DebugLevel    string               `short:"d" long:"debuglevel" description:"Logging level {trace, debug, info, warn, error, critical}"`
+	LogDir        string               `long:"logdir" description:"Directory to log output."`
+	Profile       string               `long:"profile" description:"Enable HTTP profiling on given port -- NOTE port must be between 1024 and 65536"`
 
 	// Wallet options
 	WalletPass string `long:"walletpass" default-mask:"-" description:"The public wallet password -- Only required if the wallet was created with one"`
 
 	// RPC client options
-	RPCConnect       string                  `short:"c" long:"rpcconnect" description:"Hostname/IP and port of btcd RPC server to connect to (default localhost:8334, testnet: localhost:18334, simnet: localhost:18556)"`
+	RPCConnect       string               `short:"c" long:"rpcconnect" description:"Hostname/IP and port of btcd RPC server to connect to (default localhost:8334, testnet: localhost:18334, simnet: localhost:18556)"`
 	CAFile           *util.ExplicitString `long:"cafile" description:"File containing root certificates to authenticate a TLS connections with btcd"`
-	DisableClientTLS bool                    `long:"noclienttls" description:"Disable TLS for the RPC client -- NOTE: This is only allowed if the RPC client is connecting to localhost"`
-	QitmeerUsername     string                  `long:"btcdusername" description:"Username for btcd authentication"`
-	QitmeerPassword     string                  `long:"btcdpassword" default-mask:"-" description:"Password for btcd authentication"`
-	Proxy            string                  `long:"proxy" description:"Connect via SOCKS5 proxy (eg. 127.0.0.1:9050)"`
-	ProxyUser        string                  `long:"proxyuser" description:"Username for proxy server"`
-	ProxyPass        string                  `long:"proxypass" default-mask:"-" description:"Password for proxy server"`
+	DisableClientTLS bool                 `long:"noclienttls" description:"Disable TLS for the RPC client -- NOTE: This is only allowed if the RPC client is connecting to localhost"`
+	QitmeerUsername  string               `long:"btcdusername" description:"Username for btcd authentication"`
+	QitmeerPassword  string               `long:"btcdpassword" default-mask:"-" description:"Password for btcd authentication"`
+	Proxy            string               `long:"proxy" description:"Connect via SOCKS5 proxy (eg. 127.0.0.1:9050)"`
+	ProxyUser        string               `long:"proxyuser" description:"Username for proxy server"`
+	ProxyPass        string               `long:"proxypass" default-mask:"-" description:"Password for proxy server"`
 
 	// SPV client options
 	UseSPV       bool          `long:"usespv" description:"Enables the experimental use of SPV rather than RPC for chain synchronization"`
@@ -86,13 +88,13 @@ type config struct {
 	// aren't considered legacy.
 	RPCCert                *util.ExplicitString `long:"rpccert" description:"File containing the certificate file"`
 	RPCKey                 *util.ExplicitString `long:"rpckey" description:"File containing the certificate key"`
-	OneTimeTLSKey          bool                    `long:"onetimetlskey" description:"Generate a new TLS certpair at startup, but only write the certificate to disk"`
-	DisableServerTLS       bool                    `long:"noservertls" description:"Disable TLS for the RPC server -- NOTE: This is only allowed if the RPC server is bound to localhost"`
-	LegacyRPCListeners     []string                `long:"rpclisten" description:"Listen for legacy RPC connections on this interface/port (default port: 8332, testnet: 18332, simnet: 18554)"`
-	LegacyRPCMaxClients    int64                   `long:"rpcmaxclients" description:"Max number of legacy RPC clients for standard connections"`
-	LegacyRPCMaxWebsockets int64                   `long:"rpcmaxwebsockets" description:"Max number of legacy RPC websocket connections"`
-	Username               string                  `short:"u" long:"username" description:"Username for legacy RPC and btcd authentication (if btcdusername is unset)"`
-	Password               string                  `short:"P" long:"password" default-mask:"-" description:"Password for legacy RPC and btcd authentication (if btcdpassword is unset)"`
+	OneTimeTLSKey          bool                 `long:"onetimetlskey" description:"Generate a new TLS certpair at startup, but only write the certificate to disk"`
+	DisableServerTLS       bool                 `long:"noservertls" description:"Disable TLS for the RPC server -- NOTE: This is only allowed if the RPC server is bound to localhost"`
+	LegacyRPCListeners     []string             `long:"rpclisten" description:"Listen for legacy RPC connections on this interface/port (default port: 8332, testnet: 18332, simnet: 18554)"`
+	LegacyRPCMaxClients    int64                `long:"rpcmaxclients" description:"Max number of legacy RPC clients for standard connections"`
+	LegacyRPCMaxWebsockets int64                `long:"rpcmaxwebsockets" description:"Max number of legacy RPC websocket connections"`
+	Username               string               `short:"u" long:"username" description:"Username for legacy RPC and btcd authentication (if btcdusername is unset)"`
+	Password               string               `short:"P" long:"password" default-mask:"-" description:"Password for legacy RPC and btcd authentication (if btcdpassword is unset)"`
 
 	// EXPERIMENTAL RPC server options
 	//
@@ -185,7 +187,6 @@ func parseAndSetDebugLevels(debugLevel string) error {
 			return fmt.Errorf(str, debugLevel)
 		}
 
-
 		return nil
 	}
 
@@ -201,7 +202,6 @@ func parseAndSetDebugLevels(debugLevel string) error {
 		// Extract the specified subsystem and log level.
 		fields := strings.Split(logLevelPair, "=")
 		_, logLevel := fields[0], fields[1]
-
 
 		// Validate log level.
 		if !validLogLevel(logLevel) {
@@ -263,7 +263,7 @@ func loadConfig() (*config, []string, error) {
 	appName = strings.TrimSuffix(appName, filepath.Ext(appName))
 	usageMessage := fmt.Sprintf("Use %s -h to show usage", appName)
 	if preCfg.ShowVersion {
-		fmt.Println(appName, "version", version())
+		fmt.Println(appName, "version", version.Version())
 		os.Exit(0)
 	}
 
@@ -395,9 +395,9 @@ func loadConfig() (*config, []string, error) {
 		return nil, nil, err
 	}
 
-	fmt.Println("----------------------------:",cfg.ConfigFile)
-	fmt.Println("TESTNET--------------------------:",cfg.TestNet)
-	fmt.Println("PrivNet--------------------------:",cfg.PrivNet)
+	fmt.Println("----------------------------:", cfg.ConfigFile)
+	fmt.Println("TESTNET--------------------------:", cfg.TestNet)
+	fmt.Println("PrivNet--------------------------:", cfg.PrivNet)
 	if cfg.CreateTemp {
 		tempWalletExists := false
 

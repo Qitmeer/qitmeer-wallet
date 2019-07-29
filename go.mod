@@ -12,6 +12,7 @@ require (
 	github.com/julienschmidt/httprouter v1.2.0
 	github.com/rakyll/statik v0.1.6
 	github.com/sirupsen/logrus v1.4.2
+	github.com/spf13/cobra v0.0.5
 	golang.org/x/crypto v0.0.0-20190701094942-4def268fd1a4
 	golang.org/x/net v0.0.0-20190620200207-3b0461eec859
 )
