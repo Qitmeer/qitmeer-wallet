@@ -50,11 +50,11 @@ type Config struct {
 	DebugLevel string
 	LogDir     string
 
-	Network string // mainnet testnet simnet
+	Network string // mainnet testnet privnet
 
 	//WalletRPC
 	UI            bool     // local web server UI
-	Listeners     []string // ["127.0.0.1:18131"]
+	Listeners     []string // ["127.0.0.1:38130"]
 	RPCUser       string
 	RPCPass       string
 	RPCCert       string
@@ -81,6 +81,17 @@ type Config struct {
 	// //qitmeerd RPC config
 	// QitmeerdSelect string // QitmeerdList[QitmeerdSelect]
 	// QitmeerdList   map[string]*client.Config
+}
+
+// Check config rule
+func (cfg *Config) Check() error {
+
+	activeNetParams := utils.GetNetParams(cfg.Network)
+	if activeNetParams == nil {
+		return fmt.Errorf("network not found: %s", cfg.Network)
+	}
+
+	return nil
 }
 
 // LoadConfig load config from file
@@ -131,7 +142,7 @@ func NewDefaultConfig() (cfg *Config) {
 
 		Network: "mainnet",
 
-		Listeners:     []string{"127.0.0.1:18131"},
+		Listeners:     []string{"127.0.0.1:38130"},
 		RPCUser:       "",
 		RPCPass:       "",
 		RPCCert:       defaultRPCCertFile,
@@ -139,6 +150,8 @@ func NewDefaultConfig() (cfg *Config) {
 		RPCMaxClients: defaultRPCMaxClients,
 		DisableRPC:    false,
 		DisableTLS:    false,
+
+		APIs: []string{"account", "wallet"},
 
 		isLocal:        true,
 		QServer:        "127.0.0.1",

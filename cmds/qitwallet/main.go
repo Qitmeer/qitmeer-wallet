@@ -8,7 +8,6 @@ import (
 
 	"github.com/HalalChain/qitmeer-wallet/config"
 	"github.com/HalalChain/qitmeer-wallet/version"
-	"github.com/HalalChain/qitmeer-wallet/wallet"
 	"github.com/HalalChain/qitmeer-wallet/wserver"
 )
 
@@ -39,6 +38,10 @@ func newCmd() (cmd *cobra.Command) {
 			}
 			log.SetLevel(logLevel)
 
+			err = cfg.Check()
+			if err != nil {
+				return err
+			}
 			return nil
 		},
 		Run: func(cmd *cobra.Command, args []string) {
@@ -73,7 +76,13 @@ func newCmd() (cmd *cobra.Command) {
 	gFlags.StringVarP(&cfg.ConfigFile, "config", "C", cfg.ConfigFile, "Path to configuration file")
 	gFlags.StringVarP(&cfg.AppDataDir, "appdata", "A", cfg.AppDataDir, "Application data directory for wallet config, databases and logs")
 	gFlags.StringVarP(&cfg.DebugLevel, "debuglevel", "d", cfg.DebugLevel, "Logging level {trace, debug, info, warn, error, critical}")
+
+	gFlags.StringVarP(&cfg.Network, "network", "n", cfg.Network, "network: mainet testnet privinet")
+
 	gFlags.BoolVar(&cfg.UI, "ui", true, "Start Wallet with RPC and webUI interface")
+	gFlags.StringArrayVar(&cfg.Listeners, "listens", cfg.Listeners, "rpc listens")
+	gFlags.StringVar(&cfg.RPCUser, "user", cfg.RPCUser, "rpc user")
+	gFlags.StringVar(&cfg.RPCPass, "pass", cfg.RPCPass, "rpc pass")
 
 	return
 }
@@ -82,14 +91,7 @@ func newCmd() (cmd *cobra.Command) {
 func QitmeerMain(cfg *config.Config) {
 	log.Trace("Qitmeer Main")
 
-	wt, err := wallet.NewWallet(cfg)
-	if err != nil {
-		log.Errorf("newWallet err: %s", err)
-		return
-	}
-	wt.Start()
-
-	wsvr, err := wserver.NewWalletServer(cfg, wt)
+	wsvr, err := wserver.NewWalletServer(cfg)
 	if err != nil {
 		log.Errorf("NewWalletServer err: %s", err)
 		return
