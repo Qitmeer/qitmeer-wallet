@@ -12,7 +12,7 @@ if you have golang environment, you can build it by yourself
 
 git clone https://github.com/HalalChain/qitmeer-wallet.git
 
-cd qitmeer-wallet
+cd qitmeer-wallet/cmds/qitwallet
 
 go build
 
@@ -28,7 +28,7 @@ There are two ways to use it：RPC interface and Web interface.
 ```
 # start qitmeer-wallet
 
-./qitmeer-wallet
+./qitwallet -n testnet --listens=127.0.0.1:38130 --rpcUser admin --rpcPass 123
 
 # default RPC port is 38130
 
