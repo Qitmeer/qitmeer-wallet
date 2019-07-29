@@ -11,8 +11,12 @@ import (
 	"fmt"
 	"os"
 	"strings"
+
+	"golang.org/x/crypto/ssh/terminal"
+	//"github.com/HalalChain/qitmeer-wallet/util/ssh/terminal"
+
 	"github.com/HalalChain/qitmeer-wallet/internal/legacy/keystore"
-	"github.com/HalalChain/qitmeer-wallet/util/ssh/terminal"
+
 	hdkeychain "github.com/HalalChain/qitmeer-lib/crypto/seed"
 )
 
@@ -29,7 +33,7 @@ func ProvideSeed() ([]byte, error) {
 		seedStr = strings.TrimSpace(strings.ToLower(seedStr))
 
 		seed, err := hex.DecodeString(seedStr)
-		if err != nil || len(seed) <  hdkeychain.MinSeedBytes ||
+		if err != nil || len(seed) < hdkeychain.MinSeedBytes ||
 			len(seed) > hdkeychain.MaxSeedBytes {
 
 			fmt.Printf("Invalid seed specified.  Must be a "+
