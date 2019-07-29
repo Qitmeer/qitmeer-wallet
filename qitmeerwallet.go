@@ -1,12 +1,14 @@
 package main
 
 import (
-	"github.com/HalalChain/qitmeer-lib/log"
 	"net"
 	"net/http"
 	_ "net/http/pprof"
 	"os"
 	"runtime"
+
+	"github.com/HalalChain/qitmeer-lib/log"
+	"github.com/HalalChain/qitmeer-wallet/version"
 )
 
 var (
@@ -38,7 +40,7 @@ func walletMain() error {
 	cfg = tcfg
 
 	// Show version at startup.
-	log.Info("Version %s", version())
+	log.Info("Version %s", version.Version())
 
 	if cfg.Profile != "" {
 		go func() {

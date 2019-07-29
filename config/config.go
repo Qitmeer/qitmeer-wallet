@@ -1,96 +1,155 @@
+// Copyright (c) 2013-2017 The btcsuite developers
+// Use of this source code is governed by an ISC
+// license that can be found in the LICENSE file.
+
 package config
 
 import (
 	"bytes"
 	"fmt"
 	"io/ioutil"
-	"os"
 	"path/filepath"
 
 	"github.com/BurntSushi/toml"
+
+	"github.com/HalalChain/qitmeer-lib/params"
+
 	"github.com/HalalChain/qitmeer-wallet/utils"
 )
 
-// Config Qitmeer Wallet Config
+const (
+	defaultCAFilename       = "qit.cert"
+	defaultConfigFilename   = "wallet.toml"
+	defaultLogLevel         = "debug"
+	defaultLogDirname       = "logs"
+	defaultLogFilename      = "wallet.log"
+	defaultRPCMaxClients    = 10
+	defaultRPCMaxWebsockets = 25
+
+	walletDbName = "wallet.db"
+)
+
+var (
+	defaultAppDataDir  = utils.AppDataDir("qitwallet", false)
+	DefaultConfigFile  = filepath.Join(defaultAppDataDir, defaultConfigFilename)
+	defaultRPCKeyFile  = filepath.Join(defaultAppDataDir, "rpc.key")
+	defaultRPCCertFile = filepath.Join(defaultAppDataDir, "rpc.cert")
+	defaultLogDir      = filepath.Join(defaultAppDataDir, defaultLogDirname)
+)
+
+var (
+	InsecurePubPassphrase = "public"
+
+	activeParams *params.Params
+)
+
+// Config wallet config
 type Config struct {
-	Network string // blockchain network: main/test/sim
+	ConfigFile string
+	AppDataDir string
+	DebugLevel string
+	LogDir     string
 
-	DataDir   string
-	KeysDir   string // default {datadir}/{network}/keys
-	WalletDir string //default {datadir}/{network}/wallet
+	Network string // mainnet testnet simnet
 
-	Listen     string // 127.0.0.1:18130
-	RPCUser    string
-	RPCPass    string
-	RPCCert    string
-	RPCKey     string
-	DisableTLS bool
+	//WalletRPC
+	UI            bool     // local web server UI
+	Listeners     []string // ["127.0.0.1:18131"]
+	RPCUser       string
+	RPCPass       string
+	RPCCert       string
+	RPCKey        string
+	RPCMaxClients int64
+	DisableRPC    bool
+	DisableTLS    bool
 
-	Apis []string
+	//walletAPI
+	APIs []string // rpc support api list
+
+	//Qitmeerd
+	isLocal        bool
+	QServer        string
+	QUser          string
+	QPass          string
+	QCert          string
+	QNoTLS         bool
+	QTLSSkipVerify bool
+	QProxy         string
+	QProxyUser     string
+	QProxyPass     string
+
+	// //qitmeerd RPC config
+	// QitmeerdSelect string // QitmeerdList[QitmeerdSelect]
+	// QitmeerdList   map[string]*client.Config
 }
 
-// Init check config
-func (c *Config) Init() error {
-	//check dir and make it
+// LoadConfig load config from file
+func LoadConfig(configFile string, isCreate bool, preCfg *Config) (cfg *Config, err error) {
 
-	return nil
-}
+	if isCreate {
+		cfg = NewDefaultConfig()
 
-// NewDefaultConfig make a config by default set
-func NewDefaultConfig() (cfg *Config) {
-	//make config file
-	network := "test"
-	dataDir := utils.GetUserDataDir()
+		//save default
+		buf := new(bytes.Buffer)
+		if err = toml.NewEncoder(buf).Encode(cfg); err != nil {
 
-	cfg = &Config{
-		Network:   "test",
-		DataDir:   dataDir,
-		KeysDir:   filepath.Join(dataDir, network, "keys"),
-		WalletDir: filepath.Join(dataDir, network, "wallet"),
-
-		Listen:     "127.0.0.1:38130",
-		RPCUser:    "",
-		RPCPass:    "",
-		RPCCert:    "",
-		RPCKey:     "",
-		DisableTLS: true,
-
-		Apis: []string{"account", "tx"},
-	}
-
-	return
-}
-
-// Load load config from config file or make a new config file
-func Load(configFile string) (cfg *Config, err error) {
-	_, err = os.Stat(configFile)
-	if err != nil {
-		if os.IsNotExist(err) {
-			cfg = NewDefaultConfig()
-
-			//save
-			buf := new(bytes.Buffer)
-			if err := toml.NewEncoder(buf).Encode(cfg); err != nil {
-				return nil, fmt.Errorf("config load Encode err: %s", err)
-			}
-
-			err = utils.MakeDirAll(filepath.Dir(configFile))
-			if err != nil {
-				return nil, fmt.Errorf("Load configFile: mkDir err: %s", err)
-			}
-
-			err = ioutil.WriteFile(configFile, buf.Bytes(), 0666)
-
-			return cfg, err
+			return nil, fmt.Errorf("LoadConfig err: %s", err)
 		}
-		return nil, fmt.Errorf("Load configFile: stat err: %s", err)
+		err = ioutil.WriteFile(configFile, buf.Bytes(), 0666)
+		if err != nil {
+			return nil, fmt.Errorf("LoadConfig err: %s", err)
+		}
+		return
 	}
 
-	cfg = &Config{}
-	_, err = toml.DecodeFile(configFile, cfg)
+	var fileExist bool
+	fileExist, err = utils.FileExists(configFile)
 	if err != nil {
-		return nil, fmt.Errorf("Load configFile: DecodeFile err: %s", err)
+		return nil, fmt.Errorf("LoadConfig err: %s", err)
+	}
+	if !fileExist && configFile == DefaultConfigFile {
+		return preCfg, nil
 	}
 
-	return cfg, nil
+	_, err = toml.DecodeFile(configFile, preCfg)
+	if err != nil {
+		return nil, fmt.Errorf("LoadConfig err: %s", err)
+	}
+
+	preCfg.ConfigFile = configFile
+
+	return preCfg, nil
+}
+
+// NewDefaultConfig make config by default value
+func NewDefaultConfig() (cfg *Config) {
+	cfg = &Config{
+		ConfigFile: DefaultConfigFile,
+		AppDataDir: defaultAppDataDir,
+		DebugLevel: defaultLogLevel,
+		LogDir:     defaultLogDir,
+
+		Network: "mainnet",
+
+		Listeners:     []string{"127.0.0.1:18131"},
+		RPCUser:       "",
+		RPCPass:       "",
+		RPCCert:       defaultRPCCertFile,
+		RPCKey:        defaultRPCKeyFile,
+		RPCMaxClients: defaultRPCMaxClients,
+		DisableRPC:    false,
+		DisableTLS:    false,
+
+		isLocal:        true,
+		QServer:        "127.0.0.1",
+		QUser:          "18130",
+		QPass:          "",
+		QCert:          "",
+		QNoTLS:         false,
+		QTLSSkipVerify: true,
+		QProxy:         "",
+		QProxyUser:     "",
+		QProxyPass:     "",
+	}
+	return
 }
