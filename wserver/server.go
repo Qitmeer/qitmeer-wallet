@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/julienschmidt/httprouter"
 	log "github.com/sirupsen/logrus"
@@ -109,8 +110,27 @@ func (wsvr *WalletServer) run() {
 			log.Println("server run err: ", err)
 			return
 		}
+		myStaticF := assets.NewMyStatic(staticF)
 
-		router.ServeFiles("/app/*filepath", staticF)
+		myStaticF.AddFilter("/config.js", func() []byte {
+
+			//update config.js
+			tmpl := `
+			//config
+			window.QitmeerConfig = {
+				RPCAddr: "{{api_url}}",
+				RPCUser: "{{rpc_user}}",
+				RPCPass: "{{rpc_pass}}"
+			};
+			`
+			tmpl = strings.Replace(tmpl, "{{api_url}}", "http://"+wsvr.cfg.Listeners[0]+"/api", -1)
+			tmpl = strings.Replace(tmpl, "{{rpc_user}}", wsvr.cfg.RPCUser, -1)
+			tmpl = strings.Replace(tmpl, "{{rpc_pass}}", wsvr.cfg.RPCPass, -1)
+
+			return []byte(tmpl)
+		})
+
+		router.ServeFiles("/app/*filepath", myStaticF)
 		router.GET("/", func(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 			http.Redirect(w, r, "app/index.html", http.StatusMovedPermanently)
 		})

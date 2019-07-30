@@ -11,7 +11,7 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/btcsuite/go-socks/socks"
+	"github.com/samuel/go-socks/socks"
 )
 
 type htpc struct {
@@ -22,29 +22,29 @@ type htpc struct {
 	NoTLS         bool
 	TLSSkipVerify bool
 
-	Proxy     string
-	ProxyUser string
-	ProxyPass string
+	Proxy      string
+	ProxyUser  string
+	ProxyPass  string
 	httpclient *http.Client
 }
 
-func NewHtpc(RPCUser string,RPCPassword   string,RPCServer     string,RPCCert       string,NoTLS bool,TLSSkipVerify bool,Proxy     string,ProxyUser string,ProxyPass string)(*htpc){
-	h:=&htpc{
-		RPCUser:RPCUser,
-		RPCPassword:RPCPassword,
-		RPCServer:RPCServer,
-		RPCCert:RPCCert,
-		NoTLS:NoTLS,
-		TLSSkipVerify:TLSSkipVerify,
-		Proxy:Proxy,
-		ProxyUser:ProxyUser,
-		ProxyPass:ProxyPass,
+func NewHtpc(RPCUser string, RPCPassword string, RPCServer string, RPCCert string, NoTLS bool, TLSSkipVerify bool, Proxy string, ProxyUser string, ProxyPass string) *htpc {
+	h := &htpc{
+		RPCUser:       RPCUser,
+		RPCPassword:   RPCPassword,
+		RPCServer:     RPCServer,
+		RPCCert:       RPCCert,
+		NoTLS:         NoTLS,
+		TLSSkipVerify: TLSSkipVerify,
+		Proxy:         Proxy,
+		ProxyUser:     ProxyUser,
+		ProxyPass:     ProxyPass,
 	}
-	c,err:=newHTTPClient(h)
-	if(err!=nil){
+	c, err := newHTTPClient(h)
+	if err != nil {
 		return nil
 	}
-	h.httpclient=c
+	h.httpclient = c
 	return h
 }
 
@@ -100,21 +100,21 @@ func newHTTPClient(cfg *htpc) (*http.Client, error) {
 	return &client, nil
 }
 
-func (cfg *htpc)  getblockCount() (string,error){
+func (cfg *htpc) getblockCount() (string, error) {
 	params := []interface{}{}
 	return cfg.getResString("getBlockCount", params)
 }
-func (cfg *htpc)  getBlockhash(i int64) (string,error){
+func (cfg *htpc) getBlockhash(i int64) (string, error) {
 	params := []interface{}{i}
-	str,err:= cfg.getResString("getBlockhash", params)
-	return strings.Replace(str, "\"", "", -1 ),err
+	str, err := cfg.getResString("getBlockhash", params)
+	return strings.Replace(str, "\"", "", -1), err
 }
-func (cfg *htpc)  getBlock(hash string ,isDetail bool) (string,error){
-	params := []interface{}{hash,isDetail }
+func (cfg *htpc) getBlock(hash string, isDetail bool) (string, error) {
+	params := []interface{}{hash, isDetail}
 	return cfg.getResString("getBlock", params)
 }
-func (cfg *htpc)  SendRawTransaction(tx string ,allowHighFees bool) (string,error){
-	params := []interface{}{tx,allowHighFees }
+func (cfg *htpc) SendRawTransaction(tx string, allowHighFees bool) (string, error) {
+	params := []interface{}{tx, allowHighFees}
 	return cfg.getResString("sendRawTransaction", params)
 }
 
@@ -284,5 +284,5 @@ func (cfg *htpc) getResString(method string, args []interface{}) (rs string, err
 
 	rs = string(resResult)
 	//fmt.Println("rs:",rs)
-	return rs,err
+	return rs, err
 }
