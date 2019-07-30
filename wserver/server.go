@@ -12,7 +12,6 @@ import (
 	"github.com/HalalChain/qitmeer-wallet/assets"
 	"github.com/HalalChain/qitmeer-wallet/config"
 	"github.com/HalalChain/qitmeer-wallet/rpc/server"
-	"github.com/HalalChain/qitmeer-wallet/services"
 	"github.com/HalalChain/qitmeer-wallet/utils"
 	"github.com/HalalChain/qitmeer-wallet/wallet"
 )
@@ -21,7 +20,8 @@ import (
 type WalletServer struct {
 	cfg *config.Config
 
-	wt *wallet.Wallet
+	WtLoader *wallet.Loader
+	Wt       *wallet.Wallet
 
 	RPCSvr *server.RpcServer
 
@@ -30,9 +30,24 @@ type WalletServer struct {
 
 //NewWalletServer make a wallet api server
 func NewWalletServer(cfg *config.Config) (wSvr *WalletServer, err error) {
+
+	activeNetParams := utils.GetNetParams(cfg.Network)
+	dbDir := filepath.Join(cfg.AppDataDir, cfg.Network)
+	wtLoader := wallet.NewLoader(activeNetParams, dbDir, 250)
+	wtExist, err := wtLoader.WalletExists()
+	if err != nil {
+		return nil, fmt.Errorf("load wallet err: %s", err)
+	}
+	if !wtExist && !cfg.UI {
+		return nil, fmt.Errorf("not wallet exist,please run crate command")
+	}
+
 	wSvr = &WalletServer{
-		cfg:    cfg,
-		wt:     &wallet.Wallet{},
+		cfg: cfg,
+
+		WtLoader: wtLoader,
+		// wt:     &wallet.Wallet{},
+
 		exitCh: make(chan bool),
 	}
 
@@ -51,27 +66,17 @@ func NewWalletServer(cfg *config.Config) (wSvr *WalletServer, err error) {
 		return nil, fmt.Errorf("NewWallet: %s", err)
 	}
 
-	for _, api := range cfg.APIs {
-		switch api {
-		case "account":
-			wSvr.RPCSvr.RegisterService("account", &services.AccountAPI{})
-		case "tx":
-			//wSvr.RPCSvr.RegisterService("tx", &services.TxAPI{})
-		}
-	}
+	// for _, api := range cfg.APIs {
+	// 	switch api {
+	// 	case "account":
+	// 		wSvr.RPCSvr.RegisterService("account", &services.AccountAPI{})
+	// 	case "tx":
+	// 		//wSvr.RPCSvr.RegisterService("tx", &services.TxAPI{})
+	// 	}
+	// }
 
-	wSvr.RPCSvr.RegisterService("wallet", wallet.NewAPI(cfg))
+	wSvr.RPCSvr.RegisterService("wallet", NewAPI(cfg, wSvr))
 
-	activeNetParams := utils.GetNetParams(cfg.Network)
-	dbDir := filepath.Join(cfg.AppDataDir, cfg.Network)
-	wtLoader := wallet.NewLoader(activeNetParams, dbDir, 250)
-	wtExist, err := wtLoader.WalletExists()
-	if err != nil {
-		return nil, fmt.Errorf("load wallet err: %s", err)
-	}
-	if !wtExist && !cfg.UI {
-		return nil, fmt.Errorf("not wallet exist,please run crate command")
-	}
 	// if !wtExist && cfg.UI {
 	// 	wSvr.RPCSvr.RegisterService("crate", wallet.NewCreateAPI(cfg, wSvr.wt))
 	// }
@@ -161,4 +166,15 @@ func (wsvr *WalletServer) Start() error {
 	}
 
 	return nil
+}
+
+func (wsvr *WalletServer) StartAPI() {
+	for _, api := range wsvr.cfg.APIs {
+		switch api {
+		case "account":
+			wsvr.RPCSvr.RegisterService("account", wallet.NewAccountAPI(wsvr.cfg))
+		case "tx":
+			//wSvr.RPCSvr.RegisterService("tx", &services.TxAPI{})
+		}
+	}
 }
