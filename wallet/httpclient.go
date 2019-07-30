@@ -113,6 +113,10 @@ func (cfg *htpc)  getBlock(hash string ,isDetail bool) (string,error){
 	params := []interface{}{hash,isDetail }
 	return cfg.getResString("getBlock", params)
 }
+func (cfg *htpc)  SendRawTransaction(tx string ,allowHighFees bool) (string,error){
+	params := []interface{}{tx,allowHighFees }
+	return cfg.getResString("sendRawTransaction", params)
+}
 
 // sendPostRequest sends the marshalled JSON-RPC command using HTTP-POST mode
 // to the server described in the passed config struct.  It also attempts to

@@ -47,6 +47,8 @@ const (
 	// data in the waddrmgr namespace.  Transactions are not yet encrypted.
 	InsecurePubPassphrase = "public"
 
+	minfee = uint64(3000)
+
 	walletDbWatchingOnlyName = "wowallet.db"
 
 	// recoveryBatchSize is the default number of blocks that will be
@@ -573,11 +575,17 @@ func parseBlockTxs(block clijson.BlockHttpResult) ([]*types.TxOutPoint,[]*wtxmgr
 	return txins,txouts,tx, nil
 }
 
-func (w *Wallet) Updateblock(){
-	blockcount,err:=w.Httpclient.getblockCount()
-	if(err!=nil){
-		fmt.Println("getblockcount err:",err.Error())
-		return
+func (w *Wallet) Updateblock(toHeight int64) error{
+	var blockcount string
+	var err error
+	if(toHeight==0){
+		blockcount,err=w.Httpclient.getblockCount()
+		if(err!=nil){
+			fmt.Println("getblockcount err:",err.Error())
+			return err
+		}
+	}else{
+		blockcount=strconv.FormatInt(toHeight,10)
 	}
 	fmt.Println("blockcount:",blockcount)
 	fmt.Println("httpclienr:",w.Httpclient.RPCServer)
@@ -586,7 +594,7 @@ func (w *Wallet) Updateblock(){
 		blockheight,err:= strconv.ParseInt(blockcount, 10, 32)
 		if(err!=nil){
 			fmt.Println("string to int  err:",err.Error())
-			return
+			return err
 		}
 		log.Info("getblockcount :",blockheight)
 		localheight:=w.Manager.SyncedTo().Height+1
@@ -599,7 +607,7 @@ func (w *Wallet) Updateblock(){
 			er:=w.SyncTx(blockhash)
 			if(er!=nil){
 				fmt.Println("SyncTx err :",err.Error())
-				return
+				return err
 			}
 			//fmt.Println(len(blockhash))
 			//fmt.Println("1")
@@ -608,9 +616,10 @@ func (w *Wallet) Updateblock(){
 			//fmt.Println("hs:",hs)
 			if(err!=nil){
 				fmt.Println("blockhash string to hash  err:",err.Error())
+				return err
 			}
 			stamp := &waddrmgr.BlockStamp{Hash: *hs, Height: h}
-			walletdb.Update(w.db, func(tx walletdb.ReadWriteTx) error {
+			err=walletdb.Update(w.db, func(tx walletdb.ReadWriteTx) error {
 				ns:=tx.ReadWriteBucket(waddrmgrNamespaceKey)
 				err:=w.Manager.SetSyncedTo(ns,stamp)
 				if(err!=nil){
@@ -619,12 +628,16 @@ func (w *Wallet) Updateblock(){
 				}
 				return nil
 			})
+			if(err!=nil){
+				fmt.Println("blockhash string to hash  err:",err.Error())
+				return err
+			}
 			fmt.Println("localheight:",h," blockhash:",blockhash)
 		}
 	}else{
-		fmt.Println("getblockcount err:",err.Error())
-		return
+		return fmt.Errorf("getblockcount fail ")
 	}
+	return nil
 }
 // NextAccount creates the next account and returns its account number.  The
 // name must be unique to the account.  In order to support automatic seed
@@ -1104,6 +1117,7 @@ func (w *Wallet) SendOutputs(outputs []*types.TxOutput, account uint32,
 	if(err!=nil){
 		return nil,err
 	}
+
 	synced:=w.Manager.SyncedTo()
 	var prk string
 	b:
@@ -1134,7 +1148,7 @@ func (w *Wallet) SendOutputs(outputs []*types.TxOutput, account uint32,
 							if(output.Amount>=payAmout){
 								pre:=types.NewOutPoint(&output.Txid,output.Index)
 								tx.AddTxIn(types.NewTxInput(pre,uint64(output.Amount),nil))
-								tx.AddTxOut(types.NewTxOutput(uint64(output.Amount-payAmout),frompkscipt))
+								tx.AddTxOut(types.NewTxOutput(uint64(output.Amount-payAmout)-minfee,frompkscipt))
 								payAmout=types.Amount(0)
 								break b
 							}else{
@@ -1169,6 +1183,12 @@ func (w *Wallet) SendOutputs(outputs []*types.TxOutput, account uint32,
 		return nil, err
 	}
 	fmt.Println("txSign succ:",mtxHex)
+	msg,err:=w.Httpclient.SendRawTransaction(mtxHex,false)
+	if(err!=nil){
+		return nil,err
+	}else{
+		fmt.Println("SendRawTransaction txSign response msg:",msg)
+	}
 	return signTx,nil
 }
 func (w *Wallet) txSign(privkeyStr string, rawTxStr string) (*types.Transaction, error) {
