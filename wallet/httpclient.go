@@ -104,6 +104,14 @@ func (cfg *htpc) getblockCount() (string, error) {
 	params := []interface{}{}
 	return cfg.getResString("getBlockCount", params)
 }
+func (cfg *htpc) getMempool() (string, error) {
+	params := []interface{}{"",false}
+	return cfg.getResString("getMempool", params)
+}
+func (cfg *htpc) getRawTransaction(txhash string) (string, error) {
+	params := []interface{}{txhash,true}
+	return cfg.getResString("getRawTransaction", params)
+}
 func (cfg *htpc) getBlockhash(i int64) (string, error) {
 	params := []interface{}{i}
 	str, err := cfg.getResString("getBlockhash", params)
