@@ -145,6 +145,10 @@ type GetBalanceCmd struct {
 	Account *string
 	MinConf *int `jsonrpcdefault:"1"`
 }
+type GetBalanceByAddressCmd struct {
+	Address string
+	MinConf int `jsonrpcdefault:"1"`
+}
 
 // NewGetBalanceCmd returns a new instance which can be used to issue a
 // getbalance JSON-RPC command.

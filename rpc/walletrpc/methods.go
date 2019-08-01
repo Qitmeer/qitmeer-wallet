@@ -312,6 +312,15 @@ func updateblock(icmd interface{},w *wallet.Wallet) error {
 	}
 	return nil
 }
+func getbalance(icmd interface{},w *wallet.Wallet) (interface{}, error) {
+	cmd := icmd.(*qitmeerjson.GetBalanceByAddressCmd)
+	m,err:=w.GetBalance(cmd.Address,int32(cmd.MinConf))
+	if(err!=nil){
+		fmt.Println("getbalance err :",err.Error())
+		return nil,err
+	}
+	return m, nil
+}
 
 //sendPairs creates and sends payment transactions.
 //It returns the transaction hash in string format upon success

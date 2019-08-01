@@ -42,8 +42,23 @@ func test_wallet_createNewAccount(w *wallet.Wallet) error{
 	}
 	return nil
 }
+func test_wallet_getbalance(w *wallet.Wallet) ( interface{}, error){
+	minconf:=3
+	cmd:=&qitmeerjson.GetBalanceByAddressCmd{
+		//Address:"TmZQiY7WZarVk6Fax1NgUJCoVmonrEFRzwy",
+		Address:"TmbsdsjwzuGboFQ9GcKg6EUmrr3tokzozyF",
+		MinConf:minconf,
+	}
+	b,err:=getbalance(cmd,w)
+	if(err!=nil){
+		fmt.Println("errr:",err.Error())
+		return nil,err
+	}
+	fmt.Println("balance ：",b)
+	return b, nil
+}
 func test_wallet_listAccounts(w *wallet.Wallet)( interface{}, error){
-	min:=16
+	min:=3
 	cmd:=&qitmeerjson.ListAccountsCmd{
 		MinConf:&min,
 	}
@@ -140,9 +155,10 @@ func test_wallet_getAccountAndAddress(w *wallet.Wallet)( interface{}, error){
 }
 func test_wallet_sendToAddress(w *wallet.Wallet)( interface{}, error){
 	cmd:=&qitmeerjson.SendToAddressCmd{
-		Address:"TmbCBKbZF8PeSdj5Chm22T4hZRMJY5D8XyX",
+		Address:"TmZQiY7WZarVk6Fax1NgUJCoVmonrEFRzwy",
+		//Address:"TmbCBKbZF8PeSdj5Chm22T4hZRMJY5D8XyX",
 		//Address:"TmbsdsjwzuGboFQ9GcKg6EUmrr3tokzozyF",
-		Amount :   float64(10),
+		Amount :   float64(31),
 	}
 	msg,err:=sendToAddress(cmd,w)
 	if(err!=nil){
@@ -153,7 +169,7 @@ func test_wallet_sendToAddress(w *wallet.Wallet)( interface{}, error){
 }
 func test_wallet_updateblock(w *wallet.Wallet)(  error){
 	cmd:=&qitmeerjson.UpdateBlockToCmd{
-		Toheight:2200,
+		Toheight:0,
 	}
 	err:=updateblock(cmd,w)
 	if(err!=nil){
@@ -190,18 +206,19 @@ func TestWallet_Method(t *testing.T) {
 		fmt.Println("open_wallet err:",err)
 		return
 	}
+	//w.UpdateMempool()
 	//err=test_wallet_createNewAccount(w)
 	//if(err!=nil){
 	//	fmt.Errorf("test_wallet_createNewAccount err:%s",err.Error())
 	//}
 
 
-	m,err:=test_wallet_listAccounts(w)
-	if(err!=nil){
-		fmt.Errorf("test_wallet_listAccounts err:%s",err.Error())
-	}else{
-		fmt.Println("test_wallet_listAccounts :",m)
-	}
+	//m,err:=test_wallet_listAccounts(w)
+	//if(err!=nil){
+	//	fmt.Errorf("test_wallet_listAccounts err:%s",err.Error())
+	//}else{
+	//	fmt.Println("test_wallet_listAccounts :",m)
+	//}
 
 	//address,err:=test_wallet_getNewAddress(w)
 	//if(err!=nil){
@@ -244,6 +261,20 @@ func TestWallet_Method(t *testing.T) {
 	//}else{
 	//	fmt.Println("test_wallet_sendToAddress :",err)
 	//}
+
+
+	result,err:=test_wallet_getbalance(w)
+	//result,err:=test_wallet_getbalance("TmZQiY7WZarVk6Fax1NgUJCoVmonrEFRzwy",w)
+	if(err!=nil){
+		fmt.Errorf("test_wallet_getbalance err:%s",err.Error())
+	}else{
+		r:=result.(wallet.Balance)
+		fmt.Println("test_wallet_getbalance :",result)
+		fmt.Println("test_wallet_getbalance  ConfirmAmount:",r.ConfirmAmount)
+		fmt.Println("test_wallet_getbalance  UnspendAmount:",r.UnspendAmount)
+		fmt.Println("test_wallet_getbalance  SpendAmount:",r.SpendAmount)
+		fmt.Println("test_wallet_getbalance  TotalAmount:",r.TotalAmount)
+	}
 
 
 	//result,err:=test_wallet_sendToAddress(w)

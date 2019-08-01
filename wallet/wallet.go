@@ -123,7 +123,7 @@ type (
 	heldUnlock chan struct{}
 )
 
-type balance struct {
+type Balance struct {
 	TotalAmount types.Amount // 总数
 	SpendAmount types.Amount // 已花费
 	UnspendAmount types.Amount //未花费
@@ -143,7 +143,7 @@ type AccountAndAddressResult struct {
 }
 type AddrAndAddrTxOutput struct {
 	Addr string
-	balance balance
+	balance Balance
 	Txoutput []wtxmgr.AddrTxOutput
 }
 // Namespace bucket keys.
@@ -375,31 +375,18 @@ func (w *Wallet) GetTx(txid string) (string,error){
 	return string(b),nil
 }
 
-func (w *Wallet) GetBalance(addr string) (balance,error){
-	b:=balance{}
+func (w *Wallet) GetBalance(addr string,requiredConfs int32) (Balance,error){
+	b:=Balance{}
 	if(addr ==""){
 		return b,errors.New("addr is nil")
 	}
-	var txouts []*wtxmgr.AddrTxOutput
+	syncBlock := w.Manager.SyncedTo()
+	var txouts []wtxmgr.AddrTxOutput
 	//var txins []*types.TxOutPoint
-	walletdb.View(w.db, func(tx walletdb.ReadTx) error {
+	err:=walletdb.View(w.db, func(tx walletdb.ReadTx) error {
 		hs:=[]byte(addr)
 		ns:=tx.ReadBucket(wtxmgrNamespaceKey)
-		//inns:=ns.NestedReadBucket(wtxmgr.BucketAddrtxin)
 		outns:=ns.NestedReadBucket(wtxmgr.BucketAddrtxout)
-		//hsinns:=inns.NestedReadBucket(hs)
-		//if(hsinns !=nil){
-		//	hsinns.ForEach(func(k, v []byte) error {
-		//		tin :=types.TxOutPoint{}
-		//		err:=wtxmgr.ReadCanonicalOutPoint(v,&tin)
-		//		if(err!=nil){
-		//			fmt.Println("ReadCanonicalOutPoint err:",err.Error())
-		//			return err
-		//		}
-		//		txins=append(txins,&tin)
-		//		return nil
-		//	})
-		//}
 		hsoutns:=outns.NestedReadBucket(hs)
 		if(hsoutns!=nil){
 			hsoutns.ForEach(func(k, v []byte) error {
@@ -409,29 +396,104 @@ func (w *Wallet) GetBalance(addr string) (balance,error){
 					fmt.Println("ReadAddrTxOutput err:",err.Error())
 					return err
 				}
-				txouts=append(txouts,&to)
+				txouts=append(txouts,to)
 				return nil
 			})
 		}
 		return nil
 	})
+	if err!=nil{
+		fmt.Println("ReadAddrTxOutput err:",err.Error())
+		return b,err
+	}
 	var spendAmount types.Amount
 	var unspendAmount types.Amount
 	var totalAmount types.Amount
+	var confirmAmount types.Amount
 	for _,txout :=range txouts{
-		if(txout.Spend=="1"){
+		//s, err := strconv.Atoi(txout.Spend )
+		//if err!=nil{
+		//	return b,err
+		//}
+		if txout.Spend == 1 {
 			spendAmount+=txout.Amount
 			totalAmount+=txout.Amount
 		}else{
-			totalAmount+=txout.Amount
-			unspendAmount +=txout.Amount
+			if(!confirmed(requiredConfs,txout.Block.Height,syncBlock.Height)){
+				totalAmount+=txout.Amount
+				confirmAmount+=txout.Amount
+			}else{
+				totalAmount+=txout.Amount
+				unspendAmount +=txout.Amount
+			}
 		}
 	}
 	b.UnspendAmount=unspendAmount
 	b.SpendAmount=spendAmount
 	b.TotalAmount=totalAmount
+	b.ConfirmAmount=confirmAmount
 	return b,nil
 }
+
+func (w *Wallet) insertTx( txins []*types.TxOutPoint,txouts []*wtxmgr.AddrTxOutput,trrs []*corejson.TxRawResult) error{
+	err:=walletdb.Update(w.db, func(tx walletdb.ReadWriteTx) error {
+		ns:=tx.ReadWriteBucket(wtxmgrNamespaceKey)
+		txns:=ns.NestedReadWriteBucket(wtxmgr.BucketTxJson)
+		//inns:=ns.NestedReadWriteBucket(wtxmgr.BucketAddrtxin)
+		outns:=ns.NestedReadWriteBucket(wtxmgr.BucketAddrtxout)
+		for _,tr :=range trrs{
+			k,err:=hash.NewHashFromStr(tr.Txid)
+			if(err!=nil){
+				fmt.Println("format tx key to byte err:",err.Error())
+				return err
+			}
+			v,err:=json.Marshal(tr)
+			if(err!=nil){
+				fmt.Println("format tx value to byte err:",err.Error())
+				return err
+			}
+			ks:=k.Bytes()
+			txns.Put(ks,v)
+		}
+		for _, txo := range txouts {
+			err:=w.TxStore.UpdateAddrTxOut(outns,txo)
+			if err!=nil{
+				fmt.Println("UpdateAddrTxOut err:",err.Error())
+				return err
+			}
+		}
+		for _, txi := range txins {
+			v :=txns.Get(txi.Hash.Bytes())
+			if(v==nil){
+				continue
+			}
+			var txr corejson.TxRawResult
+			err:=json.Unmarshal(v,&txr)
+			if err!=nil{
+				fmt.Println("Unmarshal tx err:",err.Error())
+				return err
+			}
+			addr:=txr.Vout[txi.OutIndex].ScriptPubKey.Addresses[0]
+			spendedOut,err:=w.TxStore.GetAddrTxOut(outns,addr,*txi)
+			if err!=nil{
+				fmt.Println("GetAddrTxOut err:",err.Error())
+				return err
+			}
+			if spendedOut.Spend == 0{
+				spendedOut.Spend=1
+				spendedOut.Address=addr
+				err=w.TxStore.UpdateAddrTxOut(outns,spendedOut)
+				if err!=nil{
+					fmt.Println("UpdateAddrTxOut to spend err:",err.Error())
+					return err
+				}
+			}
+		}
+		return nil
+	})
+	return err
+}
+
 
 func (w *Wallet) SyncTx(h string) error{
 	tx,err:=w.Httpclient.getBlock(h,true)
@@ -446,66 +508,17 @@ func (w *Wallet) SyncTx(h string) error{
 	fmt.Println("tx is :",tx)
 	var block clijson.BlockHttpResult
 	if err := json.Unmarshal([]byte(tx), &block); err == nil {
-		//var txins []*types.TxOutPoint
-		//var txouts []*wtxmgr.AddrTxOutput
-		//var trrs []*corejson.TxRawResult
 		txins ,txouts,trrs,err:=parseBlockTxs(block)
 		if(err!=nil){
 			fmt.Println("err :",err.Error())
 			return err
 		}
-		walletdb.Update(w.db, func(tx walletdb.ReadWriteTx) error {
-			ns:=tx.ReadWriteBucket(wtxmgrNamespaceKey)
-			txns:=ns.NestedReadWriteBucket(wtxmgr.BucketTxJson)
-			//inns:=ns.NestedReadWriteBucket(wtxmgr.BucketAddrtxin)
-			outns:=ns.NestedReadWriteBucket(wtxmgr.BucketAddrtxout)
-			for _,tr :=range trrs{
-				k,err:=hash.NewHashFromStr(tr.Txid)
-				if(err!=nil){
-					fmt.Println("format tx key to byte err:",err.Error())
-					return err
-				}
-				v,err:=json.Marshal(tr)
-				if(err!=nil){
-					fmt.Println("format tx value to byte err:",err.Error())
-					return err
-				}
-				ks:=k.Bytes()
-				txns.Put(ks,v)
-			}
-			for _, txi := range txins {
-				v :=txns.Get(txi.Hash.Bytes())
-				if(v==nil){
-					continue
-				}
-				var txr corejson.TxRawResult
-				err:=json.Unmarshal(v,&txr)
-				if err!=nil{
-					fmt.Println("Unmarshal tx err:",err.Error())
-					return err
-				}
-				addr:=txr.Vout[txi.OutIndex].ScriptPubKey.Addresses[0]
-				spendedOut,err:=w.TxStore.GetAddrTxOut(outns,addr,*txi)
-				if err!=nil{
-					fmt.Println("GetAddrTxOut err:",err.Error())
-					return err
-				}
-				spendedOut.Spend="1"
-				err=w.TxStore.UpdateAddrTxOut(outns,spendedOut)
-				if err!=nil{
-					fmt.Println("UpdateAddrTxOut to spend err:",err.Error())
-					return err
-				}
-			}
-			for _, txo := range txouts {
-				err:=w.TxStore.UpdateAddrTxOut(outns,txo)
-				if err!=nil{
-					fmt.Println("UpdateAddrTxOut err:",err.Error())
-					return err
-				}
-			}
+		err=w.insertTx(txins ,txouts,trrs)
+		if(err!=nil){
+			fmt.Println("err :",err.Error())
 			return err
-		})
+		}
+
 	} else {
 		fmt.Println(err)
 		return err
@@ -514,62 +527,74 @@ func (w *Wallet) SyncTx(h string) error{
 	return nil
 }
 
+func parseTx(tr corejson.TxRawResult)([]*types.TxOutPoint,[]*wtxmgr.AddrTxOutput ,error){
+	var txins []*types.TxOutPoint
+	var txouts []*wtxmgr.AddrTxOutput
+	blockhash,err:=hash.NewHashFromStr(tr.BlockHash)
+	if(err!=nil){
+		fmt.Println("vin NewHashFromStr err :", err.Error())
+		return nil,nil,err
+	}
+	block:=wtxmgr.Block{
+		Hash:*blockhash,
+		Height:int32(tr.BlockHeight),
+	}
+	txid,err:=hash.NewHashFromStr(tr.Txid)
+	if(err !=nil) {
+		fmt.Println("vin NewHashFromStr err :", err.Error())
+		return nil,nil,err
+	}
+	for j:=0;j<len(tr.Vin) ;j++  {
+		vi:=tr.Vin[j]
+		if(vi.Txid==""&&vi.TxIndex ==0){
+			continue
+		}else{
+			hs,err:=hash.NewHashFromStr(vi.Txid)
+			if(err !=nil){
+				fmt.Println("vin NewHashFromStr err :",err.Error())
+				return nil,nil,err
+			}else{
+				txin:=&types.TxOutPoint{
+					Hash:*hs,
+					OutIndex:vi.Vout,
+				}
+				txins=append(txins,txin)
+			}
+		}
+	}
+	for k:=0;k<len(tr.Vout) ; k++ {
+		vo:=tr.Vout[k]
+		if len(vo.ScriptPubKey.Addresses)==0{
+			continue
+		}else{
+			txout:=&wtxmgr.AddrTxOutput{
+				Address:vo.ScriptPubKey.Addresses[0],
+				Txid:*txid,
+				Index:uint32(k),
+				Amount:types.Amount(vo.Amount),
+				Block:block,
+				Spend:0,
+			}
+			txouts=append(txouts,txout)
+		}
+	}
+
+	return txins,txouts,nil
+}
+
 func parseBlockTxs(block clijson.BlockHttpResult) ([]*types.TxOutPoint,[]*wtxmgr.AddrTxOutput, []*corejson.TxRawResult,error){
-	//var txins []types.TxOutPoint
-	//var txouts []wtxmgr.AddrTxOutput
 	var txins []*types.TxOutPoint
 	var txouts []*wtxmgr.AddrTxOutput
 	var tx []*corejson.TxRawResult
-	for i:=0;i< len(block.Transactions); i++ {
-		tr:= block.Transactions[i]
+	for _, tr := range block.Transactions {
 		tx=append(tx,&tr)
-		blockhash,err:=hash.NewHashFromStr(tr.BlockHash)
+		tin,tout,err:=parseTx(tr)
 		if(err!=nil){
-			fmt.Println("vin NewHashFromStr err :", err.Error())
+			fmt.Println("parseTx err:",err.Error())
 			return nil,nil,nil,err
-		}
-		block:=wtxmgr.Block{
-			Hash:*blockhash,
-			Height:int32(tr.BlockHeight),
-		}
-		txid,err:=hash.NewHashFromStr(tr.Txid)
-		if(err !=nil) {
-			fmt.Println("vin NewHashFromStr err :", err.Error())
-			return nil,nil,nil,err
-		}
-		for j:=0;j<len(tr.Vin) ;j++  {
-			vi:=tr.Vin[j]
-			if(vi.Txid==""&&vi.TxIndex ==0){
-				continue
-			}else{
-				hs,err:=hash.NewHashFromStr(vi.Txid)
-				if(err !=nil){
-					fmt.Println("vin NewHashFromStr err :",err.Error())
-					return nil,nil,nil,err
-				}else{
-					txin:=&types.TxOutPoint{
-						Hash:*hs,
-						OutIndex:vi.Vout,
-					}
-					txins=append(txins,txin)
-				}
-			}
-		}
-		for k:=0;k<len(tr.Vout) ; k++ {
-			vo:=tr.Vout[k]
-			if len(vo.ScriptPubKey.Addresses)==0{
-				continue
-			}else{
-				txout:=&wtxmgr.AddrTxOutput{
-					Address:vo.ScriptPubKey.Addresses[0],
-					Txid:*txid,
-					Index:uint32(k),
-					Amount:types.Amount(vo.Amount),
-					Block:block,
-					Spend:"0",
-				}
-				txouts=append(txouts,txout)
-			}
+		}else{
+			txins= append(txins, tin...)
+			txouts=append(txouts,tout...)
 		}
 	}
 	return txins,txouts,tx, nil
@@ -637,8 +662,57 @@ func (w *Wallet) Updateblock(toHeight int64) error{
 	}else{
 		return fmt.Errorf("getblockcount fail ")
 	}
+	err=w.UpdateMempool()
+	if(err!=nil){
+		fmt.Println("updateMempool err:",err.Error())
+		return err
+	}
 	return nil
 }
+
+func (w *Wallet)  UpdateMempool() error {
+	txIdstr,err:=w.Httpclient.getMempool()
+	if(err!=nil){
+		fmt.Println("getMempool err:",err.Error())
+		return err
+	}
+	fmt.Println("getMempool result:",txIdstr)
+	var txIds []string
+	if err:=json.Unmarshal([]byte(txIdstr),&txIds);err!=nil{
+		fmt.Println("err:",err.Error())
+		return err
+	}
+	var txins []*types.TxOutPoint
+	var txouts []*wtxmgr.AddrTxOutput
+	var trrs []*corejson.TxRawResult
+	for _, txid := range txIds {
+		res,err:=w.Httpclient.getRawTransaction(txid)
+		if(err!=nil){
+			fmt.Println("getRawTransaction err:",err.Error())
+			return err
+		}
+		var txJson corejson.TxRawResult
+		if err:=json.Unmarshal([]byte(res),&txJson);err!=nil{
+			fmt.Println("err:",err.Error())
+			return err
+		}
+		txin,txout,err:=parseTx(txJson)
+		if(err!=nil){
+			fmt.Println("parseTx err:",err.Error())
+			return err
+		}
+		txins=append(txins,txin...)
+		txouts=append(txouts,txout...)
+		trrs=append(trrs,&txJson)
+	}
+	err=w.insertTx(txins,txouts,trrs)
+	if(err!=nil){
+		fmt.Println("insertTx err:",err.Error())
+		return err
+	}
+	return nil
+}
+
 // NextAccount creates the next account and returns its account number.  The
 // name must be unique to the account.  In order to support automatic seed
 // restoring, new accounts may not be created when all of the previous 100
@@ -713,7 +787,7 @@ func (w *Wallet) GetAccountAndAddress (scope waddrmgr.KeyScope,
 				//inns:=ns.NestedReadBucket(wtxmgr.BucketAddrtxin)
 				outns:=ns.NestedReadBucket(wtxmgr.BucketAddrtxout)
 				hsoutns:=outns.NestedReadBucket(hs)
-				b:=balance{}
+				b:=Balance{}
 				spendAmount:=types.Amount(0)
 				unspendAmount:=types.Amount(0)
 				confirmAmount:=types.Amount(0)
@@ -726,7 +800,7 @@ func (w *Wallet) GetAccountAndAddress (scope waddrmgr.KeyScope,
 							fmt.Println("ReadAddrTxOutput err:",err.Error())
 							return err
 						}
-						if(to.Spend=="1"){
+						if(to.Spend==1){
 							totalAmount+=to.Amount
 							spendAmount +=to.Amount
 						}else{
@@ -1119,12 +1193,15 @@ func (w *Wallet) SendOutputs(outputs []*types.TxOutput, account uint32,
 	}
 
 	synced:=w.Manager.SyncedTo()
+	var sendAddress string
+	var sendAddrTxOutput []wtxmgr.AddrTxOutput
 	var prk string
 	b:
 	for _, aaar := range aaars {
 		for _, output := range aaar.AddrsOutput {
 			if(output.balance.UnspendAmount>payAmout){
 				addr,err:=address.DecodeAddress(output.Addr)
+				sendAddress=output.Addr
 				if(err!=nil){
 					return nil,err
 				}
@@ -1143,18 +1220,20 @@ func (w *Wallet) SendOutputs(outputs []*types.TxOutput, account uint32,
 				}
 				prk=hex.EncodeToString(prikey.SerializeSecret())
 				for _, output := range output.Txoutput {
-					if(output.Spend!="1"){
+					if(output.Spend!=1){
 						if(confirmed(minconf,output.Block.Height,synced.Height)){
 							if(output.Amount>=payAmout){
 								pre:=types.NewOutPoint(&output.Txid,output.Index)
 								tx.AddTxIn(types.NewTxInput(pre,uint64(output.Amount),nil))
 								tx.AddTxOut(types.NewTxOutput(uint64(output.Amount-payAmout)-minfee,frompkscipt))
 								payAmout=types.Amount(0)
+								sendAddrTxOutput=append(sendAddrTxOutput,output)
 								break b
 							}else{
 								pre:=types.NewOutPoint(&output.Txid,output.Index)
 								tx.AddTxIn(types.NewTxInput(pre,uint64(output.Amount),nil))
 								payAmout=payAmout-output.Amount
+								sendAddrTxOutput=append(sendAddrTxOutput,output)
 							}
 						}
 					}
@@ -1189,6 +1268,26 @@ func (w *Wallet) SendOutputs(outputs []*types.TxOutput, account uint32,
 	}else{
 		fmt.Println("SendRawTransaction txSign response msg:",msg)
 	}
+
+	err=walletdb.Update(w.db, func(tx walletdb.ReadWriteTx) error {
+		ns:=tx.ReadWriteBucket(wtxmgrNamespaceKey)
+		outns:=ns.NestedReadWriteBucket(wtxmgr.BucketAddrtxout)
+		for _, txoutput := range sendAddrTxOutput {
+			txoutput.Address=sendAddress
+			txoutput.Spend=1
+			err=w.TxStore.UpdateAddrTxOut(outns,&txoutput)
+			if err!=nil{
+				fmt.Println("UpdateAddrTxOut to spend err:",err.Error())
+				return err
+			}
+		}
+		return nil
+	})
+	if err != nil {
+		fmt.Println("UpdateAddrTxOut to spend err:",err.Error())
+		return nil, err
+	}
+
 	return signTx,nil
 }
 func (w *Wallet) txSign(privkeyStr string, rawTxStr string) (*types.Transaction, error) {

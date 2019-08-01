@@ -40,7 +40,7 @@ type AddrTxOutput struct {
 	Index  uint32
 	Amount types.Amount
 	Block Block
-	Spend string // index 0  false 1 true
+	Spend int32 // index 0  unspend 1 spend
 }
 
 // incidence records the block hash and blockchain height of a mined transaction.
