@@ -167,13 +167,13 @@ func valueBlockRecord(block *BlockMeta, txHash *chainhash.Hash) []byte {
 	return v
 }
 func ValueAddrTxOutput(txout *AddrTxOutput) []byte {
-	v :=make([]byte,94)
+	v :=make([]byte,96)
 	copy(v,txout.Txid[:])
 	byteOrder.PutUint32(v[32:36], txout.Index)
 	byteOrder.PutUint64(v[36:44], uint64(txout.Amount))
 	copy(v[44:76],txout.Block.Hash[:])
 	byteOrder.PutUint32(v[88:92], uint32(txout.Block.Height))
-	copy(v[92:94],[]byte(txout.Spend))
+	byteOrder.PutUint32(v[92:96], uint32(txout.Spend))
 	return v
 }
 func ReadAddrTxOutput(v []byte,txout *AddrTxOutput) error{
@@ -182,7 +182,7 @@ func ReadAddrTxOutput(v []byte,txout *AddrTxOutput) error{
 	txout.Amount=types.Amount(byteOrder.Uint64(v[36:44]))
 	copy(txout.Block.Hash[:],v[44:76])
 	txout.Block.Height=int32(byteOrder.Uint32(v[88:92]))
-	txout.Spend=string(v[92:94])
+	txout.Spend=int32(byteOrder.Uint32(v[92:96]))
 	return nil
 }
 
