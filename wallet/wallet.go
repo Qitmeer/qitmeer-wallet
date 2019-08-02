@@ -91,10 +91,25 @@ func NewWallet(cfg *config.Config)(wt *Wallet,err error){
 }
 
 // Start wallet routine
-func (w *Wallet) Start(){
+func (wt *Wallet) Start(){
 	log.Trace("wallet start")
-	go w.walletLocker()
-	fmt.Println("555555")
+	wt.quitMu.Lock()
+	select {
+	case <-wt.quit:
+		// Restart the wallet goroutines after shutdown finishes.
+		//wt.WaitForShutdown()
+		wt.quit = make(chan struct{})
+	default:
+		// Ignore when the wallet is still running.
+		if wt.started {
+			wt.quitMu.Unlock()
+			return
+		}
+		wt.started = true
+	}
+	wt.quitMu.Unlock()
+
+	go wt.walletLocker()
 }
 
 
@@ -325,7 +340,7 @@ func Open(db walletdb.DB, pubPass []byte, cbs *waddrmgr.OpenCallbacks,
 		//rescanProgress:      make(chan *RescanProgressMsg),
 		//rescanFinished:      make(chan *RescanFinishedMsg),
 		//createTxRequests:    make(chan createTxRequest),
-		//unlockRequests:      make(chan unlockRequest),
+		unlockRequests:      make(chan unlockRequest),
 		//lockRequests:        make(chan struct{}),
 		//holdUnlockRequests:  make(chan chan heldUnlock),
 		//lockState:           make(chan bool),
@@ -1128,7 +1143,7 @@ out:
 	for {
 		select {
 		case req := <-w.unlockRequests:
-			fmt.Println("22222222222")
+			log.Trace("walletLocker,unlockRequests")
 			err := walletdb.View(w.db, func(tx walletdb.ReadTx) error {
 				addrmgrNs := tx.ReadBucket(waddrmgrNamespaceKey)
 				return w.Manager.Unlock(addrmgrNs, req.passphrase)
