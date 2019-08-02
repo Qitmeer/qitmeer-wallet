@@ -983,6 +983,7 @@ func (w *Wallet) Lock() {
 
 //// Locked returns whether the account manager for a wallet is locked.
 func (w *Wallet) Locked() bool {
+	log.Debug("wallet: Locked")
 	return <-w.lockState
 }
 // quitChan atomically reads the quit channel.
