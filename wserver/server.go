@@ -137,7 +137,7 @@ func (wsvr *WalletServer) run() {
 
 		//ajx post options
 		router.OPTIONS("/api", func(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
-			log.Trace("api OPTIONS")
+			//log.Trace("api OPTIONS")
 			w.Header().Set("Access-Control-Allow-Origin", "http://127.0.0.1:8080")
 			w.Header().Set("Access-Control-Allow-Credentials", "true")
 			w.Header().Set("Access-Control-Allow-Methods", "GET,HEAD,OPTIONS,POST,PUT")
@@ -188,11 +188,13 @@ func (wsvr *WalletServer) Start() error {
 	return nil
 }
 
+// StartAPI if wallet open ok start api
 func (wsvr *WalletServer) StartAPI() {
+	log.Trace("StartAPI", wsvr.cfg.APIs)
 	for _, api := range wsvr.cfg.APIs {
 		switch api {
 		case "account":
-			wsvr.RPCSvr.RegisterService("account", wallet.NewAccountAPI(wsvr.cfg))
+			wsvr.RPCSvr.RegisterService("account", wallet.NewAPI(wsvr.cfg, wsvr.Wt))
 		case "tx":
 			//wSvr.RPCSvr.RegisterService("tx", &services.TxAPI{})
 		}

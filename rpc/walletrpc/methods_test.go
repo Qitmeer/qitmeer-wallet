@@ -1,43 +1,64 @@
 package walletrpc
+
 import (
 	"encoding/hex"
 	"fmt"
+	"os"
+	"path/filepath"
+	"testing"
+
+	"github.com/HalalChain/qitmeer-lib/crypto/ecc/secp256k1"
 	"github.com/HalalChain/qitmeer-lib/params"
 	"github.com/HalalChain/qitmeer-wallet/json/qitmeerjson"
 	"github.com/HalalChain/qitmeer-wallet/util"
 	"github.com/HalalChain/qitmeer-wallet/wallet"
-	"github.com/HalalChain/qitmeer-lib/crypto/ecc/secp256k1"
-	"testing"
 	//"time"
-
 	//"time"
 )
 
-func open_wallet() (*wallet.Wallet,error) {
-	dbpath:="C:\\Users\\luoshan\\AppData\\Local\\Qitwallet\\testnet"
-	activeNet:=&params.TestNetParams
-	load:=wallet.NewLoader(activeNet,dbpath,250)
-	w,err:=load.OpenExistingWallet([]byte("public"),false)
-	if(err!=nil){
-		fmt.Println("openWallet err:",err.Error())
-		return nil,err
+func TestListAccounts(t *testing.T) {
+	w, err := open_wallet()
+	if err != nil {
+		t.Log("open wallet err", err)
+		return
 	}
-	err=w.UnLockManager([]byte("123456"))
-	if(err!=nil){
-		fmt.Errorf("UnLockManager err:%s",err.Error())
-		return nil,err
+
+	l, err := test_wallet_listAccounts(w)
+	if err != nil {
+		t.Log(err)
+		return
 	}
-	w.Httpclient=wallet.NewHtpc("admin" ,"123456"  ,"47.88.220.44:8131" ,
-		"" ,true ,true ,"" ,"","" )
-	return w,nil
+
+	t.Log(l)
+
 }
-func test_wallet_createNewAccount(w *wallet.Wallet) error{
-	cmd:=&qitmeerjson.CreateNewAccountCmd{
-		Account:"luoshan4",
+
+func open_wallet() (*wallet.Wallet, error) {
+	dbpath, _ := os.Getwd() //  "C:\\Users\\luoshan\\AppData\\Local\\Qitwallet\\testnet"
+	dbpath = filepath.Join(dbpath, "testnet")
+	activeNet := &params.TestNetParams
+	load := wallet.NewLoader(activeNet, dbpath, 250)
+	w, err := load.OpenExistingWallet([]byte("public"), false)
+	if err != nil {
+		fmt.Println("openWallet err:", err.Error())
+		return nil, err
 	}
-	_,err:=createNewAccount(cmd,w)
-	if(err!=nil){
-		fmt.Println("errr:",err.Error())
+	// err = w.UnLockManager([]byte("1"))
+	// if err != nil {
+	// 	fmt.Errorf("UnLockManager err:%s", err.Error())
+	// 	return nil, err
+	// }
+	// w.Httpclient = wallet.NewHtpc("admin", "123456", "47.88.220.44:8131",
+	// 	"", true, true, "", "", "")
+	return w, nil
+}
+func test_wallet_createNewAccount(w *wallet.Wallet) error {
+	cmd := &qitmeerjson.CreateNewAccountCmd{
+		Account: "luoshan4",
+	}
+	_, err := createNewAccount(cmd, w)
+	if err != nil {
+		fmt.Println("errr:", err.Error())
 		return err
 	}
 	return nil
@@ -62,96 +83,110 @@ func test_wallet_listAccounts(w *wallet.Wallet)( interface{}, error){
 	cmd:=&qitmeerjson.ListAccountsCmd{
 		MinConf:&min,
 	}
-	msg,err:=listAccounts(cmd,w)
-	if(err!=nil){
-		fmt.Println("errr:",err.Error())
-		return nil,err
+	msg, err := listAccounts(cmd, w)
+	if err != nil {
+		fmt.Println("errr:", err.Error())
+		return nil, err
 	}
-	return msg,nil
+	return msg, nil
 }
+<<<<<<< HEAD
 func test_wallet_getNewAddress(w *wallet.Wallet)( interface{}, error){
 	account:="import"
 	cmd:=&qitmeerjson.GetNewAddressCmd{
 		Account:&account,
+=======
+func test_wallet_getNewAddress(w *wallet.Wallet) (interface{}, error) {
+	account := "luoshan"
+	cmd := &qitmeerjson.GetNewAddressCmd{
+		Account: &account,
+>>>>>>> a87dfd2d3b11d0304ccb0ba05aaac29719b78507
 	}
-	msg,err:=getNewAddress(cmd,w)
-	if(err!=nil){
-		fmt.Println("errr:",err.Error())
-		return nil,err
+	msg, err := getNewAddress(cmd, w)
+	if err != nil {
+		fmt.Println("errr:", err.Error())
+		return nil, err
 	}
-	return msg,nil
+	return msg, nil
 }
+<<<<<<< HEAD
 func test_wallet_getAddressesByAccount(w *wallet.Wallet)( interface{}, error){
 	account:="imported"
 	cmd:=&qitmeerjson.GetAddressesByAccountCmd{
 		Account:account,
+=======
+func test_wallet_getAddressesByAccount(w *wallet.Wallet) (interface{}, error) {
+	account := "luoshan"
+	cmd := &qitmeerjson.GetAddressesByAccountCmd{
+		Account: account,
+>>>>>>> a87dfd2d3b11d0304ccb0ba05aaac29719b78507
 	}
-	msg,err:=getAddressesByAccount(cmd,w)
-	if(err!=nil){
-		fmt.Println("errr:",err.Error())
-		return nil,err
+	msg, err := getAddressesByAccount(cmd, w)
+	if err != nil {
+		fmt.Println("errr:", err.Error())
+		return nil, err
 	}
-	return msg,nil
+	return msg, nil
 }
-func test_wallet_getAccountByAddress(w *wallet.Wallet)( interface{}, error){
-	address:="TmbsdsjwzuGboFQ9GcKg6EUmrr3tokzozyF"
-	cmd:=&qitmeerjson.GetAccountCmd{
-		Address:address,
+func test_wallet_getAccountByAddress(w *wallet.Wallet) (interface{}, error) {
+	address := "TmbsdsjwzuGboFQ9GcKg6EUmrr3tokzozyF"
+	cmd := &qitmeerjson.GetAccountCmd{
+		Address: address,
 	}
-	msg,err:=getAccountByAddress(cmd,w)
-	if(err!=nil){
-		fmt.Println("errr:",err.Error())
-		return nil,err
+	msg, err := getAccountByAddress(cmd, w)
+	if err != nil {
+		fmt.Println("errr:", err.Error())
+		return nil, err
 	}
-	return msg,nil
+	return msg, nil
 }
-func test_wallet_importPrivKey(w *wallet.Wallet)( interface{}, error){
-	v:=false
-	cmd:=&qitmeerjson.ImportPrivKeyCmd{
-		PrivKey :"7e445aa5ffd834cb2d3b2db50f8997dd21af29bec3d296aaa066d902b93f484b",
-		Rescan:&v,
+func test_wallet_importPrivKey(w *wallet.Wallet) (interface{}, error) {
+	v := false
+	cmd := &qitmeerjson.ImportPrivKeyCmd{
+		PrivKey: "7e445aa5ffd834cb2d3b2db50f8997dd21af29bec3d296aaa066d902b93f484b",
+		Rescan:  &v,
 		//PrivKey :"7e445aa5ffd834cb2d3b2db50f8997dd21af29bec3d296aaa066d902b93f484b",
 	}
-	msg,err:=importPrivKey(cmd,w)
-	if(err!=nil){
-		fmt.Println("errr:",err.Error())
-		return nil,err
+	msg, err := importPrivKey(cmd, w)
+	if err != nil {
+		fmt.Println("errr:", err.Error())
+		return nil, err
 	}
-	return msg,nil
+	return msg, nil
 }
-func test_wallet_importWifPrivKey(w *wallet.Wallet)( interface{}, error){
-	v:=false
-	cmd:=&qitmeerjson.ImportPrivKeyCmd{
-		PrivKey :"9QwXzXVQBFNm1fxP8jCqHJG9jZKjqrUKjYiTvaRxEbFobiNrvzhgZ",
-		Rescan:&v,
+func test_wallet_importWifPrivKey(w *wallet.Wallet) (interface{}, error) {
+	v := false
+	cmd := &qitmeerjson.ImportPrivKeyCmd{
+		PrivKey: "9QwXzXVQBFNm1fxP8jCqHJG9jZKjqrUKjYiTvaRxEbFobiNrvzhgZ",
+		Rescan:  &v,
 		//PrivKey :"7e445aa5ffd834cb2d3b2db50f8997dd21af29bec3d296aaa066d902b93f484b",
 	}
-	msg,err:=importWifPrivKey(cmd,w)
-	if(err!=nil){
-		fmt.Println("errr:",err.Error())
-		return nil,err
+	msg, err := importWifPrivKey(cmd, w)
+	if err != nil {
+		fmt.Println("errr:", err.Error())
+		return nil, err
 	}
-	return msg,nil
+	return msg, nil
 }
-func test_wallet_dumpPrivKey(w *wallet.Wallet)( interface{}, error){
-	address:="TmbsdsjwzuGboFQ9GcKg6EUmrr3tokzozyF"
-	cmd:=&qitmeerjson.DumpPrivKeyCmd{
-		Address:address,
+func test_wallet_dumpPrivKey(w *wallet.Wallet) (interface{}, error) {
+	address := "TmbsdsjwzuGboFQ9GcKg6EUmrr3tokzozyF"
+	cmd := &qitmeerjson.DumpPrivKeyCmd{
+		Address: address,
 	}
-	msg,err:=dumpPrivKey(cmd,w)
-	if(err!=nil){
-		fmt.Println("errr:",err.Error())
-		return nil,err
+	msg, err := dumpPrivKey(cmd, w)
+	if err != nil {
+		fmt.Println("errr:", err.Error())
+		return nil, err
 	}
-	return msg,nil
+	return msg, nil
 }
-func test_wallet_getAccountAndAddress(w *wallet.Wallet)( interface{}, error){
-	msg,err:=getAccountAndAddress(w,16)
-	if(err!=nil){
-		fmt.Println("errr:",err.Error())
-		return nil,err
+func test_wallet_getAccountAndAddress(w *wallet.Wallet) (interface{}, error) {
+	msg, err := getAccountAndAddress(w, 16)
+	if err != nil {
+		fmt.Println("errr:", err.Error())
+		return nil, err
 	}
-	return msg,nil
+	return msg, nil
 }
 func test_wallet_sendToAddress(w *wallet.Wallet)( interface{}, error){
 	cmd:=&qitmeerjson.SendToAddressCmd{
@@ -160,50 +195,50 @@ func test_wallet_sendToAddress(w *wallet.Wallet)( interface{}, error){
 		//Address:"TmbsdsjwzuGboFQ9GcKg6EUmrr3tokzozyF",
 		Amount :   float64(31),
 	}
-	msg,err:=sendToAddress(cmd,w)
-	if(err!=nil){
-		fmt.Println("errr:",err.Error())
-		return nil,err
+	msg, err := sendToAddress(cmd, w)
+	if err != nil {
+		fmt.Println("errr:", err.Error())
+		return nil, err
 	}
-	return msg,nil
+	return msg, nil
 }
 func test_wallet_updateblock(w *wallet.Wallet)(  error){
 	cmd:=&qitmeerjson.UpdateBlockToCmd{
 		Toheight:0,
 	}
-	err:=updateblock(cmd,w)
-	if(err!=nil){
-		fmt.Println("errr:",err.Error())
+	err := updateblock(cmd, w)
+	if err != nil {
+		fmt.Println("errr:", err.Error())
 		return err
 	}
 	return nil
 }
 
-func test_wif(w *wallet.Wallet) error{
-	pri:="7e445aa5ffd834cb2d3b2db50f8997dd21af29bec3d296aaa066d902b93f484b"
+func test_wif(w *wallet.Wallet) error {
+	pri := "7e445aa5ffd834cb2d3b2db50f8997dd21af29bec3d296aaa066d902b93f484b"
 	data, err := hex.DecodeString(pri)
-	if err!=nil {
+	if err != nil {
 		return err
 	}
 	privkey, _ := secp256k1.PrivKeyFromBytes(data)
-	wif,err:=util.NewWIF(privkey,w.ChainParams(),true)
-	if err!=nil {
+	wif, err := util.NewWIF(privkey, w.ChainParams(), true)
+	if err != nil {
 		return err
 	}
-	fmt.Println("wif:",wif)
-	wif1,err:=util.DecodeWIF(wif.String(),w.ChainParams())
-	if err!=nil {
+	fmt.Println("wif:", wif)
+	wif1, err := util.DecodeWIF(wif.String(), w.ChainParams())
+	if err != nil {
 		return err
 	}
-	fmt.Println("wif1:",wif1)
-	fmt.Printf("wif1:%x\n",wif1.PrivKey.SerializeSecret())
+	fmt.Println("wif1:", wif1)
+	fmt.Printf("wif1:%x\n", wif1.PrivKey.SerializeSecret())
 	return nil
 }
 
 func TestWallet_Method(t *testing.T) {
-	w,err:=open_wallet()
-	if(err!=nil){
-		fmt.Println("open_wallet err:",err)
+	w, err := open_wallet()
+	if err != nil {
+		fmt.Println("open_wallet err:", err)
 		return
 	}
 	//w.UpdateMempool()
@@ -283,7 +318,6 @@ func TestWallet_Method(t *testing.T) {
 	}else{
 		fmt.Println("test_wallet_sendToAddress :",result)
 	}
-
 
 	//err=test_wif(w)
 	//if(err!=nil){

@@ -7,8 +7,11 @@ package bdb
 import (
 	"io"
 	"os"
+
+	//"github.com/coreos/bbolt"
+	bbolt "go.etcd.io/bbolt"
+
 	"github.com/HalalChain/qitmeer-wallet/walletdb"
-	"github.com/coreos/bbolt"
 )
 
 // convertErr converts some bolt errors to the equivalent walletdb error.

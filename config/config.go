@@ -6,8 +6,10 @@ package config
 
 import (
 	"bytes"
+	"crypto/rand"
 	"fmt"
 	"io/ioutil"
+	"math/big"
 	"path/filepath"
 
 	"github.com/BurntSushi/toml"
@@ -143,8 +145,8 @@ func NewDefaultConfig() (cfg *Config) {
 		Network: "mainnet",
 
 		Listeners:     []string{"127.0.0.1:38130"},
-		RPCUser:       "",
-		RPCPass:       "",
+		RPCUser:       randStr(8),
+		RPCPass:       randStr(24),
 		RPCCert:       defaultRPCCertFile,
 		RPCKey:        defaultRPCKeyFile,
 		RPCMaxClients: defaultRPCMaxClients,
@@ -165,4 +167,17 @@ func NewDefaultConfig() (cfg *Config) {
 		QProxyPass:     "",
 	}
 	return
+}
+
+func randStr(len int) string {
+	var container string
+	var str = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890"
+	b := bytes.NewBufferString(str)
+	length := b.Len()
+	bigInt := big.NewInt(int64(length))
+	for i := 0; i < len; i++ {
+		randomInt, _ := rand.Int(rand.Reader, bigInt)
+		container += string(str[randomInt.Int64()])
+	}
+	return container
 }

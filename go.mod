@@ -4,12 +4,10 @@ go 1.12
 
 require (
 	github.com/BurntSushi/toml v0.3.1
-	github.com/HalalChain/qitmeer-lib v0.0.0-20190708060928-91b89dc718d2
-	github.com/btcsuite/btcd v0.0.0-20190629003639-c26ffa870fd8
-	github.com/btcsuite/go-socks v0.0.0-20170105172521-4720035b7bfd
-	github.com/coreos/bbolt v1.3.2
+	github.com/HalalChain/qitmeer-lib v0.0.0-20190731141422-52abd17f2811
 	github.com/davecgh/go-spew v1.1.1
 	github.com/deckarep/golang-set v1.7.1
+	github.com/decred/dcrd/dcrec/secp256k1 v1.0.1
 	github.com/decred/dcrwallet/wallet v1.3.0
 	github.com/jessevdk/go-flags v1.4.0
 	github.com/julienschmidt/httprouter v1.2.0
@@ -17,11 +15,14 @@ require (
 	github.com/samuel/go-socks v0.0.0-20130725190102-f6c5f6a06ef6
 	github.com/sirupsen/logrus v1.4.2
 	github.com/spf13/cobra v0.0.5
+	go.etcd.io/bbolt v1.3.3
 	golang.org/x/crypto v0.0.0-20190701094942-4def268fd1a4
 	golang.org/x/net v0.0.0-20190620200207-3b0461eec859
+	golang.org/x/sys v0.0.0-20190507160741-ecd444e8653b // indirect
 )
 
 replace (
+	go.etcd.io/bbolt => github.com/etcd-io/bbolt v1.3.3
 	golang.org/x/crypto => github.com/golang/crypto v0.0.0-20190701094942-4def268fd1a4
 	golang.org/x/net => github.com/golang/net v0.0.0-20190628185345-da137c7871d7
 	golang.org/x/sync => github.com/golang/sync v0.0.0-20190423024810-112230192c58
