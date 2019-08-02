@@ -332,7 +332,7 @@ func (s *RpcServer) jsonRPCRead(w http.ResponseWriter, r *http.Request) {
 	codec := NewJSONCodec(&httpReadWriteNopCloser{body, w})
 	defer codec.Close()
 
-	log.Trace("jsonRPCRead", "body", body, "codec", codec)
+	log.Trace("jsonRPCRead")
 
 	s.ServeSingleRequest(ctx, codec, OptionMethodInvocation)
 }
