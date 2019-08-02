@@ -321,6 +321,15 @@ func getbalance(icmd interface{},w *wallet.Wallet) (interface{}, error) {
 	}
 	return m, nil
 }
+func getlisttxbyaddr(icmd interface{},w *wallet.Wallet) (interface{}, error) {
+	cmd := icmd.(*qitmeerjson.GetListTxByAddrCmd)
+	m,err:=w.GetListTxByAddr(cmd.Address,cmd.Stype,cmd.Page,cmd.PageSize)
+	if(err!=nil){
+		fmt.Println("getListTxByAddr err :",err.Error())
+		return nil,err
+	}
+	return m, nil
+}
 
 //sendPairs creates and sends payment transactions.
 //It returns the transaction hash in string format upon success
