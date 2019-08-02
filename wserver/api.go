@@ -50,11 +50,11 @@ func (api *API) Status() (status *ResStatus, err error) {
 		return
 	}
 
-	if api.wSvr.Wt.Locked() {
-		status.Stats = "lock"
-	} else {
-		status.Stats = "unlock"
-	}
+	// if api.wSvr.Wt.Locked() {
+	// 	status.Stats = "lock"
+	// } else {
+	status.Stats = "unlock"
+	// }
 	log.Debug("wallet api: status", status)
 	return
 }
@@ -71,7 +71,7 @@ func (api *API) Create(seed string, walletPass string) error {
 
 	walletExist, err := loader.WalletExists()
 	if err != nil {
-		log.Errorf("qitmeer start err: load wallet ", err)
+		log.Errorf("qitmeer start err: load wallet %s", err)
 		return &crateError{Code: -1, Msg: fmt.Sprintf("load Wallet err: %s ", err)}
 	}
 	if walletExist {
@@ -85,18 +85,60 @@ func (api *API) Create(seed string, walletPass string) error {
 
 	wt, err := loader.CreateNewWallet([]byte(wallet.InsecurePubPassphrase), []byte(walletPass), seedBuf, time.Now())
 	if err != nil {
-		log.Errorf("qitmeer start err: crate wallet ", err)
+		log.Errorf("qitmeer start err: crate wallet %s", err)
 		return &crateError{Code: -1, Msg: fmt.Sprintf("CreateNewWallet err: %s ", err)}
 	}
 
-	//wt.Manager.Close()
+	wt.Manager.Close()
 
 	// wt, err := loader.OpenExistingWallet([]byte(walletPass), false)
 	// if err != nil {
 	// 	log.Errorf("newWallet err: %s", err)
 	// 	return fmt.Errorf("open wallet err: %s", err)
 	// }
-	api.wSvr.Wt = wt
+	//api.wSvr.Wt = wt
+
+	return nil
+}
+
+//Create wallet
+func (api *API) Recove(mnemonic string, walletPass string) error {
+	log.Trace("CreateAPI CreateWallet", api.cfg.Network)
+
+	activeNetParams := utils.GetNetParams(api.cfg.Network)
+	log.Trace("CreateAPI CreateWallet ", activeNetParams.Name)
+
+	dbDir := filepath.Join(api.cfg.AppDataDir, activeNetParams.Name)
+	loader := wallet.NewLoader(activeNetParams, dbDir, 250)
+
+	walletExist, err := loader.WalletExists()
+	if err != nil {
+		log.Errorf("qitmeer start err: load wallet %s", err)
+		return &crateError{Code: -1, Msg: fmt.Sprintf("load Wallet err: %s ", err)}
+	}
+	if walletExist {
+		return &crateError{Code: -100, Msg: "wallet exist"}
+	}
+
+	seedBuf, err := bip39.EntropyFromMnemonic(mnemonic)
+	if err != nil {
+		return &crateError{Code: -1, Msg: fmt.Sprintf("seed hex err: %s ", err)}
+	}
+
+	wt, err := loader.CreateNewWallet([]byte(wallet.InsecurePubPassphrase), []byte(walletPass), seedBuf, time.Now())
+	if err != nil {
+		log.Errorf("qitmeer start err: crate wallet %s", err)
+		return &crateError{Code: -1, Msg: fmt.Sprintf("CreateNewWallet err: %s ", err)}
+	}
+
+	wt.Manager.Close()
+
+	// wt, err := loader.OpenExistingWallet([]byte(walletPass), false)
+	// if err != nil {
+	// 	log.Errorf("newWallet err: %s", err)
+	// 	return fmt.Errorf("open wallet err: %s", err)
+	// }
+	//api.wSvr.Wt = wt
 
 	return nil
 }
@@ -108,6 +150,8 @@ func (api *API) Open(walletPubPass string) error {
 		return nil
 	}
 
+	fmt.Println("333333")
+
 	walletPubPassBuf := []byte(wallet.InsecurePubPassphrase)
 	wt, err := api.wSvr.WtLoader.OpenExistingWallet(walletPubPassBuf, false)
 	if err != nil {
@@ -116,7 +160,29 @@ func (api *API) Open(walletPubPass string) error {
 	}
 	log.Trace("api open ok")
 	api.wSvr.Wt = wt
-	wt.Start()
+
+	api.wSvr.WtLoader.RunAfterLoad(func(w *wallet.Wallet) {
+
+		w.Start()
+
+		fmt.Println("Importing addresses from existing wallet...")
+
+		lockChan := make(chan time.Time, 1)
+		defer func() {
+			fmt.Println("+++++++=")
+			lockChan <- time.Time{}
+			fmt.Println("+++++++=xxxxxxx")
+		}()
+		err := w.Unlock([]byte("1"), lockChan)
+		if err != nil {
+			fmt.Printf("ERR: Failed to unlock new wallet "+
+				"during old wallet key import: %v", err)
+			return
+		}
+		fmt.Println("ollllllllllll")
+	})
+
+	fmt.Println("44444")
 
 	api.wSvr.StartAPI()
 	log.Trace("api open wallet start")

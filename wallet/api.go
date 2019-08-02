@@ -268,7 +268,7 @@ func (api API) SendToAddress(addressStr string, amount float64, comment string, 
 	// Transaction comments are not yet supported.  Error instead of
 	// pretending to save them.
 	//if !isNilOrEmpty(cmd.Comment) || !isNilOrEmpty(cmd.CommentTo) {
-	if comment == "" || commentTo == "" {
+	if comment != "" || commentTo != "" {
 		return "", &qitmeerjson.RPCError{
 			Code:    qitmeerjson.ErrRPCUnimplemented,
 			Message: "Transaction comments are not yet supported",
