@@ -194,7 +194,7 @@ func (wsvr *WalletServer) StartAPI() {
 	for _, api := range wsvr.cfg.APIs {
 		switch api {
 		case "account":
-			wsvr.RPCSvr.RegisterService("account", wallet.NewAccountAPI(wsvr.cfg, wsvr.Wt))
+			wsvr.RPCSvr.RegisterService("account", wallet.NewAPI(wsvr.cfg, wsvr.Wt))
 		case "tx":
 			//wSvr.RPCSvr.RegisterService("tx", &services.TxAPI{})
 		}
