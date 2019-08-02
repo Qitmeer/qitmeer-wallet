@@ -50,8 +50,12 @@ func (api *API) Status() (status *ResStatus, err error) {
 		return
 	}
 
-	status.Stats = "opened"
-
+	if api.wSvr.Wt.Locked() {
+		status.Stats = "lock"
+	} else {
+		status.Stats = "unlock"
+	}
+	log.Debug("wallet api: status", status)
 	return
 }
 
@@ -121,7 +125,7 @@ func (api *API) Open(walletPubPass string) error {
 
 //ResStatus statusinfo
 type ResStatus struct {
-	Stats string `json:"stats"` //err,nil,closed,opened
+	Stats string `json:"stats"` //err,nil,closed,lock,unlock
 }
 
 // MakeSeed wallet HD seed and mnemonic
