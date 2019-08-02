@@ -90,17 +90,10 @@ func test_wallet_listAccounts(w *wallet.Wallet)( interface{}, error){
 	}
 	return msg, nil
 }
-<<<<<<< HEAD
-func test_wallet_getNewAddress(w *wallet.Wallet)( interface{}, error){
-	account:="import"
-	cmd:=&qitmeerjson.GetNewAddressCmd{
-		Account:&account,
-=======
 func test_wallet_getNewAddress(w *wallet.Wallet) (interface{}, error) {
 	account := "luoshan"
 	cmd := &qitmeerjson.GetNewAddressCmd{
 		Account: &account,
->>>>>>> a87dfd2d3b11d0304ccb0ba05aaac29719b78507
 	}
 	msg, err := getNewAddress(cmd, w)
 	if err != nil {
@@ -109,17 +102,10 @@ func test_wallet_getNewAddress(w *wallet.Wallet) (interface{}, error) {
 	}
 	return msg, nil
 }
-<<<<<<< HEAD
-func test_wallet_getAddressesByAccount(w *wallet.Wallet)( interface{}, error){
-	account:="imported"
-	cmd:=&qitmeerjson.GetAddressesByAccountCmd{
-		Account:account,
-=======
 func test_wallet_getAddressesByAccount(w *wallet.Wallet) (interface{}, error) {
 	account := "luoshan"
 	cmd := &qitmeerjson.GetAddressesByAccountCmd{
 		Account: account,
->>>>>>> a87dfd2d3b11d0304ccb0ba05aaac29719b78507
 	}
 	msg, err := getAddressesByAccount(cmd, w)
 	if err != nil {

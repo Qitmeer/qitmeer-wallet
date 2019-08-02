@@ -7,8 +7,6 @@ require (
 	github.com/HalalChain/qitmeer-lib v0.0.0-20190731141422-52abd17f2811
 	github.com/davecgh/go-spew v1.1.1
 	github.com/deckarep/golang-set v1.7.1
-	github.com/decred/dcrd/dcrec/secp256k1 v1.0.1
-	github.com/decred/dcrwallet/wallet v1.3.0
 	github.com/jessevdk/go-flags v1.4.0
 	github.com/julienschmidt/httprouter v1.2.0
 	github.com/rakyll/statik v0.1.6
