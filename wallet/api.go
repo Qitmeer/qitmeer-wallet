@@ -314,7 +314,7 @@ func (api API) GetBalance(addrStr string, minConf int32) (*Balance, error) {
 		fmt.Println("getbalance err :", err.Error())
 		return nil, err
 	}
-	return &m, nil
+	return m, nil
 }
 
 //sendPairs creates and sends payment transactions.

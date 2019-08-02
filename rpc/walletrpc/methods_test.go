@@ -2,9 +2,11 @@ package walletrpc
 
 import (
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
-	"os"
-	"path/filepath"
+
+	//"os"
+	//"path/filepath"
 	"testing"
 
 	"github.com/HalalChain/qitmeer-lib/crypto/ecc/secp256k1"
@@ -12,30 +14,32 @@ import (
 	"github.com/HalalChain/qitmeer-wallet/json/qitmeerjson"
 	"github.com/HalalChain/qitmeer-wallet/util"
 	"github.com/HalalChain/qitmeer-wallet/wallet"
+	qjson "github.com/HalalChain/qitmeer-wallet/json"
 	//"time"
 	//"time"
 )
 
-func TestListAccounts(t *testing.T) {
-	w, err := open_wallet()
-	if err != nil {
-		t.Log("open wallet err", err)
-		return
-	}
-
-	l, err := test_wallet_listAccounts(w)
-	if err != nil {
-		t.Log(err)
-		return
-	}
-
-	t.Log(l)
-
-}
+//func TestListAccounts(t *testing.T) {
+//	w, err := open_wallet()
+//	if err != nil {
+//		t.Log("open wallet err", err)
+//		return
+//	}
+//
+//	l, err := test_wallet_listAccounts(w)
+//	if err != nil {
+//		t.Log(err)
+//		return
+//	}
+//
+//	t.Log(l)
+//
+//}
 
 func open_wallet() (*wallet.Wallet, error) {
-	dbpath, _ := os.Getwd() //  "C:\\Users\\luoshan\\AppData\\Local\\Qitwallet\\testnet"
-	dbpath = filepath.Join(dbpath, "testnet")
+	//dbpath, _ := os.Getwd() //  "C:\\Users\\luoshan\\AppData\\Local\\Qitwallet\\testnet"
+	dbpath:="C:\\Users\\luoshan\\AppData\\Local\\Qitwallet\\testnet"
+	//dbpath = filepath.Join(dbpath, "testnet")
 	activeNet := &params.TestNetParams
 	load := wallet.NewLoader(activeNet, dbpath, 250)
 	w, err := load.OpenExistingWallet([]byte("public"), false)
@@ -43,24 +47,31 @@ func open_wallet() (*wallet.Wallet, error) {
 		fmt.Println("openWallet err:", err.Error())
 		return nil, err
 	}
-	// err = w.UnLockManager([]byte("1"))
-	// if err != nil {
-	// 	fmt.Errorf("UnLockManager err:%s", err.Error())
-	// 	return nil, err
-	// }
-	// w.Httpclient = wallet.NewHtpc("admin", "123456", "47.88.220.44:8131",
-	// 	"", true, true, "", "", "")
+	//w.Start()
+	//err=w.Unlock([]byte("123456"),time.After(10*time.Minute))
+	//if err!=nil{
+	//	fmt.Println("err:",err.Error())
+	//	return nil,err
+	//}
+	//err = w.UnLockManager([]byte("123456"))
+	//if err != nil {
+	//	fmt.Errorf("UnLockManager err:%s", err.Error())
+	//	return nil, err
+	//}
+	w.Httpclient = wallet.NewHtpc("admin", "123456", "47.88.220.44:8131",
+		"", true, true, "", "", "")
 	return w, nil
 }
 func test_wallet_createNewAccount(w *wallet.Wallet) error {
 	cmd := &qitmeerjson.CreateNewAccountCmd{
 		Account: "luoshan4",
 	}
-	_, err := createNewAccount(cmd, w)
+	msg, err := createNewAccount(cmd, w)
 	if err != nil {
 		fmt.Println("errr:", err.Error())
 		return err
 	}
+	fmt.Println("test_wallet_createNewAccount :",msg)
 	return nil
 }
 func test_wallet_getbalance(w *wallet.Wallet) ( interface{}, error){
@@ -75,7 +86,12 @@ func test_wallet_getbalance(w *wallet.Wallet) ( interface{}, error){
 		fmt.Println("errr:",err.Error())
 		return nil,err
 	}
-	fmt.Println("balance ：",b)
+	r:=b.(*wallet.Balance)
+	fmt.Println("test_wallet_getbalance :",b)
+	fmt.Println("test_wallet_getbalance  ConfirmAmount:",r.ConfirmAmount)
+	fmt.Println("test_wallet_getbalance  UnspendAmount:",r.UnspendAmount)
+	fmt.Println("test_wallet_getbalance  SpendAmount:",r.SpendAmount)
+	fmt.Println("test_wallet_getbalance  TotalAmount:",r.TotalAmount)
 	return b, nil
 }
 func test_wallet_listAccounts(w *wallet.Wallet)( interface{}, error){
@@ -88,44 +104,63 @@ func test_wallet_listAccounts(w *wallet.Wallet)( interface{}, error){
 		fmt.Println("errr:", err.Error())
 		return nil, err
 	}
+	fmt.Println("test_wallet_listAccounts :",msg)
 	return msg, nil
 }
-<<<<<<< HEAD
-func test_wallet_getNewAddress(w *wallet.Wallet)( interface{}, error){
-	account:="import"
-	cmd:=&qitmeerjson.GetNewAddressCmd{
-		Account:&account,
-=======
+
+func test_wallet_getlisttxbyaddr(w *wallet.Wallet)( interface{}, error){
+	cmd:=&qitmeerjson.GetListTxByAddrCmd{
+		Address:"TmYaYXRU58ppifMLwqsk6YRPQDrEvdm4dW1",
+		Stype:int32(0),
+		Page:int32(1),
+		PageSize:int32(100),
+	}
+	result, err := getlisttxbyaddr(cmd, w)
+	if err != nil {
+		fmt.Println("errr:", err.Error())
+		return nil, err
+	}
+	if(err!=nil){
+		fmt.Errorf("test_wallet_getlisttxbyaddr err:%s",err.Error())
+	}else{
+		a:=result.(*qjson.PageTxRawResult)
+		fmt.Println("test_wallet_getlisttxbyaddr msg a.Total:",a.Total)
+		for _, t := range a.Transactions {
+			b,err:=json.Marshal(t)
+			if err!=nil{
+				fmt.Println("test_wallet_getlisttxbyaddr err:",err.Error())
+				return nil, err
+			}
+			fmt.Println("test_wallet_getlisttxbyaddr :",string(b))
+		}
+	}
+	return result, nil
+}
+
 func test_wallet_getNewAddress(w *wallet.Wallet) (interface{}, error) {
 	account := "luoshan"
 	cmd := &qitmeerjson.GetNewAddressCmd{
 		Account: &account,
->>>>>>> a87dfd2d3b11d0304ccb0ba05aaac29719b78507
 	}
 	msg, err := getNewAddress(cmd, w)
 	if err != nil {
 		fmt.Println("errr:", err.Error())
 		return nil, err
 	}
+	fmt.Println("test_wallet_getNewAddress :",msg)
 	return msg, nil
 }
-<<<<<<< HEAD
-func test_wallet_getAddressesByAccount(w *wallet.Wallet)( interface{}, error){
-	account:="imported"
-	cmd:=&qitmeerjson.GetAddressesByAccountCmd{
-		Account:account,
-=======
 func test_wallet_getAddressesByAccount(w *wallet.Wallet) (interface{}, error) {
 	account := "luoshan"
 	cmd := &qitmeerjson.GetAddressesByAccountCmd{
 		Account: account,
->>>>>>> a87dfd2d3b11d0304ccb0ba05aaac29719b78507
 	}
 	msg, err := getAddressesByAccount(cmd, w)
 	if err != nil {
 		fmt.Println("errr:", err.Error())
 		return nil, err
 	}
+	fmt.Println("test_wallet_getAddressesByAccount :",msg)
 	return msg, nil
 }
 func test_wallet_getAccountByAddress(w *wallet.Wallet) (interface{}, error) {
@@ -138,6 +173,7 @@ func test_wallet_getAccountByAddress(w *wallet.Wallet) (interface{}, error) {
 		fmt.Println("errr:", err.Error())
 		return nil, err
 	}
+	fmt.Println("test_wallet_getAccountByAddress :",msg)
 	return msg, nil
 }
 func test_wallet_importPrivKey(w *wallet.Wallet) (interface{}, error) {
@@ -152,6 +188,7 @@ func test_wallet_importPrivKey(w *wallet.Wallet) (interface{}, error) {
 		fmt.Println("errr:", err.Error())
 		return nil, err
 	}
+	fmt.Println("test_wallet_importPrivKey :",msg)
 	return msg, nil
 }
 func test_wallet_importWifPrivKey(w *wallet.Wallet) (interface{}, error) {
@@ -178,6 +215,7 @@ func test_wallet_dumpPrivKey(w *wallet.Wallet) (interface{}, error) {
 		fmt.Println("errr:", err.Error())
 		return nil, err
 	}
+	fmt.Println("test_wallet_dumpPrivKey :",msg)
 	return msg, nil
 }
 func test_wallet_getAccountAndAddress(w *wallet.Wallet) (interface{}, error) {
@@ -186,6 +224,9 @@ func test_wallet_getAccountAndAddress(w *wallet.Wallet) (interface{}, error) {
 		fmt.Println("errr:", err.Error())
 		return nil, err
 	}
+	a:=msg.([]wallet.AccountAndAddressResult)
+	fmt.Println("test_wallet_getAccountAndAddress :",a)
+	fmt.Println("test_wallet_getAccountAndAddress :",a[1].AddrsOutput[0].Addr)
 	return msg, nil
 }
 func test_wallet_sendToAddress(w *wallet.Wallet)( interface{}, error){
@@ -200,11 +241,12 @@ func test_wallet_sendToAddress(w *wallet.Wallet)( interface{}, error){
 		fmt.Println("errr:", err.Error())
 		return nil, err
 	}
+	fmt.Println("test_wallet_sendToAddress :",msg)
 	return msg, nil
 }
 func test_wallet_updateblock(w *wallet.Wallet)(  error){
 	cmd:=&qitmeerjson.UpdateBlockToCmd{
-		Toheight:0,
+		Toheight:1607,
 	}
 	err := updateblock(cmd, w)
 	if err != nil {
@@ -242,96 +284,48 @@ func TestWallet_Method(t *testing.T) {
 		return
 	}
 	//w.UpdateMempool()
-	//err=test_wallet_createNewAccount(w)
+	//
+	//test_wallet_createNewAccount(w)
+	//
+	//
+	//test_wallet_importPrivKey(w)
+	//
+	//
+	//test_wallet_listAccounts(w)
+	//
+	//
+	//test_wallet_getNewAddress(w)
+	//
+	//
+	//test_wallet_getAddressesByAccount(w)
+	//
+	//
+	//test_wallet_getAccountByAddress(w)
+	//
+	//
+	//test_wallet_dumpPrivKey(w)
+	//
+	//
+	//
+	//test_wallet_getbalance(w)
+	//
+	//
+	//test_wallet_sendToAddress(w)
+	//
+	//
+	//test_wif(w)
+	//
+	//test_wallet_getAccountAndAddress(w)
+	//
+	//
+	//test_wallet_getlisttxbyaddr(w)
+
+	test_wallet_updateblock(w)
+	//str,err:=w.GetTx("e44b7a7c361c7f220811f07a6c051ea95967c56dff0d255e62c29908597c320d")
+	////str,err:=w.GetTx("2c0cbf455ee3ae055261db248efa136e09c9742634b1a769c6f1be49c4a689f0")
 	//if(err!=nil){
-	//	fmt.Errorf("test_wallet_createNewAccount err:%s",err.Error())
+	//	fmt.Println("GetTx err:",err.Error())
+	//	return
 	//}
-
-	//res,err:=test_wallet_importPrivKey(w)
-	//if(err!=nil){
-	//	fmt.Errorf("test_wallet_importPrivKey err:%s",err.Error())
-	//}else{
-	//	fmt.Println("test_wallet_importPrivKey :",res)
-	//}
-
-	//m,err:=test_wallet_listAccounts(w)
-	//if(err!=nil){
-	//	fmt.Errorf("test_wallet_listAccounts err:%s",err.Error())
-	//}else{
-	//	fmt.Println("test_wallet_listAccounts :",m)
-	//}
-
-	//address,err:=test_wallet_getNewAddress(w)
-	//if(err!=nil){
-	//	fmt.Errorf("test_wallet_getNewAddress err:%s",err.Error())
-	//}else{
-	//	fmt.Println("test_wallet_getNewAddress :",address)
-	//}
-
-	//adds,err:=test_wallet_getAddressesByAccount(w)
-	//if(err!=nil){
-	//	fmt.Errorf("test_wallet_getAddressesByAccount err:%s",err.Error())
-	//}else{
-	//	fmt.Println("test_wallet_getAddressesByAccount :",adds)
-	//}
-
-	//account,err:=test_wallet_getAccountByAddress(w)
-	//if(err!=nil){
-	//	fmt.Errorf("test_wallet_getAccountByAddress err:%s",err.Error())
-	//}else{
-	//	fmt.Println("test_wallet_getAccountByAddress :",account)
-	//}
-
-	//pri,err:=test_wallet_dumpPrivKey(w)
-	//if(err!=nil){
-	//	fmt.Errorf("test_wallet_dumpPrivKey err:%s",err.Error())
-	//}else{
-	//	fmt.Println("test_wallet_dumpPrivKey :",pri)
-	//}
-
-
-	//err=test_wallet_updateblock(w)
-	//if(err!=nil){
-	//	fmt.Errorf("test_wallet_sendToAddress err:%s",err.Error())
-	//}else{
-	//	fmt.Println("test_wallet_sendToAddress :",err)
-	//}
-
-
-	result,err:=test_wallet_getbalance(w)
-	//result,err:=test_wallet_getbalance("TmZQiY7WZarVk6Fax1NgUJCoVmonrEFRzwy",w)
-	if(err!=nil){
-		fmt.Errorf("test_wallet_getbalance err:%s",err.Error())
-	}else{
-		r:=result.(*wallet.Balance)
-		fmt.Println("test_wallet_getbalance :",result)
-		fmt.Println("test_wallet_getbalance  ConfirmAmount:",r.ConfirmAmount)
-		fmt.Println("test_wallet_getbalance  UnspendAmount:",r.UnspendAmount)
-		fmt.Println("test_wallet_getbalance  SpendAmount:",r.SpendAmount)
-		fmt.Println("test_wallet_getbalance  TotalAmount:",r.TotalAmount)
-	}
-
-
-	result,err=test_wallet_sendToAddress(w)
-	if(err!=nil){
-		fmt.Errorf("test_wallet_sendToAddress err:%s",err.Error())
-	}else{
-		fmt.Println("test_wallet_sendToAddress :",result)
-	}
-
-	//err=test_wif(w)
-	//if(err!=nil){
-	//	fmt.Println("test_wif err:",err.Error())
-	//}
-
-	//result,err:=test_wallet_getAccountAndAddress(w)
-	//if(err!=nil){
-	//	fmt.Errorf("test_wallet_getAccountAndAddress err:%s",err.Error())
-	//}else{
-	//	a:=result.([]wallet.AccountAndAddressResult)
-	//	fmt.Println("test_wallet_getAccountAndAddress :",a)
-	//	fmt.Println("test_wallet_getAccountAndAddress :",a[1].AddrsOutput[0].Addr)
-	//	//fmt.Println("test_wallet_getAccountAndAddress :",a[1].Addrs[1].ScriptAddress())
-	//	//fmt.Println("test_wallet_getAccountAndAddress :",a[1].Addrs[2].Hash160())
-	//}
+	//fmt.Println("GetTx :",str)
 }

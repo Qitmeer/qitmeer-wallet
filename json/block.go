@@ -18,3 +18,9 @@ type BlockHttpResult struct {
 	Parents       []string     `json:"parents"`
 	Children       []string     `json:"children"`
 }
+type PageTxRawResult struct {
+	Total int32
+	Page  int32
+	PageSize int32
+	Transactions  []json.TxRawResult `json:"transactions,omitempty"`
+}
