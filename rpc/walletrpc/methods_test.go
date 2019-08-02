@@ -70,7 +70,7 @@ func test_wallet_listAccounts(w *wallet.Wallet)( interface{}, error){
 	return msg,nil
 }
 func test_wallet_getNewAddress(w *wallet.Wallet)( interface{}, error){
-	account:="luoshan"
+	account:="import"
 	cmd:=&qitmeerjson.GetNewAddressCmd{
 		Account:&account,
 	}
@@ -82,7 +82,7 @@ func test_wallet_getNewAddress(w *wallet.Wallet)( interface{}, error){
 	return msg,nil
 }
 func test_wallet_getAddressesByAccount(w *wallet.Wallet)( interface{}, error){
-	account:="luoshan"
+	account:="imported"
 	cmd:=&qitmeerjson.GetAddressesByAccountCmd{
 		Account:account,
 	}
@@ -212,6 +212,12 @@ func TestWallet_Method(t *testing.T) {
 	//	fmt.Errorf("test_wallet_createNewAccount err:%s",err.Error())
 	//}
 
+	//res,err:=test_wallet_importPrivKey(w)
+	//if(err!=nil){
+	//	fmt.Errorf("test_wallet_importPrivKey err:%s",err.Error())
+	//}else{
+	//	fmt.Println("test_wallet_importPrivKey :",res)
+	//}
 
 	//m,err:=test_wallet_listAccounts(w)
 	//if(err!=nil){
@@ -248,12 +254,6 @@ func TestWallet_Method(t *testing.T) {
 	//	fmt.Println("test_wallet_dumpPrivKey :",pri)
 	//}
 
-	//result,err:=test_wallet_importPrivKey(w)
-	//if(err!=nil){
-	//	fmt.Errorf("test_wallet_importPrivKey err:%s",err.Error())
-	//}else{
-	//	fmt.Println("test_wallet_importPrivKey :",result)
-	//}
 
 	//err=test_wallet_updateblock(w)
 	//if(err!=nil){
@@ -268,7 +268,7 @@ func TestWallet_Method(t *testing.T) {
 	if(err!=nil){
 		fmt.Errorf("test_wallet_getbalance err:%s",err.Error())
 	}else{
-		r:=result.(wallet.Balance)
+		r:=result.(*wallet.Balance)
 		fmt.Println("test_wallet_getbalance :",result)
 		fmt.Println("test_wallet_getbalance  ConfirmAmount:",r.ConfirmAmount)
 		fmt.Println("test_wallet_getbalance  UnspendAmount:",r.UnspendAmount)
@@ -277,12 +277,12 @@ func TestWallet_Method(t *testing.T) {
 	}
 
 
-	//result,err:=test_wallet_sendToAddress(w)
-	//if(err!=nil){
-	//	fmt.Errorf("test_wallet_sendToAddress err:%s",err.Error())
-	//}else{
-	//	fmt.Println("test_wallet_sendToAddress :",result)
-	//}
+	result,err=test_wallet_sendToAddress(w)
+	if(err!=nil){
+		fmt.Errorf("test_wallet_sendToAddress err:%s",err.Error())
+	}else{
+		fmt.Println("test_wallet_sendToAddress :",result)
+	}
 
 
 	//err=test_wif(w)
