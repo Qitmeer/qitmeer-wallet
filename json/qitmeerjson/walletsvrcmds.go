@@ -149,6 +149,12 @@ type GetBalanceByAddressCmd struct {
 	Address string
 	MinConf int `jsonrpcdefault:"1"`
 }
+type GetListTxByAddrCmd struct {
+	Address string
+	Page int32
+	PageSize int32
+	Stype int32
+}
 
 // NewGetBalanceCmd returns a new instance which can be used to issue a
 // getbalance JSON-RPC command.

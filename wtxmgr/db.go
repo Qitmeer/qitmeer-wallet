@@ -167,13 +167,24 @@ func valueBlockRecord(block *BlockMeta, txHash *chainhash.Hash) []byte {
 	return v
 }
 func ValueAddrTxOutput(txout *AddrTxOutput) []byte {
-	v :=make([]byte,96)
+	var v []byte
+	if(txout.SpendTo==nil){
+		v =make([]byte,96)
+	}else{
+		v =make([]byte,96+36)
+	}
 	copy(v,txout.Txid[:])
 	byteOrder.PutUint32(v[32:36], txout.Index)
 	byteOrder.PutUint64(v[36:44], uint64(txout.Amount))
 	copy(v[44:76],txout.Block.Hash[:])
 	byteOrder.PutUint32(v[88:92], uint32(txout.Block.Height))
 	byteOrder.PutUint32(v[92:96], uint32(txout.Spend))
+	if len(v)==136{
+		byteOrder.PutUint32(v[96:100], txout.SpendTo.Index)
+		copy(v[100:132],txout.SpendTo.TxHash[:])
+		//byteOrder.PutUint32(v[132:136], uint32(txout.SpendTo.Block.Height))
+		//copy(v[136:168],txout.SpendTo.Block.Hash[:])
+	}
 	return v
 }
 func ReadAddrTxOutput(v []byte,txout *AddrTxOutput) error{
@@ -183,6 +194,10 @@ func ReadAddrTxOutput(v []byte,txout *AddrTxOutput) error{
 	copy(txout.Block.Hash[:],v[44:76])
 	txout.Block.Height=int32(byteOrder.Uint32(v[88:92]))
 	txout.Spend=int32(byteOrder.Uint32(v[92:96]))
+	if len(v)==132{
+		txout.SpendTo.Index=byteOrder.Uint32(v[96:100])
+		copy(txout.SpendTo.TxHash[:],v[100:132])
+	}
 	return nil
 }
 
