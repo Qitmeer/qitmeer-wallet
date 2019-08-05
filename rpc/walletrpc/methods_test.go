@@ -151,8 +151,8 @@ func test_wallet_getNewAddress(w *wallet.Wallet) (interface{}, error) {
 	return msg, nil
 }
 func test_wallet_getAddressesByAccount(w *wallet.Wallet) (interface{}, error) {
-	//account := "default"
-	account := "imported"
+	account := "default"
+	//account := "imported"
 	cmd := &qitmeerjson.GetAddressesByAccountCmd{
 		Account: account,
 	}
