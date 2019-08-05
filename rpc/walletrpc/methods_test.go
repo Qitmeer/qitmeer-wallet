@@ -53,11 +53,11 @@ func open_wallet() (*wallet.Wallet, error) {
 	//	fmt.Println("err:",err.Error())
 	//	return nil,err
 	//}
-	//err = w.UnLockManager([]byte("123456"))
-	//if err != nil {
-	//	fmt.Errorf("UnLockManager err:%s", err.Error())
-	//	return nil, err
-	//}
+	err = w.UnLockManager([]byte("123456"))
+	if err != nil {
+		fmt.Errorf("UnLockManager err:%s", err.Error())
+		return nil, err
+	}
 	w.Httpclient = wallet.NewHtpc("admin", "123456", "47.88.220.44:8131",
 		"", true, true, "", "", "")
 	return w, nil
@@ -138,7 +138,7 @@ func test_wallet_getlisttxbyaddr(w *wallet.Wallet)( interface{}, error){
 }
 
 func test_wallet_getNewAddress(w *wallet.Wallet) (interface{}, error) {
-	account := "luoshan"
+	account := "default"
 	cmd := &qitmeerjson.GetNewAddressCmd{
 		Account: &account,
 	}
@@ -151,7 +151,8 @@ func test_wallet_getNewAddress(w *wallet.Wallet) (interface{}, error) {
 	return msg, nil
 }
 func test_wallet_getAddressesByAccount(w *wallet.Wallet) (interface{}, error) {
-	account := "luoshan"
+	//account := "default"
+	account := "imported"
 	cmd := &qitmeerjson.GetAddressesByAccountCmd{
 		Account: account,
 	}
@@ -181,7 +182,6 @@ func test_wallet_importPrivKey(w *wallet.Wallet) (interface{}, error) {
 	cmd := &qitmeerjson.ImportPrivKeyCmd{
 		PrivKey: "7e445aa5ffd834cb2d3b2db50f8997dd21af29bec3d296aaa066d902b93f484b",
 		Rescan:  &v,
-		//PrivKey :"7e445aa5ffd834cb2d3b2db50f8997dd21af29bec3d296aaa066d902b93f484b",
 	}
 	msg, err := importPrivKey(cmd, w)
 	if err != nil {
@@ -196,7 +196,6 @@ func test_wallet_importWifPrivKey(w *wallet.Wallet) (interface{}, error) {
 	cmd := &qitmeerjson.ImportPrivKeyCmd{
 		PrivKey: "9QwXzXVQBFNm1fxP8jCqHJG9jZKjqrUKjYiTvaRxEbFobiNrvzhgZ",
 		Rescan:  &v,
-		//PrivKey :"7e445aa5ffd834cb2d3b2db50f8997dd21af29bec3d296aaa066d902b93f484b",
 	}
 	msg, err := importWifPrivKey(cmd, w)
 	if err != nil {
@@ -246,7 +245,7 @@ func test_wallet_sendToAddress(w *wallet.Wallet)( interface{}, error){
 }
 func test_wallet_updateblock(w *wallet.Wallet)(  error){
 	cmd:=&qitmeerjson.UpdateBlockToCmd{
-		Toheight:1607,
+		Toheight:0,
 	}
 	err := updateblock(cmd, w)
 	if err != nil {
@@ -291,13 +290,13 @@ func TestWallet_Method(t *testing.T) {
 	//test_wallet_importPrivKey(w)
 	//
 	//
+	//test_wallet_getNewAddress(w)
+	test_wallet_getAddressesByAccount(w)
 	//test_wallet_listAccounts(w)
 	//
 	//
-	//test_wallet_getNewAddress(w)
 	//
 	//
-	//test_wallet_getAddressesByAccount(w)
 	//
 	//
 	//test_wallet_getAccountByAddress(w)
@@ -320,7 +319,7 @@ func TestWallet_Method(t *testing.T) {
 	//
 	//test_wallet_getlisttxbyaddr(w)
 
-	test_wallet_updateblock(w)
+	//test_wallet_updateblock(w)
 	//str,err:=w.GetTx("e44b7a7c361c7f220811f07a6c051ea95967c56dff0d255e62c29908597c320d")
 	////str,err:=w.GetTx("2c0cbf455ee3ae055261db248efa136e09c9742634b1a769c6f1be49c4a689f0")
 	//if(err!=nil){
