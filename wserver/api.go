@@ -173,12 +173,12 @@ func (api *API) Open(walletPubPass string) error {
 			lockChan <- time.Time{}
 			fmt.Println("+++++++=xxxxxxx")
 		}()
-		// err := w.Unlock([]byte("1"), lockChan)
-		// if err != nil {
-		// 	fmt.Printf("ERR: Failed to unlock new wallet "+
-		// 		"during old wallet key import: %v", err)
-		// 	return
-		// }
+		//err := w.Unlock([]byte("123456"), lockChan)
+		//if err != nil {
+		//	fmt.Printf("ERR: Failed to unlock new wallet "+
+		//		"during old wallet key import: %v", err)
+		//	return
+		//}
 		fmt.Println("ollllllllllll")
 	})
 
