@@ -34,6 +34,12 @@ type blockRecord struct {
 	transactions []chainhash.Hash
 }
 
+type SpendTo struct {
+	Index uint32
+	TxHash chainhash.Hash
+	//Block  Block
+}
+
 type AddrTxOutput struct {
 	Address string
 	Txid chainhash.Hash
@@ -41,6 +47,7 @@ type AddrTxOutput struct {
 	Amount types.Amount
 	Block Block
 	Spend int32 // index 0  unspend 1 spend
+	SpendTo *SpendTo
 }
 
 // incidence records the block hash and blockchain height of a mined transaction.
