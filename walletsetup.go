@@ -7,7 +7,9 @@ package main
 import (
 	"bufio"
 	"fmt"
+	"github.com/HalalChain/qitmeer-lib/crypto/bip32"
 	btcec "github.com/HalalChain/qitmeer-lib/crypto/ecc/secp256k1"
+	waddrmgr "github.com/HalalChain/qitmeer-wallet/waddrmgs"
 	"os"
 	"path/filepath"
 	"github.com/HalalChain/qitmeer-wallet/internal/legacy/keystore"
@@ -18,6 +20,7 @@ import (
 	chaincfg "github.com/HalalChain/qitmeer-lib/params"
 	"github.com/HalalChain/qitmeer-wallet/walletdb"
 	"github.com/HalalChain/qitmeer-wallet/wallet"
+	"github.com/HalalChain/qitmeer-lib/crypto/ecc/secp256k1"
 )
 
 // networkDir returns the directory name of a network directory to hold wallet
@@ -149,7 +152,6 @@ func createWallet(cfg *config) error {
 					"wallet format: %v", err)
 				return
 			}
-
 			// Remove the legacy key store.
 			err = os.Remove(keystorePath)
 			if err != nil {
@@ -175,13 +177,33 @@ func createWallet(cfg *config) error {
 	if err != nil {
 		return err
 	}
-
+	seedKey, err :=bip32.NewMasterKey(seed)
+	if err != nil {
+		fmt.Println("failed to derive master extended key.")
+		return err
+	}
 	fmt.Println("Creating the wallet...")
 	w, err := loader.CreateNewWallet(pubPass, privPass, seed, time.Now())
 	if err != nil {
 		return err
 	}
-
+	fmt.Printf("pri:%x\n",seedKey.Key)
+	pri,_:=secp256k1.PrivKeyFromBytes(seedKey.Key)
+	wif, err := util.NewWIF(pri,w.ChainParams(),true)
+	if err != nil {
+		fmt.Println("private key decode failed:",err.Error())
+		return err
+	}
+	if !wif.IsForNet(w.ChainParams()) {
+		fmt.Println("Key is not intended for",w.ChainParams().Name,err.Error())
+		return err
+	}
+	w.UnLockManager(privPass)
+	_,err=w.ImportPrivateKey(waddrmgr.KeyScopeBIP0044, wif, nil, false)
+	if err!=nil {
+		fmt.Println("ImportPrivateKey err:",err.Error())
+		return err
+	}
 	w.Manager.Close()
 	fmt.Println("The wallet has been created successfully.")
 	return nil
