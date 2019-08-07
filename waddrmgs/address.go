@@ -7,15 +7,16 @@ package waddrmgr
 import (
 	"encoding/hex"
 	"fmt"
+	"sync"
+
 	"github.com/HalalChain/qitmeer-lib/common/hash"
+	addr "github.com/HalalChain/qitmeer-lib/core/address"
 	"github.com/HalalChain/qitmeer-lib/core/types"
 	"github.com/HalalChain/qitmeer-lib/crypto/bip32"
 	ecc "github.com/HalalChain/qitmeer-lib/crypto/ecc/secp256k1"
 	"github.com/HalalChain/qitmeer-wallet/internal/zero"
-	"github.com/HalalChain/qitmeer-wallet/util"
+	"github.com/HalalChain/qitmeer-wallet/utils"
 	"github.com/HalalChain/qitmeer-wallet/walletdb"
-	addr "github.com/HalalChain/qitmeer-lib/core/address"
-	"sync"
 )
 
 // AddressType represents the various address types waddrmgr is currently able
@@ -49,6 +50,7 @@ const (
 	// type.
 	WitnessPubKey
 )
+
 // ManagedAddress is an interface that provides acces to information regarding
 // an address managed by an address manager. Concrete implementations of this
 // type may provide further fields to provide information specific to that type
@@ -102,7 +104,7 @@ type ManagedPubKeyAddress interface {
 
 	// ExportPrivKey returns the private key associated with the address
 	// serialized as Wallet Import Format (WIF).
-	ExportPrivKey() (*util.WIF, error)
+	ExportPrivKey() (*utils.WIF, error)
 
 	// DerivationInfo contains the information required to derive the key
 	// that backs the address via traditional methods from the HD root. For
@@ -295,7 +297,7 @@ func (a *managedAddress) PrivKey() (*ecc.PrivateKey, error) {
 		return nil, err
 	}
 
-	privKey, _ := ecc.PrivKeyFromBytes( privKeyCopy)
+	privKey, _ := ecc.PrivKeyFromBytes(privKeyCopy)
 	zero.Bytes(privKeyCopy)
 	return privKey, nil
 }
@@ -304,13 +306,13 @@ func (a *managedAddress) PrivKey() (*ecc.PrivateKey, error) {
 // Import Format (WIF).
 //
 // This is part of the ManagedPubKeyAddress interface implementation.
-func (a *managedAddress) ExportPrivKey() (*util.WIF, error) {
+func (a *managedAddress) ExportPrivKey() (*utils.WIF, error) {
 	pk, err := a.PrivKey()
 	if err != nil {
 		return nil, err
 	}
 
-	return util.NewWIF(pk, a.manager.rootManager.chainParams, a.compressed)
+	return utils.NewWIF(pk, a.manager.rootManager.chainParams, a.compressed)
 }
 
 // Derivationinfo contains the information required to derive the key that
@@ -355,7 +357,7 @@ func newManagedAddressWithoutPrivKey(m *ScopedKeyManager,
 	switch addrType {
 
 	case PubKeyHash:
-		address, err =addr.NewPubKeyHashAddressByNetId(pubKeyHash, m.rootManager.chainParams.PubKeyHashAddrID)
+		address, err = addr.NewPubKeyHashAddressByNetId(pubKeyHash, m.rootManager.chainParams.PubKeyHashAddrID)
 		if err != nil {
 			return nil, err
 		}
@@ -407,7 +409,6 @@ func newManagedAddress(s *ScopedKeyManager, derivationPath DerivationPath,
 
 	return managedAddr, nil
 }
-
 
 // newManagedAddressFromExtKey returns a new managed address based on the passed
 // account and extended key.  The managed address will have access to the
@@ -597,4 +598,3 @@ func newScriptAddress(m *ScopedKeyManager, account uint32, scriptHash,
 		scriptEncrypted: scriptEncrypted,
 	}, nil
 }
-

@@ -12,7 +12,6 @@ import (
 	"github.com/HalalChain/qitmeer-wallet/config"
 	"github.com/HalalChain/qitmeer-wallet/internal/legacy/keystore"
 	"github.com/HalalChain/qitmeer-wallet/internal/prompt"
-	"github.com/HalalChain/qitmeer-wallet/util"
 	"github.com/HalalChain/qitmeer-wallet/utils"
 )
 
@@ -145,7 +144,7 @@ func convertLegacyKeystore(legacyKeyStore *keystore.Store, w *Wallet) error {
 				continue
 			}
 
-			wif, err := util.NewWIF((*secp256k1.PrivateKey)(privKey),
+			wif, err := utils.NewWIF((*secp256k1.PrivateKey)(privKey),
 				netParams, addr.Compressed())
 			if err != nil {
 				fmt.Printf("WARN: Failed to create wallet "+

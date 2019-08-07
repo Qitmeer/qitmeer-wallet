@@ -12,7 +12,7 @@ import (
 
 	"github.com/HalalChain/qitmeer-wallet/config"
 	"github.com/HalalChain/qitmeer-wallet/json/qitmeerjson"
-	"github.com/HalalChain/qitmeer-wallet/util"
+	"github.com/HalalChain/qitmeer-wallet/utils"
 	waddrmgr "github.com/HalalChain/qitmeer-wallet/waddrmgs"
 	"github.com/HalalChain/qitmeer-wallet/wallet/txrules"
 )
@@ -185,7 +185,7 @@ func (api API) ImportWifPrivKey(accountName string, privKey string, rescan bool)
 		return &qitmeerjson.ErrNotImportedAccount
 	}
 
-	wif, err := util.DecodeWIF(privKey, api.wt.ChainParams())
+	wif, err := utils.DecodeWIF(privKey, api.wt.ChainParams())
 	if err != nil {
 		return &qitmeerjson.RPCError{
 			Code:    qitmeerjson.ErrRPCInvalidAddressOrKey,
@@ -229,7 +229,7 @@ func (api API) ImportPrivKey(accountName string, privKey string, rescan bool) er
 		return err
 	}
 	pri, _ := secp256k1.PrivKeyFromBytes(prihash)
-	wif, err := util.NewWIF(pri, api.wt.ChainParams(), true)
+	wif, err := utils.NewWIF(pri, api.wt.ChainParams(), true)
 	if err != nil {
 		return &qitmeerjson.RPCError{
 			Code:    qitmeerjson.ErrRPCInvalidAddressOrKey,

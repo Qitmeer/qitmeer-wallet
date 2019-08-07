@@ -7,20 +7,21 @@ package main
 import (
 	"bufio"
 	"fmt"
-	"github.com/HalalChain/qitmeer-lib/crypto/bip32"
-	btcec "github.com/HalalChain/qitmeer-lib/crypto/ecc/secp256k1"
-	waddrmgr "github.com/HalalChain/qitmeer-wallet/waddrmgs"
 	"os"
 	"path/filepath"
-	"github.com/HalalChain/qitmeer-wallet/internal/legacy/keystore"
-	"github.com/HalalChain/qitmeer-wallet/internal/prompt"
-	"github.com/HalalChain/qitmeer-wallet/util"
 	"time"
 
-	chaincfg "github.com/HalalChain/qitmeer-lib/params"
-	"github.com/HalalChain/qitmeer-wallet/walletdb"
-	"github.com/HalalChain/qitmeer-wallet/wallet"
+	"github.com/HalalChain/qitmeer-lib/crypto/bip32"
+	btcec "github.com/HalalChain/qitmeer-lib/crypto/ecc/secp256k1"
+	"github.com/HalalChain/qitmeer-wallet/internal/legacy/keystore"
+	"github.com/HalalChain/qitmeer-wallet/internal/prompt"
+	"github.com/HalalChain/qitmeer-wallet/utils"
+	waddrmgr "github.com/HalalChain/qitmeer-wallet/waddrmgs"
+
 	"github.com/HalalChain/qitmeer-lib/crypto/ecc/secp256k1"
+	chaincfg "github.com/HalalChain/qitmeer-lib/params"
+	"github.com/HalalChain/qitmeer-wallet/wallet"
+	"github.com/HalalChain/qitmeer-wallet/walletdb"
 )
 
 // networkDir returns the directory name of a network directory to hold wallet
@@ -169,7 +170,7 @@ func createWallet(cfg *config) error {
 	if err != nil {
 		return err
 	}
-	fmt.Println("pubPass:",string(pubPass))
+	fmt.Println("pubPass:", string(pubPass))
 	// Ascertain the wallet generation seed.  This will either be an
 	// automatically generated value the user has already confirmed or a
 	// value the user has entered which has already been validated.
@@ -177,7 +178,7 @@ func createWallet(cfg *config) error {
 	if err != nil {
 		return err
 	}
-	seedKey, err :=bip32.NewMasterKey(seed)
+	seedKey, err := bip32.NewMasterKey(seed)
 	if err != nil {
 		fmt.Println("failed to derive master extended key.")
 		return err
@@ -187,21 +188,21 @@ func createWallet(cfg *config) error {
 	if err != nil {
 		return err
 	}
-	fmt.Printf("pri:%x\n",seedKey.Key)
-	pri,_:=secp256k1.PrivKeyFromBytes(seedKey.Key)
-	wif, err := util.NewWIF(pri,w.ChainParams(),true)
+	fmt.Printf("pri:%x\n", seedKey.Key)
+	pri, _ := secp256k1.PrivKeyFromBytes(seedKey.Key)
+	wif, err := utils.NewWIF(pri, w.ChainParams(), true)
 	if err != nil {
-		fmt.Println("private key decode failed:",err.Error())
+		fmt.Println("private key decode failed:", err.Error())
 		return err
 	}
 	if !wif.IsForNet(w.ChainParams()) {
-		fmt.Println("Key is not intended for",w.ChainParams().Name,err.Error())
+		fmt.Println("Key is not intended for", w.ChainParams().Name, err.Error())
 		return err
 	}
 	w.UnLockManager(privPass)
-	_,err=w.ImportPrivateKey(waddrmgr.KeyScopeBIP0044, wif, nil, false)
-	if err!=nil {
-		fmt.Println("ImportPrivateKey err:",err.Error())
+	_, err = w.ImportPrivateKey(waddrmgr.KeyScopeBIP0044, wif, nil, false)
+	if err != nil {
+		fmt.Println("ImportPrivateKey err:", err.Error())
 		return err
 	}
 	w.Manager.Close()
@@ -229,7 +230,7 @@ func convertLegacyKeystore(legacyKeyStore *keystore.Store, w *wallet.Wallet) err
 				continue
 			}
 
-			wif, err := util.NewWIF((*btcec.PrivateKey)(privKey),
+			wif, err := utils.NewWIF((*btcec.PrivateKey)(privKey),
 				netParams, addr.Compressed())
 			if err != nil {
 				fmt.Printf("WARN: Failed to create wallet "+
@@ -237,7 +238,7 @@ func convertLegacyKeystore(legacyKeyStore *keystore.Store, w *wallet.Wallet) err
 					addr.Address(), err)
 				continue
 			}
-			fmt.Println("wif:",wif)
+			fmt.Println("wif:", wif)
 			//_, err = w.ImportPrivateKey(waddrmgr.KeyScopeBIP0044,
 			//	wif, &blockStamp, false)
 			//if err != nil {
@@ -265,4 +266,3 @@ func convertLegacyKeystore(legacyKeyStore *keystore.Store, w *wallet.Wallet) err
 
 	return nil
 }
-

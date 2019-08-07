@@ -7,19 +7,22 @@ package wallet
 import (
 	"errors"
 	"fmt"
-	"github.com/HalalChain/qitmeer-lib/log"
-	chaincfg "github.com/HalalChain/qitmeer-lib/params"
 	"os"
 	"path/filepath"
-	"github.com/HalalChain/qitmeer-wallet/waddrmgs"
-	"github.com/HalalChain/qitmeer-wallet/walletdb"
-	_ "github.com/HalalChain/qitmeer-wallet/walletdb/bdb"
 	"sync"
 	"time"
+
+	"github.com/HalalChain/qitmeer-lib/log"
+	chaincfg "github.com/HalalChain/qitmeer-lib/params"
+	waddrmgr "github.com/HalalChain/qitmeer-wallet/waddrmgs"
+	"github.com/HalalChain/qitmeer-wallet/walletdb"
+	_ "github.com/HalalChain/qitmeer-wallet/walletdb/bdb"
 )
+
 const (
 	walletDbName = "wallet.db"
 )
+
 var (
 	// ErrLoaded describes the error condition of attempting to load or
 	// create a wallet when the loader has already done so.
@@ -92,15 +95,15 @@ func (l *Loader) RunAfterLoad(fn func(*Wallet)) {
 	}
 }
 
-func (l *Loader) OpenWallet(bday time.Time)(*Wallet, error) {
-	b ,err:=l.WalletExists()
-	if(err!=nil){
-		return nil,err
+func (l *Loader) OpenWallet(bday time.Time) (*Wallet, error) {
+	b, err := l.WalletExists()
+	if err != nil {
+		return nil, err
 	}
-	if(b){
-		return l.OpenExistingWallet(nil,false)
-	}else{
-		return l.CreateNewWallet(nil,nil,nil,time.Now())
+	if b {
+		return l.OpenExistingWallet(nil, false)
+	} else {
+		return l.CreateNewWallet(nil, nil, nil, time.Now())
 	}
 }
 
@@ -180,7 +183,7 @@ func (l *Loader) OpenExistingWallet(pubPassphrase []byte, canConsolePrompt bool)
 
 	// Open the database using the boltdb backend.
 	dbPath := filepath.Join(l.dbDirPath, walletDbName)
-	fmt.Println("dbPath：",dbPath)
+	fmt.Println("dbPath：", dbPath)
 	db, err := walletdb.Open("bdb", dbPath)
 	if err != nil {
 		log.Error("Failed to open database: %v", err)
@@ -210,7 +213,7 @@ func (l *Loader) OpenExistingWallet(pubPassphrase []byte, canConsolePrompt bool)
 		}
 		return nil, err
 	}
-	//w.Start()
+	w.Start()
 
 	l.onLoaded(w, db)
 	return w, nil

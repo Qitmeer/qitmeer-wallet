@@ -23,7 +23,7 @@ import (
 	qitec "github.com/HalalChain/qitmeer-lib/crypto/ecc/secp256k1"
 	"github.com/HalalChain/qitmeer-lib/engine/txscript"
 	chaincfg "github.com/HalalChain/qitmeer-lib/params"
-	"github.com/HalalChain/qitmeer-wallet/util"
+	"github.com/HalalChain/qitmeer-wallet/utils"
 	"io"
 	"io/ioutil"
 	"math/big"
@@ -1396,7 +1396,7 @@ func (s *Store) NewIterateRecentBlocks() *BlockIterator {
 // ImportPrivateKey imports a WIF private key into the keystore.  The imported
 // address is created using either a compressed or uncompressed serialized
 // public key, depending on the CompressPubKey bool of the WIF.
-func (s *Store) ImportPrivateKey(wif *util.WIF, bs *BlockStamp) (types.Address, error) {
+func (s *Store) ImportPrivateKey(wif *utils.WIF, bs *BlockStamp) (types.Address, error) {
 	s.mtx.Lock()
 	defer s.mtx.Unlock()
 
@@ -2133,7 +2133,7 @@ type PubKeyAddress interface {
 	// or the address doesn't have any keys.
 	PrivKey() (*qitec.PrivateKey, error)
 	// ExportPrivKey exports the WIF private key.
-	ExportPrivKey() (*util.WIF, error)
+	ExportPrivKey() (*utils.WIF, error)
 }
 
 // newBtcAddress initializes and returns a new address.  privkey must
@@ -2589,7 +2589,7 @@ func (a *btcAddress) PrivKey() (*qitec.PrivateKey, error) {
 
 // ExportPrivKey exports the private key as a WIF for encoding as a string
 // in the Wallet Import Formt.
-func (a *btcAddress) ExportPrivKey() (*util.WIF, error) {
+func (a *btcAddress) ExportPrivKey() (*utils.WIF, error) {
 	pk, err := a.PrivKey()
 	if err != nil {
 		return nil, err
@@ -2598,7 +2598,7 @@ func (a *btcAddress) ExportPrivKey() (*util.WIF, error) {
 	// as our program's assumptions are so broken that this needs to be
 	// caught immediately, and a stack trace here is more useful than
 	// elsewhere.
-	wif, err := util.NewWIF((*qitec.PrivateKey)(pk), a.store.netParams(),
+	wif, err := utils.NewWIF((*qitec.PrivateKey)(pk), a.store.netParams(),
 		a.Compressed())
 	if err != nil {
 		panic(err)

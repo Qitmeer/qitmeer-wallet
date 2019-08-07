@@ -7,7 +7,7 @@ import (
 	"github.com/HalalChain/qitmeer-lib/core/address"
 	"github.com/HalalChain/qitmeer-lib/core/message"
 	"github.com/HalalChain/qitmeer-lib/engine/txscript"
-	"github.com/HalalChain/qitmeer-wallet/util"
+	"github.com/HalalChain/qitmeer-wallet/utils"
 	"github.com/HalalChain/qitmeer-wallet/wallet/txrules"
 	"github.com/HalalChain/qitmeer-lib/common/marshal"
 
@@ -17,9 +17,7 @@ import (
 	log "github.com/sirupsen/logrus"
 
 
-	
 	"github.com/HalalChain/qitmeer-wallet/config"
-	"github.com/HalalChain/qitmeer-wallet/rpc/server"
 
 
 	"encoding/json"
@@ -60,7 +58,6 @@ const (
 type Wallet struct {
 	cfg *config.Config
 
-	RPCSvr *server.RpcServer
 
 	// Data stores
 	db      walletdb.DB
@@ -179,7 +176,7 @@ var (
 //
 // NOTE: If a block stamp is not provided, then the wallet's birthday will be
 // set to the genesis block of the corresponding chain.
-func (w *Wallet) ImportPrivateKey(scope waddrmgr.KeyScope, wif *util.WIF,
+func (w *Wallet) ImportPrivateKey(scope waddrmgr.KeyScope, wif *utils.WIF,
 	bs *waddrmgr.BlockStamp, rescan bool) (string, error) {
 
 	manager, err := w.Manager.FetchScopedKeyManager(scope)
