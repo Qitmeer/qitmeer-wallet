@@ -5,7 +5,7 @@ import (
 	"github.com/HalalChain/qitmeer-lib/common/hash"
 	"github.com/HalalChain/qitmeer-lib/crypto/bip32"
 	"github.com/HalalChain/qitmeer-wallet/internal/zero"
-	"github.com/HalalChain/qitmeer-wallet/util"
+	"github.com/HalalChain/qitmeer-wallet/utils"
 
 	"github.com/HalalChain/qitmeer-lib/core/types"
 	"sync"
@@ -1409,7 +1409,7 @@ func (s *ScopedKeyManager) newAccount(ns walletdb.ReadWriteBucket,
 // It will also return an error if the address already exists.  Any other
 // errors returned are generally unexpected.
 func (s *ScopedKeyManager) ImportPrivateKey(ns walletdb.ReadWriteBucket,
-	wif *util.WIF, bs *BlockStamp) (ManagedPubKeyAddress, error) {
+	wif *utils.WIF, bs *BlockStamp) (ManagedPubKeyAddress, error) {
 
 	// Ensure the address is intended for network the address manager is
 	// associated with.
