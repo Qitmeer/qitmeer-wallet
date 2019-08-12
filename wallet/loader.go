@@ -12,7 +12,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/HalalChain/qitmeer-lib/log"
+	log "github.com/sirupsen/logrus"
+
+	// "github.com/HalalChain/qitmeer-lib/log"
 	chaincfg "github.com/HalalChain/qitmeer-lib/params"
 	waddrmgr "github.com/HalalChain/qitmeer-wallet/waddrmgs"
 	"github.com/HalalChain/qitmeer-wallet/walletdb"
@@ -183,12 +185,14 @@ func (l *Loader) OpenExistingWallet(pubPassphrase []byte, canConsolePrompt bool)
 
 	// Open the database using the boltdb backend.
 	dbPath := filepath.Join(l.dbDirPath, walletDbName)
-	fmt.Println("dbPath：", dbPath)
+	log.Trace("OpenExistingWallet", "dbPath", dbPath)
+
 	db, err := walletdb.Open("bdb", dbPath)
 	if err != nil {
 		log.Error("Failed to open database: %v", err)
 		return nil, err
 	}
+	log.Trace("OpenExistingWallet", "open db", err)
 
 	var cbs *waddrmgr.OpenCallbacks
 	if canConsolePrompt {
@@ -213,6 +217,7 @@ func (l *Loader) OpenExistingWallet(pubPassphrase []byte, canConsolePrompt bool)
 		}
 		return nil, err
 	}
+	log.Trace("OpenExistingWallet", "open ok", true)
 	w.Start()
 
 	l.onLoaded(w, db)

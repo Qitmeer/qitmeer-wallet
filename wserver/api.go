@@ -74,10 +74,10 @@ func (api *API) Create(seed string, walletPass string) error {
 
 //Recove wallet by mnemonic
 func (api *API) Recove(mnemonic string, walletPass string) error {
-	fmt.Println("mnemonic string:",mnemonic)
-	seedBuf, err :=bip39.NewSeedWithErrorChecking(mnemonic,"" )
+	fmt.Println("mnemonic string:", mnemonic)
+	seedBuf, err := bip39.NewSeedWithErrorChecking(mnemonic, "")
 	if err != nil {
-		fmt.Println("errr:",err.Error())
+		fmt.Println("errr:", err.Error())
 		return &crateError{Code: -1, Msg: fmt.Sprintf("seed hex err: %s ", err)}
 	}
 	return api.createWallet(seedBuf, walletPass)
@@ -182,6 +182,9 @@ func (api *API) createWallet(seed []byte, walletPass string) error {
 	}
 
 	wt.Manager.Close()
+	//todo,not close,reopen slow
+	wt.Database().Close()
+
 	return nil
 }
 
@@ -192,26 +195,23 @@ type ResStatus struct {
 
 // MakeSeed wallet HD seed and mnemonic
 func (api *API) MakeSeed() (*ResSeed, error) {
-	seedBuf, err := seed.GenerateSeed(uint16(32))
+	entropyBuf, err := seed.GenerateSeed(uint16(32))
 	if err != nil {
-		return nil, fmt.Errorf("GenerateSeed err: %s", err)
+		return nil, fmt.Errorf("Generate entropy err: %s", err)
 	}
 
-	mnemonic, err := bip39.NewMnemonic(seedBuf)
+	mnemonic, err := bip39.NewMnemonic(entropyBuf)
 	if err != nil {
 		return nil, fmt.Errorf("NewMnemonic err: %s", err)
 	}
 
-	seedBuf1, err :=bip39.NewSeedWithErrorChecking(mnemonic,"" )
+	seedBuf, err := bip39.NewSeedWithErrorChecking(mnemonic, "")
 	if err != nil {
-		fmt.Println("errr:",err.Error())
-		return nil, fmt.Errorf("seed hex err: %s", err)
+		return nil, fmt.Errorf("NewSeed err: %s", err)
 	}
 
-
-
 	return &ResSeed{
-		Seed:     hex.EncodeToString(seedBuf1),
+		Seed:     hex.EncodeToString(seedBuf),
 		Mnemonic: mnemonic,
 	}, nil
 }
