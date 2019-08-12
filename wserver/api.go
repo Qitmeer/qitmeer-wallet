@@ -64,8 +64,7 @@ func (api *API) Status() (status *ResStatus, err error) {
 
 //Create wallet by seed
 func (api *API) Create(seed string, walletPass string) error {
-	fmt.Println("seed string:",seed)
-	seedBuf, err :=bip39.NewSeedWithErrorChecking(seed,"" )
+	seedBuf, err := hex.DecodeString(seed)
 	if err != nil {
 		return &crateError{Code: -1, Msg: fmt.Sprintf("seed hex err: %s ", err)}
 	}
@@ -203,8 +202,16 @@ func (api *API) MakeSeed() (*ResSeed, error) {
 		return nil, fmt.Errorf("NewMnemonic err: %s", err)
 	}
 
+	seedBuf1, err :=bip39.NewSeedWithErrorChecking(mnemonic,"" )
+	if err != nil {
+		fmt.Println("errr:",err.Error())
+		return nil, fmt.Errorf("seed hex err: %s", err)
+	}
+
+
+
 	return &ResSeed{
-		Seed:     hex.EncodeToString(seedBuf),
+		Seed:     hex.EncodeToString(seedBuf1),
 		Mnemonic: mnemonic,
 	}, nil
 }
