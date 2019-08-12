@@ -64,7 +64,8 @@ func (api *API) Status() (status *ResStatus, err error) {
 
 //Create wallet by seed
 func (api *API) Create(seed string, walletPass string) error {
-	seedBuf, err := hex.DecodeString(seed)
+	fmt.Println("seed string:",seed)
+	seedBuf, err :=bip39.NewSeedWithErrorChecking(seed,"" )
 	if err != nil {
 		return &crateError{Code: -1, Msg: fmt.Sprintf("seed hex err: %s ", err)}
 	}
@@ -74,8 +75,10 @@ func (api *API) Create(seed string, walletPass string) error {
 
 //Recove wallet by mnemonic
 func (api *API) Recove(mnemonic string, walletPass string) error {
-	seedBuf, err := bip39.EntropyFromMnemonic(mnemonic)
+	fmt.Println("mnemonic string:",mnemonic)
+	seedBuf, err :=bip39.NewSeedWithErrorChecking(mnemonic,"" )
 	if err != nil {
+		fmt.Println("errr:",err.Error())
 		return &crateError{Code: -1, Msg: fmt.Sprintf("seed hex err: %s ", err)}
 	}
 	return api.createWallet(seedBuf, walletPass)
@@ -130,6 +133,7 @@ func (api *API) Open(walletPubPass string) error {
 // createWallet by seed and walletPass
 func (api *API) createWallet(seed []byte, walletPass string) error {
 	log.Trace("createWallet", api.cfg.Network)
+	fmt.Printf("seed:%x\n", seed)
 
 	activeNetParams := utils.GetNetParams(api.cfg.Network)
 	log.Trace("createWallet", activeNetParams.Name)
