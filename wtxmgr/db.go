@@ -179,7 +179,7 @@ func ValueAddrTxOutput(txout *AddrTxOutput) []byte {
 	copy(v[44:76],txout.Block.Hash[:])
 	byteOrder.PutUint32(v[88:92], uint32(txout.Block.Height))
 	byteOrder.PutUint32(v[92:96], uint32(txout.Spend))
-	if len(v)==136{
+	if len(v)==132{
 		byteOrder.PutUint32(v[96:100], txout.SpendTo.Index)
 		copy(v[100:132],txout.SpendTo.TxHash[:])
 		//byteOrder.PutUint32(v[132:136], uint32(txout.SpendTo.Block.Height))
