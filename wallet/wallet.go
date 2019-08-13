@@ -793,16 +793,12 @@ func parseBlockTxs(block clijson.BlockHttpResult) ([]types.TxOutPoint, []wtxmgr.
 	return txins, txouts, tx, nil
 }
 
-<<<<<<< HEAD
-func (w *Wallet) Updateblock(toHeight int64) error {
-=======
 func (w *Wallet) GetSynceBlockHeight() int32 {
-	height:=w.Manager.SyncedTo().Height
+	height := w.Manager.SyncedTo().Height
 	return height
 }
 
-func (w *Wallet) Updateblock(toHeight int64) error{
->>>>>>> ef5b10ce0ac0971b99cd6931ac40121b88748e7d
+func (w *Wallet) Updateblock(toHeight int64) error {
 	var blockcount string
 	var err error
 	if toHeight == 0 {
