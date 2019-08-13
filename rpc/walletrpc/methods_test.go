@@ -41,7 +41,7 @@ func open_wallet() (*wallet.Wallet, error) {
 	dbpath:="C:\\Users\\luoshan\\AppData\\Local\\Qitwallet\\testnet"
 	//dbpath = filepath.Join(dbpath, "testnet")
 	activeNet := &params.TestNetParams
-	load := wallet.NewLoader(activeNet, dbpath, 250)
+	load := wallet.NewLoader(activeNet, dbpath, 250,nil)
 	w, err := load.OpenExistingWallet([]byte("public"), false)
 	if err != nil {
 		fmt.Println("openWallet err:", err.Error())
@@ -58,8 +58,12 @@ func open_wallet() (*wallet.Wallet, error) {
 		fmt.Errorf("UnLockManager err:%s", err.Error())
 		return nil, err
 	}
-	w.Httpclient = wallet.NewHtpc("admin", "123456", "47.88.220.44:8131",
+	w.Httpclient ,err= wallet.NewHtpc("admin", "123456", "47.88.220.44:8131",
 		"", true, true, "", "", "")
+	if err!=nil{
+		fmt.Errorf("NewHtpc err:%s", err.Error())
+		return nil, err
+	}
 	return w, nil
 }
 func test_wallet_createNewAccount(w *wallet.Wallet) error {
@@ -308,7 +312,7 @@ func TestWallet_Method(t *testing.T) {
 	//
 	//
 	//
-	test_wallet_getbalance(w)
+	//test_wallet_getbalance(w)
 	//
 	//
 	//test_wallet_sendToAddress(w)
@@ -321,7 +325,7 @@ func TestWallet_Method(t *testing.T) {
 	//
 	//test_wallet_getlisttxbyaddr(w)
 
-	//test_wallet_updateblock(w)
+	test_wallet_updateblock(w)
 	//str,err:=w.GetTx("e44b7a7c361c7f220811f07a6c051ea95967c56dff0d255e62c29908597c320d")
 	////str,err:=w.GetTx("2c0cbf455ee3ae055261db248efa136e09c9742634b1a769c6f1be49c4a689f0")
 	//if(err!=nil){
