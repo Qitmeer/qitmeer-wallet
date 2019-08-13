@@ -28,7 +28,8 @@ type htpc struct {
 	httpclient *http.Client
 }
 
-func NewHtpc(RPCUser string, RPCPassword string, RPCServer string, RPCCert string, NoTLS bool, TLSSkipVerify bool, Proxy string, ProxyUser string, ProxyPass string) *htpc {
+func NewHtpc(RPCUser string, RPCPassword string, RPCServer string, RPCCert string,
+	NoTLS bool, TLSSkipVerify bool, Proxy string, ProxyUser string, ProxyPass string) (*htpc, error) {
 	h := &htpc{
 		RPCUser:       RPCUser,
 		RPCPassword:   RPCPassword,
@@ -42,10 +43,10 @@ func NewHtpc(RPCUser string, RPCPassword string, RPCServer string, RPCCert strin
 	}
 	c, err := newHTTPClient(h)
 	if err != nil {
-		return nil
+		return nil, err
 	}
 	h.httpclient = c
-	return h
+	return h, nil
 }
 
 // newHTTPClient returns a new HTTP client that is configured according to the
@@ -105,11 +106,11 @@ func (cfg *htpc) getblockCount() (string, error) {
 	return cfg.getResString("getBlockCount", params)
 }
 func (cfg *htpc) getMempool() (string, error) {
-	params := []interface{}{"",false}
+	params := []interface{}{"", false}
 	return cfg.getResString("getMempool", params)
 }
 func (cfg *htpc) getRawTransaction(txhash string) (string, error) {
-	params := []interface{}{txhash,true}
+	params := []interface{}{txhash, true}
 	return cfg.getResString("getRawTransaction", params)
 }
 func (cfg *htpc) getBlockhash(i int64) (string, error) {
@@ -150,6 +151,8 @@ func (cfg *htpc) sendPostRequest(marshalledJSON []byte) ([]byte, error) {
 
 	// Configure basic access authorization.
 	httpRequest.SetBasicAuth(cfg.RPCUser, cfg.RPCPassword)
+
+	fmt.Println(cfg.RPCUser, cfg.RPCPassword)
 
 	// Create the new HTTP client that is configured according to the user-
 	// specified options and submit the request.
