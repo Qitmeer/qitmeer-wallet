@@ -89,9 +89,6 @@ func (api *API) Open(walletPubPass string) error {
 		log.Trace("api open wallet already open ")
 		return nil
 	}
-
-	fmt.Println("333333")
-
 	walletPubPassBuf := []byte(wallet.InsecurePubPassphrase)
 	wt, err := api.wSvr.WtLoader.OpenExistingWallet(walletPubPassBuf, false)
 	if err != nil {
