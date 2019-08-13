@@ -13,6 +13,7 @@ import (
 
 	"github.com/HalalChain/qitmeer-lib/crypto/bip32"
 	btcec "github.com/HalalChain/qitmeer-lib/crypto/ecc/secp256k1"
+	nfg "github.com/HalalChain/qitmeer-wallet/config"
 	"github.com/HalalChain/qitmeer-wallet/internal/legacy/keystore"
 	"github.com/HalalChain/qitmeer-wallet/internal/prompt"
 	"github.com/HalalChain/qitmeer-wallet/utils"
@@ -90,7 +91,7 @@ func createSimulationWallet(cfg *config) error {
 // provided path.
 func createWallet(cfg *config) error {
 	dbDir := networkDir(cfg.AppDataDir.Value, activeNet)
-	loader := wallet.NewLoader(activeNet, dbDir, 250)
+	loader := wallet.NewLoader(activeNet, dbDir, 250, &nfg.Config{})
 
 	// When there is a legacy keystore, open it now to ensure any errors
 	// don't end up exiting the process after the user has spent time
