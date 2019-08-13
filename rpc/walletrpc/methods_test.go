@@ -138,7 +138,8 @@ func test_wallet_getlisttxbyaddr(w *wallet.Wallet)( interface{}, error){
 }
 
 func test_wallet_getNewAddress(w *wallet.Wallet) (interface{}, error) {
-	account := "default"
+	//account := "default"
+	account := "imported"
 	cmd := &qitmeerjson.GetNewAddressCmd{
 		Account: &account,
 	}
@@ -287,11 +288,11 @@ func TestWallet_Method(t *testing.T) {
 	//test_wallet_createNewAccount(w)
 	//
 	//
-	//test_wallet_importPrivKey(w)
+	test_wallet_importPrivKey(w)
 	//
 	//
 	//test_wallet_getNewAddress(w)
-	test_wallet_getAddressesByAccount(w)
+	//test_wallet_getAddressesByAccount(w)
 	//test_wallet_listAccounts(w)
 	//
 	//
