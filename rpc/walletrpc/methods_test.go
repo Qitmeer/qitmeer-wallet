@@ -78,7 +78,8 @@ func test_wallet_getbalance(w *wallet.Wallet) ( interface{}, error){
 	minconf:=3
 	cmd:=&qitmeerjson.GetBalanceByAddressCmd{
 		//Address:"TmZQiY7WZarVk6Fax1NgUJCoVmonrEFRzwy",
-		Address:"TmbsdsjwzuGboFQ9GcKg6EUmrr3tokzozyF",
+		Address:"TmUWxxq66VCdAJtf5kxPVGwHN8LzXyqRk8L",
+		//Address:"TmbsdsjwzuGboFQ9GcKg6EUmrr3tokzozyF",
 		MinConf:minconf,
 	}
 	b,err:=getbalance(cmd,w)
@@ -288,7 +289,7 @@ func TestWallet_Method(t *testing.T) {
 	//test_wallet_createNewAccount(w)
 	//
 	//
-	test_wallet_importPrivKey(w)
+	//test_wallet_importPrivKey(w)
 	//
 	//
 	//test_wallet_getNewAddress(w)
@@ -307,7 +308,7 @@ func TestWallet_Method(t *testing.T) {
 	//
 	//
 	//
-	//test_wallet_getbalance(w)
+	test_wallet_getbalance(w)
 	//
 	//
 	//test_wallet_sendToAddress(w)
