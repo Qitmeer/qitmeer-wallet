@@ -104,6 +104,9 @@ func getNewAddress(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
 	if cmd.Account != nil {
 		acctName = *cmd.Account
 	}
+	if acctName=="imported"{
+		return nil,fmt.Errorf("Import account cannot create subaddress.")
+	}
 	account, err := w.AccountNumber(waddrmgr.KeyScopeBIP0044, acctName)
 	if err != nil {
 		return nil, err
