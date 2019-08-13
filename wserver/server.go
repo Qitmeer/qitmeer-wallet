@@ -34,7 +34,7 @@ func NewWalletServer(cfg *config.Config) (wSvr *WalletServer, err error) {
 
 	activeNetParams := utils.GetNetParams(cfg.Network)
 	dbDir := filepath.Join(cfg.AppDataDir, cfg.Network)
-	wtLoader := wallet.NewLoader(activeNetParams, dbDir, 250)
+	wtLoader := wallet.NewLoader(activeNetParams, dbDir, 250, cfg)
 	wtExist, err := wtLoader.WalletExists()
 	if err != nil {
 		return nil, fmt.Errorf("load wallet err: %s", err)

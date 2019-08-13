@@ -16,6 +16,7 @@ import (
 
 	// "github.com/HalalChain/qitmeer-lib/log"
 	chaincfg "github.com/HalalChain/qitmeer-lib/params"
+	"github.com/HalalChain/qitmeer-wallet/config"
 	waddrmgr "github.com/HalalChain/qitmeer-wallet/waddrmgs"
 	"github.com/HalalChain/qitmeer-wallet/walletdb"
 	_ "github.com/HalalChain/qitmeer-wallet/walletdb/bdb"
@@ -40,6 +41,7 @@ var (
 )
 
 type Loader struct {
+	Cfg            *config.Config
 	callbacks      []func(*Wallet)
 	chainParams    *chaincfg.Params
 	dbDirPath      string
@@ -50,9 +52,10 @@ type Loader struct {
 }
 
 func NewLoader(chainParams *chaincfg.Params, dbDirPath string,
-	recoveryWindow uint32) *Loader {
+	recoveryWindow uint32, cfg *config.Config) *Loader {
 
 	return &Loader{
+		Cfg:            cfg,
 		chainParams:    chainParams,
 		dbDirPath:      dbDirPath,
 		recoveryWindow: recoveryWindow,
@@ -150,7 +153,7 @@ func (l *Loader) CreateNewWallet(pubPassphrase, privPassphrase, seed []byte,
 	}
 
 	// Open the newly-created wallet.
-	w, err := Open(db, pubPassphrase, nil, l.chainParams, l.recoveryWindow)
+	w, err := Open(db, pubPassphrase, nil, l.chainParams, l.recoveryWindow, l.Cfg)
 	if err != nil {
 		return nil, err
 	}
@@ -206,7 +209,7 @@ func (l *Loader) OpenExistingWallet(pubPassphrase []byte, canConsolePrompt bool)
 			ObtainPrivatePass: noConsole,
 		}
 	}
-	w, err := Open(db, pubPassphrase, cbs, l.chainParams, l.recoveryWindow)
+	w, err := Open(db, pubPassphrase, cbs, l.chainParams, l.recoveryWindow, l.Cfg)
 	if err != nil {
 		// If opening the wallet fails (e.g. because of wrong
 		// passphrase), we must close the backing database to

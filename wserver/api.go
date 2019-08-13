@@ -89,6 +89,7 @@ func (api *API) Open(walletPubPass string) error {
 		log.Trace("api open wallet already open ")
 		return nil
 	}
+
 	walletPubPassBuf := []byte(wallet.InsecurePubPassphrase)
 	wt, err := api.wSvr.WtLoader.OpenExistingWallet(walletPubPassBuf, false)
 	if err != nil {
@@ -102,13 +103,11 @@ func (api *API) Open(walletPubPass string) error {
 
 		w.Start()
 
-		fmt.Println("Importing addresses from existing wallet...")
+		log.Trace("api open RunAfterLoad")
 
 		lockChan := make(chan time.Time, 1)
 		defer func() {
-			fmt.Println("+++++++=")
 			lockChan <- time.Time{}
-			fmt.Println("+++++++=xxxxxxx")
 		}()
 		err := w.Unlock([]byte("1"), lockChan)
 		if err != nil {
@@ -116,10 +115,8 @@ func (api *API) Open(walletPubPass string) error {
 				"during old wallet key import: %v", err)
 			return
 		}
-		fmt.Println("ollllllllllll")
+		log.Trace("api open RunAfterLoad end")
 	})
-
-	fmt.Println("44444")
 
 	api.wSvr.StartAPI()
 	log.Trace("api open wallet start")
@@ -135,7 +132,7 @@ func (api *API) createWallet(seed []byte, walletPass string) error {
 	log.Trace("createWallet", activeNetParams.Name)
 
 	dbDir := filepath.Join(api.cfg.AppDataDir, activeNetParams.Name)
-	loader := wallet.NewLoader(activeNetParams, dbDir, 250)
+	loader := wallet.NewLoader(activeNetParams, dbDir, 250, api.cfg)
 
 	walletExist, err := loader.WalletExists()
 	if err != nil {
