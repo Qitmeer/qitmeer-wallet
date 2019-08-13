@@ -23,7 +23,7 @@ func CreateWallet(cfg *config.Config, walletPass string) error {
 	activNetParams := utils.GetNetParams(cfg.Network)
 
 	dbDir := filepath.Join(cfg.AppDataDir, cfg.Network)
-	loader := NewLoader(activNetParams, dbDir, 250)
+	loader := NewLoader(activNetParams, dbDir, 250, cfg)
 
 	// When there is a legacy keystore, open it now to ensure any errors
 	// don't end up exiting the process after the user has spent time
