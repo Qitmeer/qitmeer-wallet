@@ -8,6 +8,7 @@ package wtxmgr
 import (
 	"bytes"
 	"encoding/binary"
+	"errors"
 	"fmt"
 	"time"
 
@@ -67,10 +68,9 @@ var (
 	bucketUnmined        = []byte("m")
 	bucketUnminedCredits = []byte("mc")
 	bucketUnminedInputs  = []byte("mi")
-	BucketAddrtxin		 	 = []byte("in")
-	BucketAddrtxout	         = []byte("out")
-	BucketTxJson	         = []byte("txjson")
-
+	BucketAddrtxin       = []byte("in")
+	BucketAddrtxout      = []byte("out")
+	BucketTxJson         = []byte("txjson")
 )
 
 // Root (namespace) bucket keys
@@ -168,35 +168,42 @@ func valueBlockRecord(block *BlockMeta, txHash *chainhash.Hash) []byte {
 }
 func ValueAddrTxOutput(txout *AddrTxOutput) []byte {
 	var v []byte
-	if(txout.SpendTo==nil){
-		v =make([]byte,96)
-	}else{
-		v =make([]byte,96+36)
+	if txout.SpendTo == nil {
+		v = make([]byte, 96)
+	} else {
+		v = make([]byte, 96+36)
 	}
-	copy(v,txout.Txid[:])
+	copy(v, txout.Txid[:])
 	byteOrder.PutUint32(v[32:36], txout.Index)
 	byteOrder.PutUint64(v[36:44], uint64(txout.Amount))
-	copy(v[44:76],txout.Block.Hash[:])
+	copy(v[44:76], txout.Block.Hash[:])
 	byteOrder.PutUint32(v[88:92], uint32(txout.Block.Height))
 	byteOrder.PutUint32(v[92:96], uint32(txout.Spend))
-	if len(v)==136{
+	if len(v) == 136 {
 		byteOrder.PutUint32(v[96:100], txout.SpendTo.Index)
-		copy(v[100:132],txout.SpendTo.TxHash[:])
+		copy(v[100:132], txout.SpendTo.TxHash[:])
 		//byteOrder.PutUint32(v[132:136], uint32(txout.SpendTo.Block.Height))
 		//copy(v[136:168],txout.SpendTo.Block.Hash[:])
 	}
 	return v
 }
-func ReadAddrTxOutput(v []byte,txout *AddrTxOutput) error{
-	copy(txout.Txid[:],v[0:32])
-	txout.Index=byteOrder.Uint32(v[32:36])
-	txout.Amount=types.Amount(byteOrder.Uint64(v[36:44]))
-	copy(txout.Block.Hash[:],v[44:76])
-	txout.Block.Height=int32(byteOrder.Uint32(v[88:92]))
-	txout.Spend=int32(byteOrder.Uint32(v[92:96]))
-	if len(v)==132{
-		txout.SpendTo.Index=byteOrder.Uint32(v[96:100])
-		copy(txout.SpendTo.TxHash[:],v[100:132])
+func ReadAddrTxOutput(v []byte, txout *AddrTxOutput) (err error) {
+	defer func() {
+		if rev := recover(); rev != nil {
+			errMsg := fmt.Sprintf("ReadAddrTxOutput recover: %s", rev)
+			err = errors.New(errMsg)
+		}
+	}()
+
+	copy(txout.Txid[:], v[0:32])
+	txout.Index = byteOrder.Uint32(v[32:36])
+	txout.Amount = types.Amount(byteOrder.Uint64(v[36:44]))
+	copy(txout.Block.Hash[:], v[44:76])
+	txout.Block.Height = int32(byteOrder.Uint32(v[88:92]))
+	txout.Spend = int32(byteOrder.Uint32(v[92:96]))
+	if len(v) == 132 {
+		txout.SpendTo.Index = byteOrder.Uint32(v[96:100])
+		copy(txout.SpendTo.TxHash[:], v[100:132])
 	}
 	return nil
 }
@@ -428,12 +435,12 @@ func valueTxRecord(rec *TxRecord) ([]byte, error) {
 		txSize := rec.MsgTx.SerializeSize()
 		v = make([]byte, 8, 8+txSize)
 		//err := rec.MsgTx.Serialize(bytes.NewBuffer(v[8:]))
-		bu,err:=rec.MsgTx.Serialize(types.TxSerializeFull)
+		bu, err := rec.MsgTx.Serialize(types.TxSerializeFull)
 		if err != nil {
 			str := fmt.Sprintf("unable to serialize transaction %v", rec.Hash)
 			return nil, storeError(ErrInput, str, err)
 		}
-		copy(v[8:],bu)
+		copy(v[8:], bu)
 		v = v[:cap(v)]
 	} else {
 		v = make([]byte, 8+len(rec.SerializedTx))
