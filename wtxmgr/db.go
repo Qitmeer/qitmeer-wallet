@@ -8,7 +8,7 @@ package wtxmgr
 import (
 	"bytes"
 	"encoding/binary"
-	"errors"
+	//"errors"
 	"fmt"
 	"time"
 
@@ -202,8 +202,10 @@ func ReadAddrTxOutput(v []byte, txout *AddrTxOutput) (err error) {
 	txout.Block.Height = int32(byteOrder.Uint32(v[88:92]))
 	txout.Spend = int32(byteOrder.Uint32(v[92:96]))
 	if len(v) == 132 {
-		txout.SpendTo.Index = byteOrder.Uint32(v[96:100])
-		copy(txout.SpendTo.TxHash[:], v[100:132])
+		st:=SpendTo{}
+		st.Index = byteOrder.Uint32(v[96:100])
+		copy(st.TxHash[:], v[100:132])
+		txout.SpendTo=&st
 	}
 	return nil
 }
