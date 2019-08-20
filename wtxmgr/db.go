@@ -8,7 +8,7 @@ package wtxmgr
 import (
 	"bytes"
 	"encoding/binary"
-	//"errors"
+	"errors"
 	"fmt"
 	"time"
 
