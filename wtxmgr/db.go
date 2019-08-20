@@ -9,6 +9,11 @@ import (
 	"bytes"
 	"encoding/binary"
 	"errors"
+<<<<<<< HEAD
+=======
+
+	//"errors"
+>>>>>>> df4bf3640beffa092c8b6f3f3e5e399e35354322
 	"fmt"
 	"time"
 
@@ -179,7 +184,7 @@ func ValueAddrTxOutput(txout *AddrTxOutput) []byte {
 	copy(v[44:76], txout.Block.Hash[:])
 	byteOrder.PutUint32(v[88:92], uint32(txout.Block.Height))
 	byteOrder.PutUint32(v[92:96], uint32(txout.Spend))
-	if len(v)==132{
+	if len(v) == 132 {
 		byteOrder.PutUint32(v[96:100], txout.SpendTo.Index)
 		copy(v[100:132], txout.SpendTo.TxHash[:])
 		//byteOrder.PutUint32(v[132:136], uint32(txout.SpendTo.Block.Height))
@@ -202,10 +207,10 @@ func ReadAddrTxOutput(v []byte, txout *AddrTxOutput) (err error) {
 	txout.Block.Height = int32(byteOrder.Uint32(v[88:92]))
 	txout.Spend = int32(byteOrder.Uint32(v[92:96]))
 	if len(v) == 132 {
-		st:=SpendTo{}
+		st := SpendTo{}
 		st.Index = byteOrder.Uint32(v[96:100])
 		copy(st.TxHash[:], v[100:132])
-		txout.SpendTo=&st
+		txout.SpendTo = &st
 	}
 	return nil
 }
