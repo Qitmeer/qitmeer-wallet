@@ -1,0 +1,27 @@
+#configFile=""
+#appDataDir=""
+#debugLevel=""
+#logDir=""
+
+network="testnet"
+#ui=false
+#RPCUser=""
+#RPCPass=""
+#RPCCert=""
+#RPCKey=""
+#RPCMaxClients=10
+#DisableRPC=false
+#DisableTLS=false
+
+#Qitmeerd
+QServer="47.88.220.44:8131"
+QUser="admin"
+QPass="123456"
+#QCert=""
+#QNoTLS=false
+#QTLSSkipVerify =false
+#QProxy     =""
+#QProxyUser =""
+#QProxyPass =""
+
+WalletPass="1"

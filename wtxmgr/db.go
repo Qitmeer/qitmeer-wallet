@@ -9,11 +9,6 @@ import (
 	"bytes"
 	"encoding/binary"
 	"errors"
-<<<<<<< HEAD
-=======
-
-	//"errors"
->>>>>>> df4bf3640beffa092c8b6f3f3e5e399e35354322
 	"fmt"
 	"time"
 
