@@ -3,7 +3,7 @@
 // license that can be found in the LICENSE file.
 
 package main
-
-import "github.com/HalalChain/qitmeer-lib/params"
-
-var activeNet = &params.MainNetParams
+//
+//import "github.com/HalalChain/qitmeer-lib/params"
+//
+//var activeNet = &params.MainNetParams

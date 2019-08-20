@@ -71,7 +71,7 @@ func test_wallet_createNewAccount(w *wallet.Wallet) error {
 	cmd := &qitmeerjson.CreateNewAccountCmd{
 		Account: "luoshan4",
 	}
-	msg, err := createNewAccount(cmd, w)
+	msg, err := CreateNewAccount(cmd, w)
 	if err != nil {
 		fmt.Println("errr:", err.Error())
 		return err
@@ -87,7 +87,7 @@ func test_wallet_getbalance(w *wallet.Wallet) ( interface{}, error){
 		Address:"TmbsdsjwzuGboFQ9GcKg6EUmrr3tokzozyF",
 		MinConf:minconf,
 	}
-	b,err:=getbalance(cmd,w)
+	b,err:=Getbalance(cmd,w)
 	if(err!=nil){
 		fmt.Println("errr:",err.Error())
 		return nil,err
@@ -105,7 +105,7 @@ func test_wallet_listAccounts(w *wallet.Wallet)( interface{}, error){
 	cmd:=&qitmeerjson.ListAccountsCmd{
 		MinConf:&min,
 	}
-	msg, err := listAccounts(cmd, w)
+	msg, err := ListAccounts(cmd, w)
 	if err != nil {
 		fmt.Println("errr:", err.Error())
 		return nil, err
@@ -121,7 +121,7 @@ func test_wallet_getlisttxbyaddr(w *wallet.Wallet)( interface{}, error){
 		Page:int32(1),
 		PageSize:int32(100),
 	}
-	result, err := getlisttxbyaddr(cmd, w)
+	result, err := Getlisttxbyaddr(cmd, w)
 	if err != nil {
 		fmt.Println("errr:", err.Error())
 		return nil, err
@@ -149,7 +149,7 @@ func test_wallet_getNewAddress(w *wallet.Wallet) (interface{}, error) {
 	cmd := &qitmeerjson.GetNewAddressCmd{
 		Account: &account,
 	}
-	msg, err := getNewAddress(cmd, w)
+	msg, err := GetNewAddress(cmd, w)
 	if err != nil {
 		fmt.Println("errr:", err.Error())
 		return nil, err
@@ -163,7 +163,7 @@ func test_wallet_getAddressesByAccount(w *wallet.Wallet) (interface{}, error) {
 	cmd := &qitmeerjson.GetAddressesByAccountCmd{
 		Account: account,
 	}
-	msg, err := getAddressesByAccount(cmd, w)
+	msg, err := GetAddressesByAccount(cmd, w)
 	if err != nil {
 		fmt.Println("errr:", err.Error())
 		return nil, err
@@ -176,7 +176,7 @@ func test_wallet_getAccountByAddress(w *wallet.Wallet) (interface{}, error) {
 	cmd := &qitmeerjson.GetAccountCmd{
 		Address: address,
 	}
-	msg, err := getAccountByAddress(cmd, w)
+	msg, err := GetAccountByAddress(cmd, w)
 	if err != nil {
 		fmt.Println("errr:", err.Error())
 		return nil, err
@@ -190,7 +190,7 @@ func test_wallet_importPrivKey(w *wallet.Wallet) (interface{}, error) {
 		PrivKey: "7e445aa5ffd834cb2d3b2db50f8997dd21af29bec3d296aaa066d902b93f484b",
 		Rescan:  &v,
 	}
-	msg, err := importPrivKey(cmd, w)
+	msg, err := ImportPrivKey(cmd, w)
 	if err != nil {
 		fmt.Println("errr:", err.Error())
 		return nil, err
@@ -204,7 +204,7 @@ func test_wallet_importWifPrivKey(w *wallet.Wallet) (interface{}, error) {
 		PrivKey: "9QwXzXVQBFNm1fxP8jCqHJG9jZKjqrUKjYiTvaRxEbFobiNrvzhgZ",
 		Rescan:  &v,
 	}
-	msg, err := importWifPrivKey(cmd, w)
+	msg, err := ImportWifPrivKey(cmd, w)
 	if err != nil {
 		fmt.Println("errr:", err.Error())
 		return nil, err
@@ -216,7 +216,7 @@ func test_wallet_dumpPrivKey(w *wallet.Wallet) (interface{}, error) {
 	cmd := &qitmeerjson.DumpPrivKeyCmd{
 		Address: address,
 	}
-	msg, err := dumpPrivKey(cmd, w)
+	msg, err := DumpPrivKey(cmd, w)
 	if err != nil {
 		fmt.Println("errr:", err.Error())
 		return nil, err
@@ -225,7 +225,7 @@ func test_wallet_dumpPrivKey(w *wallet.Wallet) (interface{}, error) {
 	return msg, nil
 }
 func test_wallet_getAccountAndAddress(w *wallet.Wallet) (interface{}, error) {
-	msg, err := getAccountAndAddress(w, 16)
+	msg, err := GetAccountAndAddress(w, 16)
 	if err != nil {
 		fmt.Println("errr:", err.Error())
 		return nil, err
@@ -242,7 +242,7 @@ func test_wallet_sendToAddress(w *wallet.Wallet)( interface{}, error){
 		//Address:"TmbsdsjwzuGboFQ9GcKg6EUmrr3tokzozyF",
 		Amount :   float64(31),
 	}
-	msg, err := sendToAddress(cmd, w)
+	msg, err := SendToAddress(cmd, w)
 	if err != nil {
 		fmt.Println("errr:", err.Error())
 		return nil, err
@@ -254,7 +254,7 @@ func test_wallet_updateblock(w *wallet.Wallet)(  error){
 	cmd:=&qitmeerjson.UpdateBlockToCmd{
 		Toheight:0,
 	}
-	err := updateblock(cmd, w)
+	err := Updateblock(cmd, w)
 	if err != nil {
 		fmt.Println("errr:", err.Error())
 		return err

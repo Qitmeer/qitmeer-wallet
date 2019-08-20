@@ -29,14 +29,14 @@ import (
 
 // confirmed checks whether a transaction at height txHeight has met minconf
 // confirmations for a blockchain at height curHeight.
-func confirmed(minconf, txHeight, curHeight int32) bool {
-	return confirms(txHeight, curHeight) >= minconf
+func Confirmed(minconf, txHeight, curHeight int32) bool {
+	return Confirms(txHeight, curHeight) >= minconf
 }
 
 // confirms returns the number of confirmations for a transaction in a block at
 // height txHeight (or -1 for an unconfirmed tx) given the chain height
 // curHeight.
-func confirms(txHeight, curHeight int32) int32 {
+func Confirms(txHeight, curHeight int32) int32 {
 	switch {
 	case txHeight == -1, txHeight > curHeight:
 		return 0
@@ -55,7 +55,7 @@ type requestHandler func(interface{}, *wallet.Wallet) (interface{}, error)
 // createNewAccount handles a createnewaccount request by creating and
 // returning a new account. If the last account has no transaction history
 // as per BIP 0044 a new account cannot be created so an error will be returned.
-func createNewAccount(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
+func CreateNewAccount(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
 	cmd := icmd.(*qitmeerjson.CreateNewAccountCmd)
 
 	// The wildcard * is reserved by the rpc server with the special meaning
@@ -77,7 +77,7 @@ func createNewAccount(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
 
 // listAccounts handles a listaccounts request by returning a map of account
 // names to their balances.
-func listAccounts(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
+func ListAccounts(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
 	cmd := icmd.(*qitmeerjson.ListAccountsCmd)
 
 	accountBalances := map[string]float64{}
@@ -97,7 +97,7 @@ func listAccounts(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
 // error is returned.
 // TODO: Follow BIP 0044 and warn if number of unused addresses exceeds
 // the gap limit.
-func getNewAddress(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
+func GetNewAddress(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
 	cmd := icmd.(*qitmeerjson.GetNewAddressCmd)
 
 	acctName := "default"
@@ -121,7 +121,7 @@ func getNewAddress(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
 // getAddressesByAccount handles a getaddressesbyaccount request by returning
 // all addresses for an account, or an error if the requested account does
 // not exist.
-func getAddressesByAccount(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
+func GetAddressesByAccount(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
 	cmd := icmd.(*qitmeerjson.GetAddressesByAccountCmd)
 
 	account, err := w.AccountNumber(waddrmgr.KeyScopeBIP0044, cmd.Account)
@@ -141,7 +141,7 @@ func getAddressesByAccount(icmd interface{}, w *wallet.Wallet) (interface{}, err
 	return addrStrs, nil
 }
 
-func getAccountAndAddress( w *wallet.Wallet,
+func GetAccountAndAddress( w *wallet.Wallet,
 	minconf int32) (interface{}, error)   {
 	a,err:=w.GetAccountAndAddress(waddrmgr.KeyScopeBIP0044,minconf)
 	if err != nil {
@@ -152,7 +152,7 @@ func getAccountAndAddress( w *wallet.Wallet,
 
 // getAccount handles a getaccount request by returning the account name
 // associated with a single address.
-func getAccountByAddress(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
+func GetAccountByAddress(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
 	cmd := icmd.(*qitmeerjson.GetAccountCmd)
 
 	addr, err := address.DecodeAddress(cmd.Address)
@@ -175,7 +175,7 @@ func getAccountByAddress(icmd interface{}, w *wallet.Wallet) (interface{}, error
 // dumpPrivKey handles a dumpprivkey request with the private key
 // for a single address, or an appropiate error if the wallet
 // is locked.
-func dumpPrivKey(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
+func DumpPrivKey(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
 	cmd := icmd.(*qitmeerjson.DumpPrivKeyCmd)
 
 	addr, err :=address.DecodeAddress(cmd.Address)
@@ -194,7 +194,7 @@ func dumpPrivKey(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
 
 // importPrivKey handles an importprivkey request by parsing
 // a WIF-encoded private key and adding it to an account.
-func importWifPrivKey(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
+func ImportWifPrivKey(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
 	cmd := icmd.(*qitmeerjson.ImportPrivKeyCmd)
 
 	// Ensure that private keys are only imported to the correct account.
@@ -230,7 +230,7 @@ func importWifPrivKey(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
 
 	return nil, err
 }
-func importPrivKey(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
+func ImportPrivKey(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
 	cmd := icmd.(*qitmeerjson.ImportPrivKeyCmd)
 	// Ensure that private keys are only imported to the correct account.
 	//
@@ -275,7 +275,7 @@ func importPrivKey(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
 //payment address.  Leftover inputs not sent to the payment address or a fee
 //for the miner are sent back to a new address in the wallet.  Upon success,
 //the TxID for the created transaction is returned.
-func sendToAddress(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
+func SendToAddress(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
 	cmd := icmd.(*qitmeerjson.SendToAddressCmd)
 
 	// Transaction comments are not yet supported.  Error instead of
@@ -306,7 +306,7 @@ func sendToAddress(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
 	return sendPairs(w, pairs, waddrmgr.DefaultAccountNum, 1, txrules.DefaultRelayFeePerKb)
 }
 
-func updateblock(icmd interface{},w *wallet.Wallet) error {
+func Updateblock(icmd interface{},w *wallet.Wallet) error {
 	cmd := icmd.(*qitmeerjson.UpdateBlockToCmd)
 	err:=w.Updateblock(cmd.Toheight)
 	if(err!=nil){
@@ -315,7 +315,7 @@ func updateblock(icmd interface{},w *wallet.Wallet) error {
 	}
 	return nil
 }
-func getbalance(icmd interface{},w *wallet.Wallet) (interface{}, error) {
+func Getbalance(icmd interface{},w *wallet.Wallet) (interface{}, error) {
 	cmd := icmd.(*qitmeerjson.GetBalanceByAddressCmd)
 	m,err:=w.GetBalance(cmd.Address,int32(cmd.MinConf))
 	if(err!=nil){
@@ -324,7 +324,7 @@ func getbalance(icmd interface{},w *wallet.Wallet) (interface{}, error) {
 	}
 	return m, nil
 }
-func getlisttxbyaddr(icmd interface{},w *wallet.Wallet) (interface{}, error) {
+func Getlisttxbyaddr(icmd interface{},w *wallet.Wallet) (interface{}, error) {
 	cmd := icmd.(*qitmeerjson.GetListTxByAddrCmd)
 	m,err:=w.GetListTxByAddr(cmd.Address,cmd.Stype,cmd.Page,cmd.PageSize)
 	if(err!=nil){
