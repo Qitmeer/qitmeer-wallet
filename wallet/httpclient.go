@@ -152,7 +152,6 @@ func (cfg *htpc) sendPostRequest(marshalledJSON []byte) ([]byte, error) {
 	// Configure basic access authorization.
 	httpRequest.SetBasicAuth(cfg.RPCUser, cfg.RPCPassword)
 
-	fmt.Println(cfg.RPCUser, cfg.RPCPassword)
 
 	// Create the new HTTP client that is configured according to the user-
 	// specified options and submit the request.
