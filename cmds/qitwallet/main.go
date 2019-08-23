@@ -45,7 +45,8 @@ func newCmd() (cmd *cobra.Command) {
 			return nil
 		},
 		Run: func(cmd *cobra.Command, args []string) {
-			QitmeerMain(cfg)
+			fmt.Println("QServer--------------------1:",config.Cfg.QServer)
+			QitmeerMain(config.Cfg)
 		},
 	}
 
@@ -72,7 +73,7 @@ func newCmd() (cmd *cobra.Command) {
 
 	//cmd flags
 	gFlags := cmd.PersistentFlags()
-	cfg = config.NewDefaultConfig()
+	cfg = config.Cfg
 	gFlags.StringVarP(&cfg.ConfigFile, "config", "C", cfg.ConfigFile, "Path to configuration file")
 	gFlags.StringVarP(&cfg.AppDataDir, "appdata", "A", cfg.AppDataDir, "Application data directory for wallet config, databases and logs")
 	gFlags.StringVarP(&cfg.DebugLevel, "debuglevel", "d", cfg.DebugLevel, "Logging level {trace, debug, info, warn, error, critical}")
@@ -90,7 +91,7 @@ func newCmd() (cmd *cobra.Command) {
 // QitmeerMain wallet main
 func QitmeerMain(cfg *config.Config) {
 	log.Trace("Qitmeer Main")
-
+	fmt.Println("QServer--------------------:",cfg.QServer)
 	wsvr, err := wserver.NewWalletServer(cfg)
 	if err != nil {
 		log.Errorf("NewWalletServer err: %s", err)

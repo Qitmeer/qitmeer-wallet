@@ -18,10 +18,10 @@ QServer="47.88.220.44:8131"
 QUser="admin"
 QPass="123456"
 #QCert=""
-#QNoTLS=false
+QNoTLS=true
 #QTLSSkipVerify =false
 #QProxy     =""
 #QProxyUser =""
 #QProxyPass =""
 
-WalletPass="1"
+WalletPass="public"

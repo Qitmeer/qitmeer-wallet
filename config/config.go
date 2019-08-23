@@ -99,6 +99,7 @@ var once sync.Once
 
 func init(){
 	once.Do(func() {
+		fmt.Println("执行init------------------------")
 		Cfg=NewDefaultConfig()
 		_, err := toml.DecodeFile("config.toml", &Cfg)
 		if err != nil {

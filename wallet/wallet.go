@@ -1297,6 +1297,48 @@ func (w *Wallet) AccountName(scope waddrmgr.KeyScope, accountNumber uint32) (str
 	return accountName, err
 }
 
+func (w *Wallet) GetUtxo(addr string)([]wtxmgr.Utxo, error){
+		log.Trace("getAddrAndAddrTxOutputByAddr")
+		var txouts []wtxmgr.AddrTxOutput
+		var utxos []wtxmgr.Utxo
+		//var txins []*types.TxOutPoint
+		err := walletdb.View(w.db, func(tx walletdb.ReadTx) error {
+			hs := []byte(addr)
+			ns := tx.ReadBucket(wtxmgrNamespaceKey)
+			outns := ns.NestedReadBucket(wtxmgr.BucketAddrtxout)
+			hsoutns := outns.NestedReadBucket(hs)
+			if hsoutns != nil {
+				hsoutns.ForEach(func(k, v []byte) error {
+					to := wtxmgr.AddrTxOutput{}
+					err := wtxmgr.ReadAddrTxOutput(v, &to)
+					if err != nil {
+						fmt.Println("ReadAddrTxOutput err:", err.Error())
+						return err
+					}
+					txouts = append(txouts, to)
+
+					return nil
+				})
+			}
+			return nil
+		})
+		if err != nil {
+			log.Tracef("ReadAddrTxOutput err: %s", err)
+			return nil, err
+		}
+
+		for _, txout := range txouts {
+			uo:=wtxmgr.Utxo{}
+			if txout.Spend == 0 {
+				uo.Txid=txout.Txid.String()
+				uo.Index=txout.Index
+				uo.Amount=txout.Amount
+				utxos=append(utxos,uo)
+			}
+		}
+		return utxos, nil
+}
+
 // SendOutputs creates and sends payment transactions. It returns the
 // transaction upon success.
 func (w *Wallet) SendOutputs(outputs []*types.TxOutput, account uint32,
