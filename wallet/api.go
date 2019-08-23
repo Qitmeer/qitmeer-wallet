@@ -3,6 +3,7 @@ package wallet
 import (
 	"encoding/hex"
 	"fmt"
+	"github.com/HalalChain/qitmeer-wallet/wtxmgr"
 
 	"github.com/HalalChain/qitmeer-lib/core/address"
 	"github.com/HalalChain/qitmeer-lib/core/types"
@@ -45,6 +46,15 @@ func (api API) List() (map[string]float64, error) {
 	}
 	// Return the map.  This will be marshaled into a JSON object.
 	return accountBalances, nil
+}
+
+// Getutxo addr unspend utxo
+func (api API) GetUtxo(addr string) ([]wtxmgr.Utxo, error) {
+	results, err := api.wt.GetUtxo(addr)
+	if err != nil {
+		return nil, err
+	}
+	return results, nil
 }
 
 // Create a account

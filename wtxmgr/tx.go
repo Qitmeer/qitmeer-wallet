@@ -49,6 +49,11 @@ type AddrTxOutput struct {
 	Spend int32 // index 0  unspend 1 spend
 	SpendTo *SpendTo
 }
+type Utxo struct {
+	Txid string
+	Index  uint32
+	Amount types.Amount
+}
 
 // incidence records the block hash and blockchain height of a mined transaction.
 // Since a transaction hash alone is not enough to uniquely identify a mined
