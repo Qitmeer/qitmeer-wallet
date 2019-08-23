@@ -63,6 +63,7 @@ type Config struct {
 	//WalletRPC
 	UI            bool     // local web server UI
 	Listeners     []string // ["127.0.0.1:38130"]
+	ApiUrl        string
 	RPCUser       string
 	RPCPass       string
 	RPCCert       string
@@ -194,6 +195,7 @@ func NewDefaultConfig() (cfg *Config) {
 		QProxyUser:     "",
 		QProxyPass:     "",
 		WalletPass:     "public",
+		ApiUrl:         "127.0.0.1:38130",
 	}
 	return
 }
