@@ -4,8 +4,8 @@
 #logDir=""
 
 network="testnet"
-#Listeners=[127.0.0.1:8132]
-#ApiUrl=127.0.0.1:8132
+#Listeners=["127.0.0.1:8132"]
+ApiUrl="127.0.0.1:38130"
 #ui=false
 #RPCUser=""
 #RPCPass=""

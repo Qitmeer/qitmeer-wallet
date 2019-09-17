@@ -8,6 +8,7 @@ import (
 	"github.com/HalalChain/qitmeer-lib/params"
 	util "github.com/HalalChain/qitmeer-wallet/utils"
 	"github.com/HalalChain/qitmeer-wallet/wallet/txrules"
+	"time"
 
 	//"github.com/HalalChain/qitmeer-wallet/wallet/txrules"
 
@@ -72,7 +73,7 @@ func CreateNewAccount(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
 				"Enter the wallet passphrase with walletpassphrase to unlock",
 		}
 	}
-	return nil, err
+	return "succ", err
 }
 
 // listAccounts handles a listaccounts request by returning a map of account
@@ -324,6 +325,11 @@ func Getbalance(icmd interface{},w *wallet.Wallet) (interface{}, error) {
 	}
 	return m, nil
 }
+
+func Unlock(password string,w *wallet.Wallet) ( error) {
+	return w.Unlock([]byte(password),time.After(10*time.Minute))
+}
+
 func Getlisttxbyaddr(icmd interface{},w *wallet.Wallet) (interface{}, error) {
 	cmd := icmd.(*qitmeerjson.GetListTxByAddrCmd)
 	m,err:=w.GetListTxByAddr(cmd.Address,cmd.Stype,cmd.Page,cmd.PageSize)

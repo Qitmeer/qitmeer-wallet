@@ -427,7 +427,7 @@ func (w *Wallet) GetAccountAndAddress(scope waddrmgr.KeyScope,
 			}
 			addroutputs := []AddrAndAddrTxOutput{}
 			for _, addr := range addrs {
-				fmt.Println("addr:", addr)
+				//fmt.Println("addr:", addr)
 				addroutput, err := w.getAddrAndAddrTxOutputByAddr(addr.Encode(), requiredConfs)
 				if err != nil {
 					fmt.Println("getAddrAndAddrTxOutputByAddr err :", err.Error())
@@ -698,7 +698,7 @@ func (w *Wallet) SyncTx(h string) error {
 		fmt.Println("tx is null")
 		return err
 	}
-	fmt.Println("tx is :", tx)
+	//fmt.Println("tx is :", tx)
 	var block clijson.BlockHttpResult
 	if err := json.Unmarshal([]byte(tx), &block); err == nil {
 		txins, txouts, trrs, err := parseBlockTxs(block)
@@ -804,15 +804,15 @@ func (w *Wallet) Updateblock(toHeight int64) error {
 	if toHeight == 0 {
 		blockcount, err = w.Httpclient.getblockCount()
 		if err != nil {
-			fmt.Println("getblockcount err:", err.Error())
+			//fmt.Println("getblockcount err:", err.Error())
 			return err
 		}
 	} else {
 		blockcount = strconv.FormatInt(toHeight, 10)
 	}
-	fmt.Println("blockcount:", blockcount)
-	fmt.Println("httpclienr:", w.Httpclient.RPCServer)
-	fmt.Println("syny blockcount:", w.Manager.SyncedTo().Height)
+	//fmt.Println("blockcount:", blockcount)
+	//fmt.Println("httpclienr:", w.Httpclient.RPCServer)
+	//fmt.Println("syny blockcount:", w.Manager.SyncedTo().Height)
 	if blockcount != "" {
 		blockheight, err := strconv.ParseInt(blockcount, 10, 32)
 		if err != nil {
@@ -825,12 +825,12 @@ func (w *Wallet) Updateblock(toHeight int64) error {
 		for h := localheight; h <= int32(blockheight); h++ {
 			blockhash, err := w.Httpclient.getBlockhash(int64(h))
 			if err != nil {
-				fmt.Println("getblockhash err:", err.Error())
+				//fmt.Println("getblockhash err:", err.Error())
 				break
 			}
 			er := w.SyncTx(blockhash)
 			if er != nil {
-				fmt.Println("SyncTx err :", err.Error())
+				//fmt.Println("SyncTx err :", err.Error())
 				return err
 			}
 			//fmt.Println(len(blockhash))
@@ -853,19 +853,19 @@ func (w *Wallet) Updateblock(toHeight int64) error {
 				return nil
 			})
 			if err != nil {
-				fmt.Println("blockhash string to hash  err:", err.Error())
+				//fmt.Println("blockhash string to hash  err:", err.Error())
 				return err
 			}
-			fmt.Println("localheight:", h, " blockhash:", blockhash)
+			//fmt.Println("localheight:", h, " blockhash:", blockhash)
 		}
 	} else {
 		return fmt.Errorf("getblockcount fail ")
 	}
-	err = w.UpdateMempool()
-	if err != nil {
-		fmt.Println("updateMempool err:", err.Error())
-		return err
-	}
+	//err = w.UpdateMempool()
+	//if err != nil {
+	//	fmt.Println("updateMempool err:", err.Error())
+	//	return err
+	//}
 	return nil
 }
 

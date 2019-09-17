@@ -287,7 +287,7 @@ func (cfg *htpc) getResString(method string, args []interface{}) (rs string, err
 
 	resResult, err := cfg.sendPostRequest(reqData)
 	if err != nil {
-		err = fmt.Errorf("getResString [%s]: %s", method, err)
+		//err = fmt.Errorf("getResString [%s]: %s", method, err)
 		return
 	}
 
