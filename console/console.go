@@ -17,6 +17,7 @@ import (
 
 const (
 	Name     = "wallet-cli"
+	Default_minconf =16
 )
 var w *wallet.Wallet
 var isWin = runtime.GOOS == "windows"
@@ -53,69 +54,125 @@ func StartConsole()  {
 		case "createNewAccount":
 			createNewAccount(arg1)
 			break
+			//Tmjc34zWMTAASHTwcNtPppPujFKVK5SeuaJ
 		case "getbalance":
-			iarg1,err:=strconv.Atoi(arg1)
-			if(err!=nil){
-				fmt.Print("getbalance err :",err.Error())
+			if arg1==""{
+				fmt.Println("Please enter your address.")
 				break
 			}
-			getbalance(iarg1,arg2)
+			if(err!=nil){
+				fmt.Println("getbalance err :",err.Error())
+				break
+			}
+			getbalance(Default_minconf,arg1)
 			break
 		case "listAccountsBalance":
-			iarg1,err:=strconv.Atoi(arg1)
-			if(err!=nil){
-				fmt.Print("listAccountsBalance err :",err.Error())
-				break
-			}
-			listAccountsBalance(iarg1)
+			listAccountsBalance(Default_minconf)
 			break
 		case "getlisttxbyaddr":
+			if arg1 == ""{
+				fmt.Println("getlisttxbyaddr err :Please enter your address.")
+				break
+			}
 			getlisttxbyaddr(arg1)
 			break
 		case "getNewAddress":
+			if arg1 == ""{
+				fmt.Println("getNewAddress err :Please enter your account.")
+				break
+			}
 			getNewAddress(arg1)
 			break
 		case "getAddressesByAccount":
+			if arg1 == ""{
+				fmt.Println("getAddressesByAccount err :Please enter your account.")
+				break
+			}
 			getAddressesByAccount(arg1)
 			break
 		case "getAccountByAddress":
+			if arg1 == ""{
+				fmt.Println("getAccountByAddress err :Please enter your address.")
+				break
+			}
 			getAccountByAddress(arg1)
 			break
 		case "importPrivKey":
+			if arg1 == ""{
+				fmt.Println("importPrivKey err :Please enter your privkey.")
+				break
+			}
 			importPrivKey(arg1)
 			break
 		case "importWifPrivKey":
+			if arg1 == ""{
+				fmt.Println("importWifPrivKey err :Please enter your wif privkey.")
+				break
+			}
 			importWifPrivKey(arg1)
 			break
 		case "dumpPrivKey":
+			if arg1 == ""{
+				fmt.Println("dumpPrivKey err :Please enter your address.")
+				break
+			}
 			dumpPrivKey(arg1)
 			break
 		case "getAccountAndAddress":
-			i32,err := strconv.ParseInt(arg1,10,32)
-			if(err!=nil){
-				fmt.Print("getAccountAndAddress err :",err.Error())
-				break
-			}
-			getAccountAndAddress(int32(i32))
+			getAccountAndAddress(int32(Default_minconf))
 			break
 		case "sendToAddress":
-			i32,err := strconv.ParseInt(arg2,10,32)
-			if(err!=nil){
-				fmt.Print("getAccountAndAddress err :",err.Error())
+			if arg1 =="" {
+				fmt.Println("getAccountAndAddress err : Please enter the receipt address.")
 				break
 			}
-			sendToAddress(arg1,int32(i32))
+			if arg2 == ""{
+				fmt.Println("getAccountAndAddress err : Please enter the amount of transfer.")
+				break
+			}
+			f32,err := strconv.ParseFloat(arg2,32)
+			if(err!=nil){
+				fmt.Println("getAccountAndAddress err :",err.Error())
+				break
+			}
+			sendToAddress(arg1,float64(f32))
 			break
 		case "updateblock":
 			updateblock()
 			break
-		//case "help":
-		//	printHelp()
+		case "unlock":
+			unlock(arg1)
+			break
+		case "help":
+			printHelp()
+			break
 		default:
 			printError("Wrong command " + cmd)
 			break
 		}
 	}
+}
+
+func printHelp() {
+	fmt.Println("Usage:")
+	fmt.Println("\t<command> [arguments]")
+	fmt.Println("\tThe commands are:")
+	fmt.Println("\t<createNewAccount> : Create a new account. Parameter: [account]")
+	fmt.Println("\t<getbalance> : Query the specified address balance. Parameter: [address]")
+	fmt.Println("\t<listAccountsBalance> : Obtain all account balances. Parameter: []")
+	fmt.Println("\t<getlisttxbyaddr> : Gets all transaction records at the specified address. Parameter: [address]")
+	fmt.Println("\t<getNewAddress> : Create a new address under the account. Parameter: [account]")
+	fmt.Println("\t<getAddressesByAccount> : Check all addresses under the account. Parameter: [account]")
+	fmt.Println("\t<getAccountByAddress> : Inquire about the account number of the address. Parameter: [address]")
+	fmt.Println("\t<importPrivKey> : Import private key. Parameter: [prikey]")
+	fmt.Println("\t<importWifPrivKey> : Import wif format private key. Parameter: [prikey]")
+	fmt.Println("\t<dumpPrivKey> : Export the private key by address. Parameter: [address]")
+	fmt.Println("\t<getAccountAndAddress> : Check all accounts and addresses. Parameter: []")
+	fmt.Println("\t<sendToAddress> : Transfer transaction. Parameter: [address] [num]")
+	fmt.Println("\t<updateblock> : Update Wallet Block. Parameter: []")
+	fmt.Println("\t<help> : help")
+	fmt.Println("\t<exit> : Exit command mode")
+	fmt.Println()
 }
 
 func printPrompt() (cmd string, arg1 string, arg2 string) {
@@ -166,7 +223,7 @@ func createNewAccount(arg string) error {
 	}
 	msg, err := walletrpc.CreateNewAccount(cmd, w)
 	if err != nil {
-		fmt.Println("errr:", err.Error())
+		fmt.Println("err:", err.Error())
 		return err
 	}
 	fmt.Println("createNewAccount :",msg)
@@ -179,7 +236,7 @@ func getbalance(minconf int ,addr string) ( interface{}, error){
 	}
 	b,err:=walletrpc.Getbalance(cmd,w)
 	if(err!=nil){
-		fmt.Println("errr:",err.Error())
+		fmt.Println("err:",err.Error())
 		return nil,err
 	}
 	r:=b.(*wallet.Balance)
@@ -196,7 +253,7 @@ func  listAccountsBalance(min int)( interface{}, error){
 	}
 	msg, err := walletrpc.ListAccounts(cmd, w)
 	if err != nil {
-		fmt.Println("errr:", err.Error())
+		fmt.Println("err:", err.Error())
 		return nil, err
 	}
 	fmt.Println("listAccounts :",msg)
@@ -212,7 +269,7 @@ func getlisttxbyaddr(addr string)( interface{}, error){
 	}
 	result, err := walletrpc.Getlisttxbyaddr(cmd, w)
 	if err != nil {
-		fmt.Println("errr:", err.Error())
+		fmt.Println("err:", err.Error())
 		return nil, err
 	}
 	if(err!=nil){
@@ -241,7 +298,7 @@ func getNewAddress(account string) (interface{}, error) {
 	}
 	msg, err := walletrpc.GetNewAddress(cmd, w)
 	if err != nil {
-		fmt.Println("errr:", err.Error())
+		fmt.Println("err:", err.Error())
 		return nil, err
 	}
 	fmt.Println("getNewAddress :",msg)
@@ -256,7 +313,7 @@ func getAddressesByAccount(account string) (interface{}, error) {
 	}
 	msg, err := walletrpc.GetAddressesByAccount(cmd, w)
 	if err != nil {
-		fmt.Println("errr:", err.Error())
+		fmt.Println("err:", err.Error())
 		return nil, err
 	}
 	fmt.Println("getAddressesByAccount :",msg)
@@ -268,7 +325,7 @@ func getAccountByAddress(address string) (interface{}, error) {
 	}
 	msg, err := walletrpc.GetAccountByAddress(cmd, w)
 	if err != nil {
-		fmt.Println("errr:", err.Error())
+		fmt.Println("err:", err.Error())
 		return nil, err
 	}
 	fmt.Println("getAccountByAddress :",msg)
@@ -282,7 +339,7 @@ func importPrivKey(privKey string) (interface{}, error) {
 	}
 	msg, err := walletrpc.ImportPrivKey(cmd, w)
 	if err != nil {
-		fmt.Println("errr:", err.Error())
+		fmt.Println("err:", err.Error())
 		return nil, err
 	}
 	fmt.Println("importPrivKey :",msg)
@@ -296,7 +353,7 @@ func importWifPrivKey(wifprivKey string) (interface{}, error) {
 	}
 	msg, err := walletrpc.ImportWifPrivKey(cmd, w)
 	if err != nil {
-		fmt.Println("errr:", err.Error())
+		fmt.Println("err:", err.Error())
 		return nil, err
 	}
 	return msg, nil
@@ -307,7 +364,7 @@ func dumpPrivKey(address string) (interface{}, error) {
 	}
 	msg, err := walletrpc.DumpPrivKey(cmd, w)
 	if err != nil {
-		fmt.Println("errr:", err.Error())
+		fmt.Println("err:", err.Error())
 		return nil, err
 	}
 	fmt.Println("dumpPrivKey :",msg)
@@ -316,22 +373,22 @@ func dumpPrivKey(address string) (interface{}, error) {
 func getAccountAndAddress(minconf int32) (interface{}, error) {
 	msg, err := walletrpc.GetAccountAndAddress(w, minconf)
 	if err != nil {
-		fmt.Println("errr:", err.Error())
+		fmt.Println("err:", err.Error())
 		return nil, err
 	}
 	a:=msg.([]wallet.AccountAndAddressResult)
 	fmt.Println("getAccountAndAddress :",a)
-	fmt.Println("getAccountAndAddress :",a[1].AddrsOutput[0].Addr)
+	//fmt.Println("getAccountAndAddress :",a[1].AddrsOutput[0].Addr)
 	return msg, nil
 }
-func sendToAddress(address string ,amount int32)( interface{}, error){
+func sendToAddress(address string ,amount float64)( interface{}, error){
 	cmd:=&qitmeerjson.SendToAddressCmd{
-		Address:"address",
-		Amount :   float64(amount),
+		Address: address,
+		Amount :   amount,
 	}
 	msg, err := walletrpc.SendToAddress(cmd, w)
 	if err != nil {
-		fmt.Println("errr:", err.Error())
+		fmt.Println("err:", err.Error())
 		return nil, err
 	}
 	fmt.Println("sendToAddress :",msg)
@@ -343,7 +400,16 @@ func updateblock()(  error){
 	}
 	err := walletrpc.Updateblock(cmd, w)
 	if err != nil {
-		fmt.Println("errr:", err.Error())
+		fmt.Println("err:", err.Error())
+		return err
+	}
+	return nil
+}
+
+func unlock(password string) error{
+	err :=walletrpc.Unlock(password,w)
+	if err != nil {
+		fmt.Println("unlock err:", err.Error())
 		return err
 	}
 	return nil

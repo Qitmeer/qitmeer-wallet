@@ -317,7 +317,7 @@ func TestWallet_Method(t *testing.T) {
 	test_wallet_getbalance(w)
 	//
 	//
-	//test_wallet_sendToAddress(w)
+	test_wallet_sendToAddress(w)
 	//
 	//
 	//test_wif(w)
