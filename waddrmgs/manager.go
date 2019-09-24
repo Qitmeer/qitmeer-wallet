@@ -531,7 +531,7 @@ func Create(ns walletdb.ReadWriteBucket, seed, pubPassphrase, privPassphrase []b
 
 
 	// Save the initial synced to state.
-	fmt.Println("&syncInfo.syncedTo ：",&syncInfo.syncedTo)
+	//fmt.Println("&syncInfo.syncedTo ：",&syncInfo.syncedTo)
 	err = PutSyncedTo(ns, &syncInfo.syncedTo)
 	if err != nil {
 		return maybeConvertDbError(err)

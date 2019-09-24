@@ -232,7 +232,7 @@ func (w *Wallet) ImportPrivateKey(scope waddrmgr.KeyScope, wif *utils.WIF,
 	if err != nil {
 		return "", err
 	}
-	fmt.Println("props:", props)
+	//fmt.Println("props:", props)
 	addrStr := addr.Encode()
 	log.Infof("Imported payment address %s", addrStr)
 
@@ -1003,7 +1003,7 @@ func (w *Wallet) NewAddress(
 	if err != nil {
 		return nil, err
 	}
-	fmt.Println("props:", props)
+	//fmt.Println("props:", props)
 	//// Notify the rpc server about the newly created address.
 	//err = chainClient.NotifyReceived([]btcutil.Address{addr})
 	//if err != nil {
@@ -1057,8 +1057,8 @@ func (w *Wallet) DumpWIFPrivateKey(addr types.Address) (string, error) {
 	if !ok {
 		return "", fmt.Errorf("address %s is not a key type", addr)
 	}
-	pri, err := pka.PrivKey()
-	fmt.Printf("pri:%x\n", pri.SerializeSecret())
+	//pri, err := pka.PrivKey()
+	//fmt.Printf("pri:%x\n", pri.SerializeSecret())
 	wif, err := pka.ExportPrivKey()
 	if err != nil {
 		return "", err
