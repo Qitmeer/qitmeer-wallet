@@ -714,7 +714,7 @@ func (w *Wallet) SyncTx(h string) error {
 	return nil
 }
 
-func parseTx(tr corejson.TxRawResult) ([]types.TxOutPoint, []wtxmgr.AddrTxOutput, error) {
+func parseTx(tr corejson.TxRawResult,height int32) ([]types.TxOutPoint, []wtxmgr.AddrTxOutput, error) {
 	var txins []types.TxOutPoint
 	var txouts []wtxmgr.AddrTxOutput
 	blockhash, err := hash.NewHashFromStr(tr.BlockHash)
@@ -724,7 +724,7 @@ func parseTx(tr corejson.TxRawResult) ([]types.TxOutPoint, []wtxmgr.AddrTxOutput
 	}
 	block := wtxmgr.Block{
 		Hash:   *blockhash,
-		//Height: int32(tr.BlockHeight),
+		Height: height,
 	}
 	txid, err := hash.NewHashFromStr(tr.Txid)
 	if err != nil {
@@ -775,7 +775,7 @@ func parseBlockTxs(block clijson.BlockHttpResult) ([]types.TxOutPoint, []wtxmgr.
 	var tx []corejson.TxRawResult
 	for _, tr := range block.Transactions {
 		tx = append(tx, tr)
-		tin, tout, err := parseTx(tr)
+		tin, tout, err := parseTx(tr,block.Height)
 		if err != nil {
 			fmt.Println("parseTx err:", err.Error())
 			return nil, nil, nil, err
@@ -863,48 +863,48 @@ func (w *Wallet) Updateblock(toHeight int64) error {
 	return nil
 }
 
-func (w *Wallet) UpdateMempool() error {
-	txIdstr, err := w.Httpclient.getMempool()
-	if err != nil {
-		fmt.Println("getMempool err:", err.Error())
-		return err
-	}
-	fmt.Println("getMempool result:", txIdstr)
-	var txIds []string
-	if err := json.Unmarshal([]byte(txIdstr), &txIds); err != nil {
-		fmt.Println("err:", err.Error())
-		return err
-	}
-	var txins []types.TxOutPoint
-	var txouts []wtxmgr.AddrTxOutput
-	var trrs []corejson.TxRawResult
-	for _, txid := range txIds {
-		res, err := w.Httpclient.getRawTransaction(txid)
-		if err != nil {
-			fmt.Println("getRawTransaction err:", err.Error())
-			return err
-		}
-		var txJson corejson.TxRawResult
-		if err := json.Unmarshal([]byte(res), &txJson); err != nil {
-			fmt.Println("err:", err.Error())
-			return err
-		}
-		txin, txout, err := parseTx(txJson)
-		if err != nil {
-			fmt.Println("parseTx err:", err.Error())
-			return err
-		}
-		txins = append(txins, txin...)
-		txouts = append(txouts, txout...)
-		trrs = append(trrs, txJson)
-	}
-	err = w.insertTx(txins, txouts, trrs)
-	if err != nil {
-		fmt.Println("insertTx err:", err.Error())
-		return err
-	}
-	return nil
-}
+//func (w *Wallet) UpdateMempool() error {
+//	txIdstr, err := w.Httpclient.getMempool()
+//	if err != nil {
+//		fmt.Println("getMempool err:", err.Error())
+//		return err
+//	}
+//	fmt.Println("getMempool result:", txIdstr)
+//	var txIds []string
+//	if err := json.Unmarshal([]byte(txIdstr), &txIds); err != nil {
+//		fmt.Println("err:", err.Error())
+//		return err
+//	}
+//	var txins []types.TxOutPoint
+//	var txouts []wtxmgr.AddrTxOutput
+//	var trrs []corejson.TxRawResult
+//	for _, txid := range txIds {
+//		res, err := w.Httpclient.getRawTransaction(txid)
+//		if err != nil {
+//			fmt.Println("getRawTransaction err:", err.Error())
+//			return err
+//		}
+//		var txJson corejson.TxRawResult
+//		if err := json.Unmarshal([]byte(res), &txJson); err != nil {
+//			fmt.Println("err:", err.Error())
+//			return err
+//		}
+//		txin, txout, err := parseTx(txJson)
+//		if err != nil {
+//			fmt.Println("parseTx err:", err.Error())
+//			return err
+//		}
+//		txins = append(txins, txin...)
+//		txouts = append(txouts, txout...)
+//		trrs = append(trrs, txJson)
+//	}
+//	err = w.insertTx(txins, txouts, trrs)
+//	if err != nil {
+//		fmt.Println("insertTx err:", err.Error())
+//		return err
+//	}
+//	return nil
+//}
 
 // NextAccount creates the next account and returns its account number.  The
 // name must be unique to the account.  In order to support automatic seed
