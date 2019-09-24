@@ -147,11 +147,11 @@ The commands are:
                 <exit>: Exit command mode
 
 # Import private key
-[wallet-cli]: import PrivKey 123456
+[wallet-cli]: importPrivKey 123456
 ImportPrivKey: OK
 
 # Create a new account
-[wallet-cli]: create New Acceount test
+[wallet-cli]: createNewAcceount test
 CreateNewAccount: succ
 
 # Check all your account addresses
@@ -164,12 +164,12 @@ Account: imported, address: Tmbsds jwzuGboFQ9GcKg6EUmrr3tokzozyF
 [wallet-cli]: getbalance TmbsdsjwzuGboFQ9GcKg6EUmrr3tokzozyF
 Getbalance amount: 0.04497 MEER
 
-# Unlock Wallet
+# Unlock Wallet Auto-lock after 15 minutes
 [wallet-cli]: unlock 123456
 Unlock succ
 
 # Transfer from a wallet requires unlocking the wallet first
-[wallet-cli]: sendToAddress Tmbsds jwzuGboFQ9GcKg6EUmrr3tokzozyF 0.01
+[wallet-cli]: sendToAddress TmbsdsjwzuGboFQ9GcKg6EUmrr3tokzozyF 0.01
 Send Raw Transaction txSign response msg: "0e441ecee44defe28711103eef0cc3d01c187c257738150869c032fbbf96d4c9"
 
 # View the current block synchronization number
