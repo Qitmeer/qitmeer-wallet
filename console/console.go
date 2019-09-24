@@ -67,9 +67,9 @@ func StartConsole()  {
 			}
 			getbalance(Default_minconf,arg1)
 			break
-		case "listAccountsBalance":
-			listAccountsBalance(Default_minconf)
-			break
+		//case "listAccountsBalance":
+		//	listAccountsBalance(Default_minconf)
+		//	break
 		case "getlisttxbyaddr":
 			if arg1 == ""{
 				fmt.Println("getlisttxbyaddr err :Please enter your address.")
@@ -161,20 +161,21 @@ func printHelp() {
 	fmt.Println("Usage:")
 	fmt.Println("\t<command> [arguments]")
 	fmt.Println("\tThe commands are:")
-	fmt.Println("\t<createNewAcceount> : Create a new account. Parameter: [account]")
+	fmt.Println("\t<createNewAccount> : Create a new account. Parameter: [account]")
 	fmt.Println("\t<getbalance> : Query the specified address balance. Parameter: [address]")
-	fmt.Println("\t<listAccountsBalance> : Obtain all account balances. Parameter: []")
+	//fmt.Println("\t<listAccountsBalance> : Obtain all account balances. Parameter: []")
 	fmt.Println("\t<getlisttxbyaddr> : Gets all transaction records at the specified address. Parameter: [address]")
 	fmt.Println("\t<getNewAddress> : Create a new address under the account. Parameter: [account]")
 	fmt.Println("\t<getAddressesByAccount> : Check all addresses under the account. Parameter: [account]")
 	fmt.Println("\t<getAccountByAddress> : Inquire about the account number of the address. Parameter: [address]")
 	fmt.Println("\t<importPrivKey> : Import private key. Parameter: [prikey]")
 	fmt.Println("\t<importWifPrivKey> : Import wif format private key. Parameter: [prikey]")
-	fmt.Println("\t<dumpPrivKey> : Export the private key by address. Parameter: [address]")
+	fmt.Println("\t<dumpPrivKey> : Export wif format private key by address. Parameter: [address]")
 	fmt.Println("\t<getAccountAndAddress> : Check all accounts and addresses. Parameter: []")
 	fmt.Println("\t<sendToAddress> : Transfer transaction. Parameter: [address] [num]")
 	fmt.Println("\t<updateblock> : Update Wallet Block. Parameter: []")
 	fmt.Println("\t<syncheight> : Current Synchronized Data Height. Parameter: []")
+	fmt.Println("\t<unlock> : Unlock Wallet. Parameter: [password]")
 	fmt.Println("\t<help> : help")
 	fmt.Println("\t<exit> : Exit command mode")
 	fmt.Println()
@@ -424,6 +425,8 @@ func unlock(password string) error{
 	if err != nil {
 		fmt.Println("unlock err:", err.Error())
 		return err
+	}else{
+		fmt.Println("unlock succ")
 	}
 	return nil
 }
