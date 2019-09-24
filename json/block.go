@@ -6,6 +6,7 @@ type BlockHttpResult struct {
 	Hash          string        `json:"hash"`
 	Confirmations int64         `json:"confirmations"`
 	Version       int32         `json:"version"`
+	Height		  int32			`json:"height"`
 	Weight       int64         `json:"weight"`
 	Order       int32         `json:"order"`
 	TxRoot        string        `json:"txRoot"`
