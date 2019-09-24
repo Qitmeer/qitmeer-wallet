@@ -40,10 +40,11 @@ func StartConsole()  {
 			log.Println("createWallet err:",err.Error())
 			return
 		}
+		return
 	}
 	for {
 		cmd, arg1, arg2 := printPrompt()
-		fmt.Println("arg1:",arg1,"arg2:",arg2)
+		//fmt.Println("arg1:",arg1,"arg2:",arg2)
 		if cmd == "exit" {
 			break
 		}
