@@ -1,6 +1,6 @@
 package json
 
-import "github.com/HalalChain/qitmeer-lib/core/json"
+import "github.com/Qitmeer/qitmeer-lib/core/json"
 
 type BlockHttpResult struct {
 	Hash          string        `json:"hash"`

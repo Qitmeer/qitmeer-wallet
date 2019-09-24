@@ -8,8 +8,8 @@ import (
 	"fmt"
 	"os"
 	"testing"
-	"github.com/HalalChain/qitmeer-wallet/walletdb"
-	_ "github.com/HalalChain/qitmeer-wallet/walletdb/bdb"
+	"github.com/Qitmeer/qitmeer-wallet/walletdb"
+	_ "github.com/Qitmeer/qitmeer-wallet/walletdb/bdb"
 )
 
 var (

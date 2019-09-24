@@ -11,13 +11,13 @@ import (
 	"reflect"
 	"testing"
 
-	btcec "github.com/HalalChain/qitmeer-lib/crypto/ecc/secp256k1"
-	chaincfg "github.com/HalalChain/qitmeer-lib/params"
-	"github.com/HalalChain/qitmeer-lib/core/types"
-	"github.com/HalalChain/qitmeer-lib/engine/txscript"
-	"github.com/HalalChain/qitmeer-wallet/utils"
+	btcec "github.com/Qitmeer/qitmeer-lib/crypto/ecc/secp256k1"
+	chaincfg "github.com/Qitmeer/qitmeer-lib/params"
+	"github.com/Qitmeer/qitmeer-lib/core/types"
+	"github.com/Qitmeer/qitmeer-lib/engine/txscript"
+	"github.com/Qitmeer/qitmeer-wallet/utils"
 	"github.com/davecgh/go-spew/spew"
-	"github.com/HalalChain/qitmeer-lib/common/hash"
+	"github.com/Qitmeer/qitmeer-lib/common/hash"
 )
 
 const dummyDir = ""

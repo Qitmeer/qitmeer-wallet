@@ -13,11 +13,11 @@ import (
 	"strings"
 
 	"golang.org/x/crypto/ssh/terminal"
-	//"github.com/HalalChain/qitmeer-wallet/util/ssh/terminal"
+	//"github.com/Qitmeer/qitmeer-wallet/util/ssh/terminal"
 
-	"github.com/HalalChain/qitmeer-wallet/internal/legacy/keystore"
+	"github.com/Qitmeer/qitmeer-wallet/internal/legacy/keystore"
 
-	hdkeychain "github.com/HalalChain/qitmeer-lib/crypto/seed"
+	hdkeychain "github.com/Qitmeer/qitmeer-lib/crypto/seed"
 )
 
 // ProvideSeed is used to prompt for the wallet seed which maybe required during

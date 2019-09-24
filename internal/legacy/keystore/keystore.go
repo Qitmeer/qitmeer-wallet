@@ -14,16 +14,16 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
-	"github.com/HalalChain/qitmeer-lib/common/hash"
-	chainhash "github.com/HalalChain/qitmeer-lib/common/hash"
-	"github.com/HalalChain/qitmeer-lib/core/address"
-	"github.com/HalalChain/qitmeer-lib/core/protocol"
-	"github.com/HalalChain/qitmeer-lib/core/types"
-	"github.com/HalalChain/qitmeer-lib/crypto/ecc"
-	qitec "github.com/HalalChain/qitmeer-lib/crypto/ecc/secp256k1"
-	"github.com/HalalChain/qitmeer-lib/engine/txscript"
-	chaincfg "github.com/HalalChain/qitmeer-lib/params"
-	"github.com/HalalChain/qitmeer-wallet/utils"
+	"github.com/Qitmeer/qitmeer-lib/common/hash"
+	chainhash "github.com/Qitmeer/qitmeer-lib/common/hash"
+	"github.com/Qitmeer/qitmeer-lib/core/address"
+	"github.com/Qitmeer/qitmeer-lib/core/protocol"
+	"github.com/Qitmeer/qitmeer-lib/core/types"
+	"github.com/Qitmeer/qitmeer-lib/crypto/ecc"
+	qitec "github.com/Qitmeer/qitmeer-lib/crypto/ecc/secp256k1"
+	"github.com/Qitmeer/qitmeer-lib/engine/txscript"
+	chaincfg "github.com/Qitmeer/qitmeer-lib/params"
+	"github.com/Qitmeer/qitmeer-wallet/utils"
 	"io"
 	"io/ioutil"
 	"math/big"
@@ -34,7 +34,7 @@ import (
 
 	"golang.org/x/crypto/ripemd160"
 
-	"github.com/HalalChain/qitmeer-wallet/internal/legacy/rename"
+	"github.com/Qitmeer/qitmeer-wallet/internal/legacy/rename"
 )
 
 const (
@@ -2786,7 +2786,7 @@ type ScriptAddress interface {
 // iv must be 16 bytes, or nil (in which case it is randomly generated).
 func newScriptAddress(s *Store, script []byte, bs *BlockStamp) (addr *scriptAddress, err error) {
 	class, addresses, reqSigs, err :=
-		txscript.ExtractPkScriptAddrs(1,script, s.netParams())
+		txscript.ExtractPkScriptAddrs(script, s.netParams())
 	if err != nil {
 		return nil, err
 	}
@@ -2877,7 +2877,7 @@ func (sa *scriptAddress) ReadFrom(r io.Reader) (n int64, err error) {
 	}
 
 	class, addresses, reqSigs, err :=
-		txscript.ExtractPkScriptAddrs(1,sa.script, sa.store.netParams())
+		txscript.ExtractPkScriptAddrs(sa.script, sa.store.netParams())
 	if err != nil {
 		return n, err
 	}

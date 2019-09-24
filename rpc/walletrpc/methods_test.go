@@ -9,12 +9,12 @@ import (
 	//"path/filepath"
 	"testing"
 
-	"github.com/HalalChain/qitmeer-lib/crypto/ecc/secp256k1"
-	"github.com/HalalChain/qitmeer-lib/params"
-	"github.com/HalalChain/qitmeer-wallet/json/qitmeerjson"
-	util "github.com/HalalChain/qitmeer-wallet/utils"
-	"github.com/HalalChain/qitmeer-wallet/wallet"
-	qjson "github.com/HalalChain/qitmeer-wallet/json"
+	"github.com/Qitmeer/qitmeer-lib/crypto/ecc/secp256k1"
+	"github.com/Qitmeer/qitmeer-lib/params"
+	"github.com/Qitmeer/qitmeer-wallet/json/qitmeerjson"
+	util "github.com/Qitmeer/qitmeer-wallet/utils"
+	"github.com/Qitmeer/qitmeer-wallet/wallet"
+	qjson "github.com/Qitmeer/qitmeer-wallet/json"
 	//"time"
 	//"time"
 )

@@ -1,6 +1,6 @@
 package util
 
-import "github.com/HalalChain/qitmeer-lib/core/types"
+import "github.com/Qitmeer/qitmeer-lib/core/types"
 // calcMinRequiredTxRelayFee returns the minimum transaction fee required for a
 // transaction with the passed serialized size to be accepted into the memory
 // pool and relayed.

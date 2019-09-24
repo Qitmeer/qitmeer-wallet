@@ -1,4 +1,4 @@
-module github.com/HalalChain/qitmeer-wallet
+module github.com/Qitmeer/qitmeer-wallet
 
 go 1.12
 

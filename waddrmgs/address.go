@@ -9,14 +9,14 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/HalalChain/qitmeer-lib/common/hash"
-	addr "github.com/HalalChain/qitmeer-lib/core/address"
-	"github.com/HalalChain/qitmeer-lib/core/types"
-	"github.com/HalalChain/qitmeer-lib/crypto/bip32"
-	ecc "github.com/HalalChain/qitmeer-lib/crypto/ecc/secp256k1"
-	"github.com/HalalChain/qitmeer-wallet/internal/zero"
-	"github.com/HalalChain/qitmeer-wallet/utils"
-	"github.com/HalalChain/qitmeer-wallet/walletdb"
+	"github.com/Qitmeer/qitmeer-lib/common/hash"
+	addr "github.com/Qitmeer/qitmeer-lib/core/address"
+	"github.com/Qitmeer/qitmeer-lib/core/types"
+	"github.com/Qitmeer/qitmeer-lib/crypto/bip32"
+	ecc "github.com/Qitmeer/qitmeer-lib/crypto/ecc/secp256k1"
+	"github.com/Qitmeer/qitmeer-wallet/internal/zero"
+	"github.com/Qitmeer/qitmeer-wallet/utils"
+	"github.com/Qitmeer/qitmeer-wallet/walletdb"
 )
 
 // AddressType represents the various address types waddrmgr is currently able

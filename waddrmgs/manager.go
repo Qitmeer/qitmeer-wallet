@@ -8,15 +8,15 @@ import (
 	"crypto/rand"
 	"crypto/sha512"
 	"fmt"
-	"github.com/HalalChain/qitmeer-lib/core/types"
-	chaincfg "github.com/HalalChain/qitmeer-lib/params"
-	"github.com/HalalChain/qitmeer-wallet/internal/zero"
-	"github.com/HalalChain/qitmeer-wallet/walletdb"
+	"github.com/Qitmeer/qitmeer-lib/core/types"
+	chaincfg "github.com/Qitmeer/qitmeer-lib/params"
+	"github.com/Qitmeer/qitmeer-wallet/internal/zero"
+	"github.com/Qitmeer/qitmeer-wallet/walletdb"
 	"sync"
 	"time"
-	"github.com/HalalChain/qitmeer-wallet/snacl"
-	"github.com/HalalChain/qitmeer-lib/crypto/bip32"
-	ecc "github.com/HalalChain/qitmeer-lib/crypto/ecc/secp256k1"
+	"github.com/Qitmeer/qitmeer-wallet/snacl"
+	"github.com/Qitmeer/qitmeer-lib/crypto/bip32"
+	ecc "github.com/Qitmeer/qitmeer-lib/crypto/ecc/secp256k1"
 )
 
 const (

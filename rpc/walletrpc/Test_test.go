@@ -2,10 +2,10 @@ package walletrpc
 
 import (
 	"fmt"
-	//"github.com/HalalChain/qitmeer-lib/engine/txscript"
-	"github.com/HalalChain/qitmeer-lib/params"
-	"github.com/HalalChain/qitmeer-lib/core/address"
-	//"github.com/HalalChain/qitmeer-lib/common/hash"
+	//"github.com/Qitmeer/qitmeer-lib/engine/txscript"
+	"github.com/Qitmeer/qitmeer-lib/params"
+	"github.com/Qitmeer/qitmeer-lib/core/address"
+	//"github.com/Qitmeer/qitmeer-lib/common/hash"
 	"encoding/hex"
 	"testing"
 )

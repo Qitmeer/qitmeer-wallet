@@ -14,11 +14,11 @@ package main
 //	"strings"
 //	"time"
 //
-//	"github.com/HalalChain/qitmeer-lib/log"
-//	netparams "github.com/HalalChain/qitmeer-lib/params"
-//	"github.com/HalalChain/qitmeer-wallet/util"
-//	"github.com/HalalChain/qitmeer-wallet/version"
-//	"github.com/HalalChain/qitmeer-wallet/wallet"
+//	"github.com/Qitmeer/qitmeer-lib/log"
+//	netparams "github.com/Qitmeer/qitmeer-lib/params"
+//	"github.com/Qitmeer/qitmeer-wallet/util"
+//	"github.com/Qitmeer/qitmeer-wallet/version"
+//	"github.com/Qitmeer/qitmeer-wallet/wallet"
 //	flags "github.com/jessevdk/go-flags"
 //)
 //

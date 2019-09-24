@@ -11,12 +11,12 @@ package hdkeychain
 //	"errors"
 //	"fmt"
 //	"math/big"
-//	"github.com/HalalChain/qitmeer-lib/core/address"
-//	btcec "github.com/HalalChain/qitmeer-lib/crypto/ecc/secp256k1"
-//	chaincfg "github.com/HalalChain/qitmeer-lib/params"
-//	chainhash "github.com/HalalChain/qitmeer-lib/common/hash"
-//	"github.com/HalalChain/qitmeer-lib/common/encode/base58"
-//	//"github.com/HalalChain/qitmeer-lib/crypto/bip32"
+//	"github.com/Qitmeer/qitmeer-lib/core/address"
+//	btcec "github.com/Qitmeer/qitmeer-lib/crypto/ecc/secp256k1"
+//	chaincfg "github.com/Qitmeer/qitmeer-lib/params"
+//	chainhash "github.com/Qitmeer/qitmeer-lib/common/hash"
+//	"github.com/Qitmeer/qitmeer-lib/common/encode/base58"
+//	//"github.com/Qitmeer/qitmeer-lib/crypto/bip32"
 //)
 //
 //const (

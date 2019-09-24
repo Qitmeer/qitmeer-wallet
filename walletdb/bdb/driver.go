@@ -6,7 +6,7 @@ package bdb
 
 import (
 	"fmt"
-	"github.com/HalalChain/qitmeer-wallet/walletdb"
+	"github.com/Qitmeer/qitmeer-wallet/walletdb"
 )
 
 const (

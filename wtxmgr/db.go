@@ -12,9 +12,9 @@ import (
 	"fmt"
 	"time"
 
-	chainhash "github.com/HalalChain/qitmeer-lib/common/hash"
-	"github.com/HalalChain/qitmeer-lib/core/types"
-	"github.com/HalalChain/qitmeer-wallet/walletdb"
+	chainhash "github.com/Qitmeer/qitmeer-lib/common/hash"
+	"github.com/Qitmeer/qitmeer-lib/core/types"
+	"github.com/Qitmeer/qitmeer-wallet/walletdb"
 )
 
 // Naming
@@ -437,7 +437,7 @@ func valueTxRecord(rec *TxRecord) ([]byte, error) {
 		txSize := rec.MsgTx.SerializeSize()
 		v = make([]byte, 8, 8+txSize)
 		//err := rec.MsgTx.Serialize(bytes.NewBuffer(v[8:]))
-		bu, err := rec.MsgTx.Serialize(types.TxSerializeFull)
+		bu, err := rec.MsgTx.Serialize()
 		if err != nil {
 			str := fmt.Sprintf("unable to serialize transaction %v", rec.Hash)
 			return nil, storeError(ErrInput, str, err)

@@ -9,7 +9,7 @@ import (
 	"io"
 	"runtime/debug"
 
-	"github.com/HalalChain/qitmeer-wallet/internal/zero"
+	"github.com/Qitmeer/qitmeer-wallet/internal/zero"
 	"golang.org/x/crypto/scrypt"
 	"golang.org/x/crypto/nacl/secretbox"
 )
