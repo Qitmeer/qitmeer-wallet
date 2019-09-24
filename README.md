@@ -58,59 +58,6 @@ you can also use [qitmeer-cli](https://github.com/Qitmeer/qitmeer-cli) to access
 
 ![Qitmeer Wallet](assets/wallet-info.png)
 
-
-
-# RPC API
-
-## account/key
-
-```
-listAccounts // list all keystore
-
-createAccount // create a keystore (json key file and wallet database)
-
-delAccount //del a keystore from keys dir and wallet database
-
-importAccount //import keystore from json
-
-exportAccount //export keysort json file
-
-
-getBalance // get account balance or address balance
-
-```
-
-## address
-
-```
-
-listAddresses
-
-createAddress 
-
-```
-
-## tx
-
-```
-
-getAllTx //get account or address all tx
-
-```
-
-## RawTx
-> qitmeer rpc method
-
-```
-getRawTx
-
-createRawTx
-
-signRawTx
-
-sendRawTx
-```
-
 ### console model
 ```
     # start qitmerr-wallet 
