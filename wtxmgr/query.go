@@ -7,9 +7,9 @@ package wtxmgr
 
 import (
 	"fmt"
-	"github.com/HalalChain/qitmeer-lib/core/types"
-	"github.com/HalalChain/qitmeer-wallet/walletdb"
-	"github.com/HalalChain/qitmeer-lib/common/hash"
+	"github.com/Qitmeer/qitmeer-lib/core/types"
+	"github.com/Qitmeer/qitmeer-wallet/walletdb"
+	"github.com/Qitmeer/qitmeer-lib/common/hash"
 )
 
 // CreditRecord contains metadata regarding a transaction credit for a known

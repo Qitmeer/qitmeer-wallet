@@ -3,12 +3,12 @@ package console
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/HalalChain/qitmeer-wallet/config"
-	"github.com/HalalChain/qitmeer-wallet/json/qitmeerjson"
-	"github.com/HalalChain/qitmeer-wallet/rpc/walletrpc"
-	"github.com/HalalChain/qitmeer-wallet/util"
-	qjson "github.com/HalalChain/qitmeer-wallet/json"
-	"github.com/HalalChain/qitmeer-wallet/wallet"
+	"github.com/Qitmeer/qitmeer-wallet/config"
+	"github.com/Qitmeer/qitmeer-wallet/json/qitmeerjson"
+	"github.com/Qitmeer/qitmeer-wallet/rpc/walletrpc"
+	"github.com/Qitmeer/qitmeer-wallet/util"
+	qjson "github.com/Qitmeer/qitmeer-wallet/json"
+	"github.com/Qitmeer/qitmeer-wallet/wallet"
 	"log"
 	"path/filepath"
 	"runtime"
@@ -245,10 +245,10 @@ func getbalance(minconf int ,addr string) ( interface{}, error){
 	}
 	r:=b.(*wallet.Balance)
 	//fmt.Println("getbalance :",b)
-	fmt.Println("getbalance  ConfirmAmount:",r.ConfirmAmount)
-	fmt.Println("getbalance  UnspendAmount:",r.UnspendAmount)
-	fmt.Println("getbalance  SpendAmount:",r.SpendAmount)
-	fmt.Println("getbalance  TotalAmount:",r.TotalAmount)
+	//fmt.Println("getbalance  ConfirmAmount:",r.ConfirmAmount)
+	fmt.Println("getbalance  amount:",r.UnspendAmount)
+	//fmt.Println("getbalance  SpendAmount:",r.SpendAmount)
+	//fmt.Println("getbalance  TotalAmount:",r.TotalAmount)
 	return b, nil
 }
 func  listAccountsBalance(min int)( interface{}, error){
@@ -381,7 +381,6 @@ func getAccountAndAddress(minconf int32) (interface{}, error) {
 		return nil, err
 	}
 	a:=msg.([]wallet.AccountAndAddressResult)
-	fmt.Println("getAccountAndAddress :",a)
 	for _ , result :=range a{
 		for _,r:= range result.AddrsOutput{
 			fmt.Println("account:",result.AccountName," ,address:",r.Addr)

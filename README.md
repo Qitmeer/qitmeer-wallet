@@ -4,13 +4,13 @@ The command-line wallet of the Qitmeer network
 
 # download or build
 
-you can download from [release](https://github.com/HalalChain/qitmeer-wallet/releases)
+you can download from [release](https://github.com/Qitmeer/qitmeer-wallet/releases)
 
 if you have golang environment, you can build it by yourself
 
 ```
 
-git clone https://github.com/HalalChain/qitmeer-wallet.git
+git clone https://github.com/Qitmeer/qitmeer-wallet.git
 
 go build
 
@@ -39,7 +39,7 @@ curl -i -X POST -H 'Content-type':'application/json' --user uid:pwd -d '{"jsonrp
 
 ```
 
-you can also use [qitmeer-cli](https://github.com/HalalChain/qitmeer-cli) to access the qitmeer-wallet RPC interface.
+you can also use [qitmeer-cli](https://github.com/Qitmeer/qitmeer-cli) to access the qitmeer-wallet RPC interface.
 
 ```
 ./qitmeer-cli getbalance your-address
@@ -134,6 +134,7 @@ sendRawTx
             <getAccountAndAddress> : Check all accounts and addresses. Parameter: []
             <sendToAddress> : Transfer transaction. Parameter: [address] [num]
             <updateblock> : Update Wallet Block. Parameter: []
+            <syncheight> : Current Synchronized Data Height. Parameter: []
             <help> : help
             <exit> : Exit command mode
 

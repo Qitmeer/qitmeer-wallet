@@ -15,7 +15,7 @@ package bdb_test
 import (
 	"os"
 	"testing"
-	"github.com/HalalChain/qitmeer-wallet/walletdb/walletdbtest"
+	"github.com/Qitmeer/qitmeer-wallet/walletdb/walletdbtest"
 )
 
 // TestInterface performs all interfaces tests for this database driver.

@@ -11,18 +11,18 @@ package main
 //	"path/filepath"
 //	"time"
 //
-//	"github.com/HalalChain/qitmeer-lib/crypto/bip32"
-//	btcec "github.com/HalalChain/qitmeer-lib/crypto/ecc/secp256k1"
-//	nfg "github.com/HalalChain/qitmeer-wallet/config"
-//	"github.com/HalalChain/qitmeer-wallet/internal/legacy/keystore"
-//	"github.com/HalalChain/qitmeer-wallet/internal/prompt"
-//	"github.com/HalalChain/qitmeer-wallet/utils"
-//	waddrmgr "github.com/HalalChain/qitmeer-wallet/waddrmgs"
+//	"github.com/Qitmeer/qitmeer-lib/crypto/bip32"
+//	btcec "github.com/Qitmeer/qitmeer-lib/crypto/ecc/secp256k1"
+//	nfg "github.com/Qitmeer/qitmeer-wallet/config"
+//	"github.com/Qitmeer/qitmeer-wallet/internal/legacy/keystore"
+//	"github.com/Qitmeer/qitmeer-wallet/internal/prompt"
+//	"github.com/Qitmeer/qitmeer-wallet/utils"
+//	waddrmgr "github.com/Qitmeer/qitmeer-wallet/waddrmgs"
 //
-//	"github.com/HalalChain/qitmeer-lib/crypto/ecc/secp256k1"
-//	chaincfg "github.com/HalalChain/qitmeer-lib/params"
-//	"github.com/HalalChain/qitmeer-wallet/wallet"
-//	"github.com/HalalChain/qitmeer-wallet/walletdb"
+//	"github.com/Qitmeer/qitmeer-lib/crypto/ecc/secp256k1"
+//	chaincfg "github.com/Qitmeer/qitmeer-lib/params"
+//	"github.com/Qitmeer/qitmeer-wallet/wallet"
+//	"github.com/Qitmeer/qitmeer-wallet/walletdb"
 //)
 //
 //// networkDir returns the directory name of a network directory to hold wallet

@@ -6,10 +6,10 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 
-	"github.com/HalalChain/qitmeer-wallet/console"
-	"github.com/HalalChain/qitmeer-wallet/config"
-	"github.com/HalalChain/qitmeer-wallet/version"
-	"github.com/HalalChain/qitmeer-wallet/wserver"
+	"github.com/Qitmeer/qitmeer-wallet/console"
+	"github.com/Qitmeer/qitmeer-wallet/config"
+	"github.com/Qitmeer/qitmeer-wallet/version"
+	"github.com/Qitmeer/qitmeer-wallet/wserver"
 )
 
 func main() {

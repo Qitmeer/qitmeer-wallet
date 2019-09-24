@@ -11,7 +11,7 @@ import (
 	//"github.com/coreos/bbolt"
 	bbolt "go.etcd.io/bbolt"
 
-	"github.com/HalalChain/qitmeer-wallet/walletdb"
+	"github.com/Qitmeer/qitmeer-wallet/walletdb"
 )
 
 // convertErr converts some bolt errors to the equivalent walletdb error.

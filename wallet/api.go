@@ -3,19 +3,19 @@ package wallet
 import (
 	"encoding/hex"
 	"fmt"
-	"github.com/HalalChain/qitmeer-wallet/wtxmgr"
+	"github.com/Qitmeer/qitmeer-wallet/wtxmgr"
 
-	"github.com/HalalChain/qitmeer-lib/core/address"
-	"github.com/HalalChain/qitmeer-lib/core/types"
-	"github.com/HalalChain/qitmeer-lib/crypto/ecc/secp256k1"
-	"github.com/HalalChain/qitmeer-lib/engine/txscript"
-	"github.com/HalalChain/qitmeer-lib/params"
+	"github.com/Qitmeer/qitmeer-lib/core/address"
+	"github.com/Qitmeer/qitmeer-lib/core/types"
+	"github.com/Qitmeer/qitmeer-lib/crypto/ecc/secp256k1"
+	"github.com/Qitmeer/qitmeer-lib/engine/txscript"
+	"github.com/Qitmeer/qitmeer-lib/params"
 
-	"github.com/HalalChain/qitmeer-wallet/config"
-	"github.com/HalalChain/qitmeer-wallet/json/qitmeerjson"
-	"github.com/HalalChain/qitmeer-wallet/utils"
-	waddrmgr "github.com/HalalChain/qitmeer-wallet/waddrmgs"
-	"github.com/HalalChain/qitmeer-wallet/wallet/txrules"
+	"github.com/Qitmeer/qitmeer-wallet/config"
+	"github.com/Qitmeer/qitmeer-wallet/json/qitmeerjson"
+	"github.com/Qitmeer/qitmeer-wallet/utils"
+	waddrmgr "github.com/Qitmeer/qitmeer-wallet/waddrmgs"
+	"github.com/Qitmeer/qitmeer-wallet/wallet/txrules"
 )
 
 // API wallet
@@ -355,8 +355,7 @@ func sendPairs(w *Wallet, amounts map[string]types.Amount,
 			Message: err.Error(),
 		}
 	}
-	txHashStr := tx.TxHash().String()
-	return txHashStr, nil
+	return *tx, nil
 }
 
 // makeOutputs creates a slice of transaction outputs from a pair of address

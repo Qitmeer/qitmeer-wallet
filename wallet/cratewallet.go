@@ -7,12 +7,12 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/HalalChain/qitmeer-lib/crypto/ecc/secp256k1"
+	"github.com/Qitmeer/qitmeer-lib/crypto/ecc/secp256k1"
 
-	"github.com/HalalChain/qitmeer-wallet/config"
-	"github.com/HalalChain/qitmeer-wallet/internal/legacy/keystore"
-	"github.com/HalalChain/qitmeer-wallet/internal/prompt"
-	"github.com/HalalChain/qitmeer-wallet/utils"
+	"github.com/Qitmeer/qitmeer-wallet/config"
+	"github.com/Qitmeer/qitmeer-wallet/internal/legacy/keystore"
+	"github.com/Qitmeer/qitmeer-wallet/internal/prompt"
+	"github.com/Qitmeer/qitmeer-wallet/utils"
 )
 
 // createWallet prompts the user for information needed to generate a new wallet

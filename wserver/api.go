@@ -8,15 +8,15 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/HalalChain/qitmeer-lib/crypto/bip32"
-	"github.com/HalalChain/qitmeer-lib/crypto/bip39"
-	"github.com/HalalChain/qitmeer-lib/crypto/ecc/secp256k1"
-	"github.com/HalalChain/qitmeer-lib/crypto/seed"
+	"github.com/Qitmeer/qitmeer-lib/crypto/bip32"
+	"github.com/Qitmeer/qitmeer-lib/crypto/bip39"
+	"github.com/Qitmeer/qitmeer-lib/crypto/ecc/secp256k1"
+	"github.com/Qitmeer/qitmeer-lib/crypto/seed"
 
-	"github.com/HalalChain/qitmeer-wallet/config"
-	"github.com/HalalChain/qitmeer-wallet/utils"
-	waddrmgr "github.com/HalalChain/qitmeer-wallet/waddrmgs"
-	"github.com/HalalChain/qitmeer-wallet/wallet"
+	"github.com/Qitmeer/qitmeer-wallet/config"
+	"github.com/Qitmeer/qitmeer-wallet/utils"
+	waddrmgr "github.com/Qitmeer/qitmeer-wallet/waddrmgs"
+	"github.com/Qitmeer/qitmeer-wallet/wallet"
 )
 
 // API wallet

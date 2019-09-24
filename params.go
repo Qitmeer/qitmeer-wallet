@@ -4,6 +4,6 @@
 
 package main
 //
-//import "github.com/HalalChain/qitmeer-lib/params"
+//import "github.com/Qitmeer/qitmeer-lib/params"
 //
 //var activeNet = &params.MainNetParams

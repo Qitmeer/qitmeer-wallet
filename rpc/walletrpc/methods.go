@@ -3,14 +3,14 @@ package walletrpc
 import (
 	"encoding/hex"
 	"fmt"
-	"github.com/HalalChain/qitmeer-lib/core/address"
-	"github.com/HalalChain/qitmeer-lib/crypto/ecc/secp256k1"
-	"github.com/HalalChain/qitmeer-lib/params"
-	util "github.com/HalalChain/qitmeer-wallet/utils"
-	"github.com/HalalChain/qitmeer-wallet/wallet/txrules"
+	"github.com/Qitmeer/qitmeer-lib/core/address"
+	"github.com/Qitmeer/qitmeer-lib/crypto/ecc/secp256k1"
+	"github.com/Qitmeer/qitmeer-lib/params"
+	util "github.com/Qitmeer/qitmeer-wallet/utils"
+	"github.com/Qitmeer/qitmeer-wallet/wallet/txrules"
 	"time"
 
-	//"github.com/HalalChain/qitmeer-wallet/wallet/txrules"
+	//"github.com/Qitmeer/qitmeer-wallet/wallet/txrules"
 
 	//"bytes"
 	//"encoding/base64"
@@ -18,14 +18,14 @@ import (
 	//"encoding/json"
 	//"errors"
 	//"fmt"
-	"github.com/HalalChain/qitmeer-wallet/json/qitmeerjson"
-	waddrmgr "github.com/HalalChain/qitmeer-wallet/waddrmgs"
-	"github.com/HalalChain/qitmeer-lib/core/types"
-	"github.com/HalalChain/qitmeer-lib/engine/txscript"
+	"github.com/Qitmeer/qitmeer-wallet/json/qitmeerjson"
+	waddrmgr "github.com/Qitmeer/qitmeer-wallet/waddrmgs"
+	"github.com/Qitmeer/qitmeer-lib/core/types"
+	"github.com/Qitmeer/qitmeer-lib/engine/txscript"
 	//"sync"
 	//"time"
 
-	"github.com/HalalChain/qitmeer-wallet/wallet"
+	"github.com/Qitmeer/qitmeer-wallet/wallet"
 )
 
 // confirmed checks whether a transaction at height txHeight has met minconf
@@ -368,8 +368,7 @@ func sendPairs(w *wallet.Wallet, amounts map[string]types.Amount,
 			Message: err.Error(),
 		}
 	}
-	txHashStr := tx.TxHash().String()
-	return txHashStr, nil
+	return *tx, nil
 }
 
 // makeOutputs creates a slice of transaction outputs from a pair of address

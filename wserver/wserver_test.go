@@ -5,13 +5,13 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/HalalChain/qitmeer-lib/crypto/bip32"
-	"github.com/HalalChain/qitmeer-lib/crypto/bip39"
-	"github.com/HalalChain/qitmeer-lib/crypto/ecc/secp256k1"
-	"github.com/HalalChain/qitmeer-lib/crypto/seed"
-	"github.com/HalalChain/qitmeer-wallet/utils"
+	"github.com/Qitmeer/qitmeer-lib/crypto/bip32"
+	"github.com/Qitmeer/qitmeer-lib/crypto/bip39"
+	"github.com/Qitmeer/qitmeer-lib/crypto/ecc/secp256k1"
+	"github.com/Qitmeer/qitmeer-lib/crypto/seed"
+	"github.com/Qitmeer/qitmeer-wallet/utils"
 
-	"github.com/HalalChain/qitmeer-lib/qx"
+	"github.com/Qitmeer/qitmeer-lib/qx"
 )
 
 func TestSeed(t *testing.T) {

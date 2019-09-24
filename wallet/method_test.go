@@ -2,9 +2,9 @@ package wallet
 
 import (
 	//"fmt"
-	//"github.com/HalalChain/qitmeer-lib/params"
-	//"github.com/HalalChain/qitmeer-wallet/waddrmgs"
-	//"github.com/HalalChain/qitmeer-wallet/walletdb"
+	//"github.com/Qitmeer/qitmeer-lib/params"
+	//"github.com/Qitmeer/qitmeer-wallet/waddrmgs"
+	//"github.com/Qitmeer/qitmeer-wallet/walletdb"
 	//"testing"
 	//"time"
 )

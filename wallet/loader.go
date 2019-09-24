@@ -14,12 +14,12 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	// "github.com/HalalChain/qitmeer-lib/log"
-	chaincfg "github.com/HalalChain/qitmeer-lib/params"
-	"github.com/HalalChain/qitmeer-wallet/config"
-	waddrmgr "github.com/HalalChain/qitmeer-wallet/waddrmgs"
-	"github.com/HalalChain/qitmeer-wallet/walletdb"
-	_ "github.com/HalalChain/qitmeer-wallet/walletdb/bdb"
+	// "github.com/Qitmeer/qitmeer-lib/log"
+	chaincfg "github.com/Qitmeer/qitmeer-lib/params"
+	"github.com/Qitmeer/qitmeer-wallet/config"
+	waddrmgr "github.com/Qitmeer/qitmeer-wallet/waddrmgs"
+	"github.com/Qitmeer/qitmeer-wallet/walletdb"
+	_ "github.com/Qitmeer/qitmeer-wallet/walletdb/bdb"
 )
 
 const (

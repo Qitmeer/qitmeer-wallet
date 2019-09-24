@@ -2,14 +2,14 @@ package wtxmgr
 
 import (
 	"bytes"
-	"github.com/HalalChain/qitmeer-lib/common/math"
+	"github.com/Qitmeer/qitmeer-lib/common/math"
 	"time"
 
-	chainhash "github.com/HalalChain/qitmeer-lib/common/hash"
-	"github.com/HalalChain/qitmeer-lib/core/types"
-	"github.com/HalalChain/qitmeer-lib/log"
-	chaincfg "github.com/HalalChain/qitmeer-lib/params"
-	"github.com/HalalChain/qitmeer-wallet/walletdb"
+	chainhash "github.com/Qitmeer/qitmeer-lib/common/hash"
+	"github.com/Qitmeer/qitmeer-lib/core/types"
+	"github.com/Qitmeer/qitmeer-lib/log"
+	chaincfg "github.com/Qitmeer/qitmeer-lib/params"
+	"github.com/Qitmeer/qitmeer-wallet/walletdb"
 )
 // Block contains the minimum amount of data to uniquely identify any block on
 // either the best or side chain.
@@ -118,7 +118,7 @@ func NewTxRecord(serializedTx []byte, received time.Time) (*TxRecord, error) {
 // into the store.
 func NewTxRecordFromMsgTx(msgTx *types.Transaction, received time.Time) (*TxRecord, error) {
 	//buf := bytes.NewBuffer(make([]byte, 0, msgTx.SerializeSize()))
-	bu,err := msgTx.Serialize(types.TxSerializeFull)
+	bu,err := msgTx.Serialize()
 	if err != nil {
 		str := "failed to serialize transaction"
 		return nil, storeError(ErrInput, str, err)

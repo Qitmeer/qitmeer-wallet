@@ -10,8 +10,8 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
-	chainhash "github.com/HalalChain/qitmeer-lib/common/hash"
-	"github.com/HalalChain/qitmeer-wallet/walletdb"
+	chainhash "github.com/Qitmeer/qitmeer-lib/common/hash"
+	"github.com/Qitmeer/qitmeer-wallet/walletdb"
 	"time"
 )
 

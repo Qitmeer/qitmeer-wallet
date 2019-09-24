@@ -7,8 +7,8 @@ package main
 //	"os"
 //	"runtime"
 //
-//	"github.com/HalalChain/qitmeer-lib/log"
-//	"github.com/HalalChain/qitmeer-wallet/version"
+//	"github.com/Qitmeer/qitmeer-lib/log"
+//	"github.com/Qitmeer/qitmeer-wallet/version"
 //)
 //
 //var (

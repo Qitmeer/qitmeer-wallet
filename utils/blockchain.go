@@ -1,7 +1,7 @@
 package utils
 
 import (
-	"github.com/HalalChain/qitmeer-lib/params"
+	"github.com/Qitmeer/qitmeer-lib/params"
 )
 
 // GetNetParams by network name

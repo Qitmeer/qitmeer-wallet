@@ -7,7 +7,7 @@ import (
 
 	"github.com/rakyll/statik/fs"
 
-	_ "github.com/HalalChain/qitmeer-wallet/assets/statik"
+	_ "github.com/Qitmeer/qitmeer-wallet/assets/statik"
 )
 
 // GetStatic return statci binary fileSystem

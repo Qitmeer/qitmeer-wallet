@@ -10,11 +10,11 @@ import (
 	"github.com/julienschmidt/httprouter"
 	log "github.com/sirupsen/logrus"
 
-	"github.com/HalalChain/qitmeer-wallet/assets"
-	"github.com/HalalChain/qitmeer-wallet/config"
-	"github.com/HalalChain/qitmeer-wallet/rpc/server"
-	"github.com/HalalChain/qitmeer-wallet/utils"
-	"github.com/HalalChain/qitmeer-wallet/wallet"
+	"github.com/Qitmeer/qitmeer-wallet/assets"
+	"github.com/Qitmeer/qitmeer-wallet/config"
+	"github.com/Qitmeer/qitmeer-wallet/rpc/server"
+	"github.com/Qitmeer/qitmeer-wallet/utils"
+	"github.com/Qitmeer/qitmeer-wallet/wallet"
 )
 
 //WalletServer wallet api server

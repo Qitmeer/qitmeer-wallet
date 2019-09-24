@@ -20,9 +20,9 @@ import (
 
 	"github.com/BurntSushi/toml"
 
-	"github.com/HalalChain/qitmeer-lib/params"
+	"github.com/Qitmeer/qitmeer-lib/params"
 
-	"github.com/HalalChain/qitmeer-wallet/utils"
+	"github.com/Qitmeer/qitmeer-wallet/utils"
 )
 
 const (
@@ -100,7 +100,7 @@ var once sync.Once
 
 func init(){
 	once.Do(func() {
-		fmt.Println("执行init------------------------")
+		//fmt.Println("执行init------------------------")
 		Cfg=NewDefaultConfig()
 		_, err := toml.DecodeFile("config.toml", &Cfg)
 		if err != nil {

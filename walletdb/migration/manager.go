@@ -4,8 +4,8 @@ import (
 	"errors"
 	"sort"
 
-	"github.com/HalalChain/qitmeer-lib/log"
-	"github.com/HalalChain/qitmeer-wallet/walletdb"
+	"github.com/Qitmeer/qitmeer-lib/log"
+	"github.com/Qitmeer/qitmeer-wallet/walletdb"
 )
 
 var (

@@ -1,7 +1,6 @@
 package wallet
 
 import (
-	"bytes"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
@@ -12,23 +11,21 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/HalalChain/qitmeer-lib/common/hash"
-	"github.com/HalalChain/qitmeer-lib/common/marshal"
-	"github.com/HalalChain/qitmeer-lib/core/address"
-	corejson "github.com/HalalChain/qitmeer-lib/core/json"
-	"github.com/HalalChain/qitmeer-lib/core/message"
-	"github.com/HalalChain/qitmeer-lib/core/types"
-	"github.com/HalalChain/qitmeer-lib/crypto/ecc"
-	"github.com/HalalChain/qitmeer-lib/engine/txscript"
-	chaincfg "github.com/HalalChain/qitmeer-lib/params"
+	"github.com/Qitmeer/qitmeer-lib/common/hash"
+	"github.com/Qitmeer/qitmeer-lib/core/address"
+	corejson "github.com/Qitmeer/qitmeer-lib/core/json"
+	"github.com/Qitmeer/qitmeer-lib/core/types"
+	"github.com/Qitmeer/qitmeer-lib/engine/txscript"
+	chaincfg "github.com/Qitmeer/qitmeer-lib/params"
+	"github.com/Qitmeer/qitmeer-lib/qx"
 
-	"github.com/HalalChain/qitmeer-wallet/config"
-	clijson "github.com/HalalChain/qitmeer-wallet/json"
-	"github.com/HalalChain/qitmeer-wallet/utils"
-	waddrmgr "github.com/HalalChain/qitmeer-wallet/waddrmgs"
-	"github.com/HalalChain/qitmeer-wallet/wallet/txrules"
-	"github.com/HalalChain/qitmeer-wallet/walletdb"
-	"github.com/HalalChain/qitmeer-wallet/wtxmgr"
+	"github.com/Qitmeer/qitmeer-wallet/config"
+	clijson "github.com/Qitmeer/qitmeer-wallet/json"
+	"github.com/Qitmeer/qitmeer-wallet/utils"
+	waddrmgr "github.com/Qitmeer/qitmeer-wallet/waddrmgs"
+	"github.com/Qitmeer/qitmeer-wallet/wallet/txrules"
+	"github.com/Qitmeer/qitmeer-wallet/walletdb"
+	"github.com/Qitmeer/qitmeer-wallet/wtxmgr"
 )
 
 const (
@@ -287,10 +284,8 @@ func Create(db walletdb.DB, pubPass, privPass, seed []byte, params *chaincfg.Par
 func Open(db walletdb.DB, pubPass []byte, cbs *waddrmgr.OpenCallbacks,
 	params *chaincfg.Params, recoveryWindow uint32, cfg *config.Config) (*Wallet, error) {
 
-	var (
-		addrMgr *waddrmgr.Manager
-		txMgr   *wtxmgr.Store
-	)
+	var	addrMgr *waddrmgr.Manager
+	//var	txMgr   *wtxmgr.Store
 
 	// Before attempting to open the wallet, we'll check if there are any
 	// database upgrades for us to proceed. We'll also create our references
@@ -316,7 +311,7 @@ func Open(db walletdb.DB, pubPass []byte, cbs *waddrmgr.OpenCallbacks,
 		if err != nil {
 			return err
 		}
-		txMgr, err = wtxmgr.Open(txMgrBucket, params)
+		_, err = wtxmgr.Open(txMgrBucket, params)
 		if err != nil {
 			return err
 		}
@@ -480,18 +475,18 @@ func (w *Wallet) getAddrAndAddrTxOutputByAddr(addr string, requiredConfs int32) 
 
 	var spendAmount types.Amount
 	var unspendAmount types.Amount
-	var totalAmount types.Amount
+	//var totalAmount types.Amount
 	var confirmAmount types.Amount
 	for _, txout := range txouts {
 		if txout.Spend == 1 {
 			spendAmount += txout.Amount
-			totalAmount += txout.Amount
+			//totalAmount += txout.Amount
 		} else {
 			if !confirmed(requiredConfs, txout.Block.Height, syncBlock.Height) {
-				totalAmount += txout.Amount
+				//totalAmount += txout.Amount
 				confirmAmount += txout.Amount
 			} else {
-				totalAmount += txout.Amount
+				//totalAmount += txout.Amount
 				unspendAmount += txout.Amount
 			}
 		}
@@ -499,7 +494,7 @@ func (w *Wallet) getAddrAndAddrTxOutputByAddr(addr string, requiredConfs int32) 
 
 	b.UnspendAmount = unspendAmount
 	b.SpendAmount = spendAmount
-	b.TotalAmount = totalAmount
+	//b.TotalAmount = totalAmount
 	b.ConfirmAmount = confirmAmount
 	ato.Addr = addr
 	ato.balance = b
@@ -729,7 +724,7 @@ func parseTx(tr corejson.TxRawResult) ([]types.TxOutPoint, []wtxmgr.AddrTxOutput
 	}
 	block := wtxmgr.Block{
 		Hash:   *blockhash,
-		Height: int32(tr.BlockHeight),
+		//Height: int32(tr.BlockHeight),
 	}
 	txid, err := hash.NewHashFromStr(tr.Txid)
 	if err != nil {
@@ -738,7 +733,7 @@ func parseTx(tr corejson.TxRawResult) ([]types.TxOutPoint, []wtxmgr.AddrTxOutput
 	}
 	for j := 0; j < len(tr.Vin); j++ {
 		vi := tr.Vin[j]
-		if vi.Txid == "" && vi.TxIndex == 0 {
+		if vi.Txid == "" && vi.Vout == 0 {
 			continue
 		} else {
 			hs, err := hash.NewHashFromStr(vi.Txid)
@@ -818,7 +813,7 @@ func (w *Wallet) Updateblock(toHeight int64) error {
 			fmt.Println("string to int  err:", err.Error())
 			return err
 		}
-		log.Info("getblockcount :", blockheight)
+		//log.Info("getblockcount :", blockheight)
 		//localheight:=int32(1607)
 		localheight := w.Manager.SyncedTo().Height + 1
 		for h := localheight; h <= int32(blockheight); h++ {
@@ -1341,7 +1336,7 @@ func (w *Wallet) GetUtxo(addr string)([]wtxmgr.Utxo, error){
 // SendOutputs creates and sends payment transactions. It returns the
 // transaction upon success.
 func (w *Wallet) SendOutputs(outputs []*types.TxOutput, account uint32,
-	minconf int32, satPerKb types.Amount) (*types.Transaction, error) {
+	minconf int32, satPerKb types.Amount) (*string, error) {
 
 	// Ensure the outputs to be created adhere to the network's consensus
 	// rules.
@@ -1366,7 +1361,7 @@ func (w *Wallet) SendOutputs(outputs []*types.TxOutput, account uint32,
 b:
 	for _, aaar := range aaars {
 		for _, output := range aaar.AddrsOutput {
-			fmt.Println("output:", output)
+			//fmt.Println("output:", output)
 			if output.balance.UnspendAmount > payAmout {
 				addr, err := address.DecodeAddress(output.Addr)
 				sendAddress = output.Addr
@@ -1392,14 +1387,14 @@ b:
 						if confirmed(minconf, output.Block.Height, synced.Height) {
 							if output.Amount >= payAmout {
 								pre := types.NewOutPoint(&output.Txid, output.Index)
-								tx.AddTxIn(types.NewTxInput(pre, uint64(output.Amount), nil))
+								tx.AddTxIn(types.NewTxInput(pre, nil))
 								tx.AddTxOut(types.NewTxOutput(uint64(output.Amount-payAmout)-minfee, frompkscipt))
 								payAmout = types.Amount(0)
 								sendAddrTxOutput = append(sendAddrTxOutput, output)
 								break b
 							} else {
 								pre := types.NewOutPoint(&output.Txid, output.Index)
-								tx.AddTxIn(types.NewTxInput(pre, uint64(output.Amount), nil))
+								tx.AddTxIn(types.NewTxInput(pre, nil))
 								payAmout = payAmout - output.Amount
 								sendAddrTxOutput = append(sendAddrTxOutput, output)
 							}
@@ -1413,24 +1408,23 @@ b:
 		fmt.Println("balance is not enough")
 		return nil, fmt.Errorf("balance is not enough")
 	}
-	s := types.TxSerializeFull
-	b, err := tx.Serialize(s)
+	b, err := tx.Serialize()
 	if err != nil {
 		fmt.Println("err:", err.Error())
 		return nil, err
 	}
-	signTx, err := w.txSign(prk, hex.EncodeToString(b))
+	signTx, err := qx.TxSign(prk, hex.EncodeToString(b),w.chainParams.Name)
 	if err != nil {
 		fmt.Println("txSign err:", err.Error())
 		return nil, err
 	}
-	mtxHex, err := marshal.MessageToHex(&message.MsgTx{Tx: signTx})
-	if err != nil {
-		fmt.Println("txSign err:", err.Error())
-		return nil, err
-	}
-	fmt.Println("txSign succ:", mtxHex)
-	msg, err := w.Httpclient.SendRawTransaction(mtxHex, false)
+	//mtxHex, err := marshal.MessageToHex(&message.MsgTx{Tx: signTx})
+	//if err != nil {
+	//	fmt.Println("txSign err:", err.Error())
+	//	return nil, err
+	//}
+	//fmt.Println("txSign succ:", mtxHex)
+	msg, err := w.Httpclient.SendRawTransaction(signTx, false)
 	if err != nil {
 		return nil, err
 	} else {
@@ -1456,62 +1450,62 @@ b:
 		return nil, err
 	}
 
-	return signTx, nil
+	return &signTx, nil
 }
-func (w *Wallet) txSign(privkeyStr string, rawTxStr string) (*types.Transaction, error) {
-	privkeyByte, err := hex.DecodeString(privkeyStr)
-	if err != nil {
-		return nil, err
-	}
-	if len(privkeyByte) != 32 {
-		return nil, fmt.Errorf("invaid ec private key bytes: %d", len(privkeyByte))
-	}
-	privateKey, pubKey := ecc.Secp256k1.PrivKeyFromBytes(privkeyByte)
-	h160 := hash.Hash160(pubKey.SerializeCompressed())
-	fmt.Println("hex.EncodeToString(h160)：", hex.EncodeToString(h160))
-
-	addr, err := address.NewPubKeyHashAddress(h160, w.chainParams, ecc.ECDSA_Secp256k1)
-	if err != nil {
-		return nil, err
-	}
-	// Create a new script which pays to the provided address.
-	pkScript, err := txscript.PayToAddrScript(addr)
-	if err != nil {
-		return nil, err
-	}
-
-	if len(rawTxStr)%2 != 0 {
-		return nil, fmt.Errorf("invaild raw transaction : %s", rawTxStr)
-	}
-	serializedTx, err := hex.DecodeString(rawTxStr)
-	if err != nil {
-		return nil, err
-	}
-
-	var redeemTx types.Transaction
-	err = redeemTx.Deserialize(bytes.NewReader(serializedTx))
-	if err != nil {
-		return nil, err
-	}
-	var kdb txscript.KeyClosure = func(types.Address) (ecc.PrivateKey, bool, error) {
-		return privateKey, true, nil // compressed is true
-	}
-	var sigScripts [][]byte
-	for i := range redeemTx.TxIn {
-		sigScript, err := txscript.SignTxOutput(w.chainParams, &redeemTx, i, pkScript, txscript.SigHashAll, kdb, nil, nil, ecc.ECDSA_Secp256k1)
-		if err != nil {
-			return nil, err
-		}
-		sigScripts = append(sigScripts, sigScript)
-	}
-
-	for i2 := range sigScripts {
-		redeemTx.TxIn[i2].SignScript = sigScripts[i2]
-	}
-	return &redeemTx, nil
-	//mtxHex, err := marshal.MessageToHex(&message.MsgTx{Tx: &redeemTx})
-	//if err != nil {
-	//	return "", err
-	//}
-	//return mtxHex, nil
-}
+//func (w *Wallet) txSign(privkeyStr string, rawTxStr string) (*types.Transaction, error) {
+//	privkeyByte, err := hex.DecodeString(privkeyStr)
+//	if err != nil {
+//		return nil, err
+//	}
+//	if len(privkeyByte) != 32 {
+//		return nil, fmt.Errorf("invaid ec private key bytes: %d", len(privkeyByte))
+//	}
+//	privateKey, pubKey := ecc.Secp256k1.PrivKeyFromBytes(privkeyByte)
+//	h160 := hash.Hash160(pubKey.SerializeCompressed())
+//	fmt.Println("hex.EncodeToString(h160)：", hex.EncodeToString(h160))
+//
+//	addr, err := address.NewPubKeyHashAddress(h160, w.chainParams, ecc.ECDSA_Secp256k1)
+//	if err != nil {
+//		return nil, err
+//	}
+//	// Create a new script which pays to the provided address.
+//	pkScript, err := txscript.PayToAddrScript(addr)
+//	if err != nil {
+//		return nil, err
+//	}
+//
+//	if len(rawTxStr)%2 != 0 {
+//		return nil, fmt.Errorf("invaild raw transaction : %s", rawTxStr)
+//	}
+//	serializedTx, err := hex.DecodeString(rawTxStr)
+//	if err != nil {
+//		return nil, err
+//	}
+//
+//	var redeemTx types.Transaction
+//	err = redeemTx.Deserialize(bytes.NewReader(serializedTx))
+//	if err != nil {
+//		return nil, err
+//	}
+//	var kdb txscript.KeyClosure = func(types.Address) (ecc.PrivateKey, bool, error) {
+//		return privateKey, true, nil // compressed is true
+//	}
+//	var sigScripts [][]byte
+//	for i := range redeemTx.TxIn {
+//		sigScript, err := txscript.SignTxOutput(w.chainParams, &redeemTx, i, pkScript, txscript.SigHashAll, kdb, nil, nil, ecc.ECDSA_Secp256k1)
+//		if err != nil {
+//			return nil, err
+//		}
+//		sigScripts = append(sigScripts, sigScript)
+//	}
+//
+//	for i2 := range sigScripts {
+//		redeemTx.TxIn[i2].SignScript = sigScripts[i2]
+//	}
+//	return &redeemTx, nil
+//	//mtxHex, err := marshal.MessageToHex(&message.MsgTx{Tx: &redeemTx})
+//	//if err != nil {
+//	//	return "", err
+//	//}
+//	//return mtxHex, nil
+//}

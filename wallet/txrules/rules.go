@@ -8,9 +8,9 @@ package txrules
 
 import (
 	"errors"
-	"github.com/HalalChain/qitmeer-lib/core/types"
-	"github.com/HalalChain/qitmeer-lib/core/serialization"
-	"github.com/HalalChain/qitmeer-lib/engine/txscript"
+	"github.com/Qitmeer/qitmeer-lib/core/types"
+	"github.com/Qitmeer/qitmeer-lib/core/serialization"
+	"github.com/Qitmeer/qitmeer-lib/engine/txscript"
 )
 
 // DefaultRelayFeePerKb is the default minimum relay fee policy for a mempool.
@@ -50,7 +50,7 @@ func IsDustOutput(output *types.TxOutput, relayFeePerKb types.Amount) bool {
 	}
 
 	// All other unspendable outputs are considered dust.
-	if txscript.IsUnspendable(output.Amount,output.PkScript) {
+	if txscript.IsUnspendable(output.PkScript) {
 		return true
 	}
 
