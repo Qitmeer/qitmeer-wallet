@@ -140,6 +140,9 @@ func StartConsole()  {
 		case "updateblock":
 			updateblock()
 			break
+		case "syncheight":
+			syncheight()
+			break
 		case "unlock":
 			unlock(arg1)
 			break
@@ -157,7 +160,7 @@ func printHelp() {
 	fmt.Println("Usage:")
 	fmt.Println("\t<command> [arguments]")
 	fmt.Println("\tThe commands are:")
-	fmt.Println("\t<createNewAccount> : Create a new account. Parameter: [account]")
+	fmt.Println("\t<createNewAcceount> : Create a new account. Parameter: [account]")
 	fmt.Println("\t<getbalance> : Query the specified address balance. Parameter: [address]")
 	fmt.Println("\t<listAccountsBalance> : Obtain all account balances. Parameter: []")
 	fmt.Println("\t<getlisttxbyaddr> : Gets all transaction records at the specified address. Parameter: [address]")
@@ -170,6 +173,7 @@ func printHelp() {
 	fmt.Println("\t<getAccountAndAddress> : Check all accounts and addresses. Parameter: []")
 	fmt.Println("\t<sendToAddress> : Transfer transaction. Parameter: [address] [num]")
 	fmt.Println("\t<updateblock> : Update Wallet Block. Parameter: []")
+	fmt.Println("\t<syncheight> : Current Synchronized Data Height. Parameter: []")
 	fmt.Println("\t<help> : help")
 	fmt.Println("\t<exit> : Exit command mode")
 	fmt.Println()
@@ -240,7 +244,7 @@ func getbalance(minconf int ,addr string) ( interface{}, error){
 		return nil,err
 	}
 	r:=b.(*wallet.Balance)
-	fmt.Println("getbalance :",b)
+	//fmt.Println("getbalance :",b)
 	fmt.Println("getbalance  ConfirmAmount:",r.ConfirmAmount)
 	fmt.Println("getbalance  UnspendAmount:",r.UnspendAmount)
 	fmt.Println("getbalance  SpendAmount:",r.SpendAmount)
@@ -378,6 +382,11 @@ func getAccountAndAddress(minconf int32) (interface{}, error) {
 	}
 	a:=msg.([]wallet.AccountAndAddressResult)
 	fmt.Println("getAccountAndAddress :",a)
+	for _ , result :=range a{
+		for _,r:= range result.AddrsOutput{
+			fmt.Println("account:",result.AccountName," ,address:",r.Addr)
+		}
+	}
 	//fmt.Println("getAccountAndAddress :",a[1].AddrsOutput[0].Addr)
 	return msg, nil
 }
@@ -403,6 +412,10 @@ func updateblock()(  error){
 		fmt.Println("err:", err.Error())
 		return err
 	}
+	return nil
+}
+func syncheight()(  error){
+	fmt.Println(w.Manager.SyncedTo().Height)
 	return nil
 }
 

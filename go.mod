@@ -4,7 +4,7 @@ go 1.12
 
 require (
 	github.com/BurntSushi/toml v0.3.1
-	github.com/HalalChain/qitmeer-lib v0.0.0-20190731141422-52abd17f2811
+	github.com/Qitmeer/qitmeer-lib v0.0.0-20190923031344-bd998d432f44
 	github.com/davecgh/go-spew v1.1.1
 	github.com/deckarep/golang-set v1.7.1
 	github.com/jessevdk/go-flags v1.4.0

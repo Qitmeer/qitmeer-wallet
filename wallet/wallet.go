@@ -320,7 +320,6 @@ func Open(db walletdb.DB, pubPass []byte, cbs *waddrmgr.OpenCallbacks,
 		if err != nil {
 			return err
 		}
-		fmt.Println("txmgr：", txMgr)
 		return nil
 	})
 	if err != nil {
@@ -835,7 +834,7 @@ func (w *Wallet) Updateblock(toHeight int64) error {
 			}
 			//fmt.Println(len(blockhash))
 			//fmt.Println("1")
-			log.Info("localheight:", h, " blockhash:", blockhash)
+			//log.Info("localheight:", h, " blockhash:", blockhash)
 			hs, err := hash.NewHashFromStr(blockhash)
 			//fmt.Println("hs:",hs)
 			if err != nil {
