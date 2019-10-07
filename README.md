@@ -58,34 +58,6 @@ you can also use [qitmeer-cli](https://github.com/Qitmeer/qitmeer-cli) to access
 
 ![Qitmeer Wallet](assets/wallet-info.png)
 
-## console model
-```
-    # start qitmerr-wallet 
-    ./qitmeer-wallet -console
-    
-    # get helper
-    [wallet-cli]: help
-    Usage:
-            <command> [arguments]
-            The commands are:
-            <createNewAccount> : Create a new account. Parameter: [account]
-            <getbalance> : Query the specified address balance. Parameter: [address]
-            <getlisttxbyaddr> : Gets all transaction records at the specified address. Parameter: [address]
-            <getNewAddress> : Create a new address under the account. Parameter: [account]
-            <getAddressesByAccount> : Check all addresses under the account. Parameter: [account]
-            <getAccountByAddress> : Inquire about the account number of the address. Parameter: [address]
-            <importPrivKey> : Import private key. Parameter: [prikey]
-            <importWifPrivKey> : Import wif format private key. Parameter: [prikey]
-            <dumpPrivKey> : Export wif format private key by address. Parameter: [address]
-            <getAccountAndAddress> : Check all accounts and addresses. Parameter: []
-            <sendToAddress> : Transfer transaction. Parameter: [address] [num]
-            <updateblock> : Update Wallet Block. Parameter: []
-            <syncheight> : Current Synchronized Data Height. Parameter: []
-            <unlock> : Unlock Wallet. Parameter: [password]
-            <help> : help
-            <exit> : Exit command mode
-
-```
 
 
 ## How to use qitmeer-wallet console command model
