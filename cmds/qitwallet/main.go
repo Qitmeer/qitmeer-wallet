@@ -1,7 +1,9 @@
 package main
-
+/*
 import (
 	"fmt"
+	"github.com/Qitmeer/qitmeer-wallet/console"
+	"os"
 
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -12,10 +14,14 @@ import (
 )
 
 func main() {
-	cmd := newCmd()
-	err := cmd.Execute()
-	if err != nil {
-		log.Errorf("main err: %s", err)
+	if len(os.Args) > 1 && os.Args[1] == "-console" {
+		console.StartConsole()
+	}else{
+		cmd := newCmd()
+		err := cmd.Execute()
+		if err != nil {
+			log.Errorf("main err: %s", err)
+		}
 	}
 }
 
@@ -101,4 +107,4 @@ func QitmeerMain(cfg *config.Config) {
 
 	exitCh := make(chan int)
 	<-exitCh
-}
+}*/

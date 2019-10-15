@@ -1,12 +1,12 @@
 #configFile=""
 #appDataDir=""
-#debugLevel=""
+debugLevel="info"
 #logDir=""
 
 network="testnet"
 #Listeners=["127.0.0.1:8132"]
 ApiUrl="127.0.0.1:38130"
-#ui=false
+ui=true
 #RPCUser=""
 #RPCPass=""
 #RPCCert=""

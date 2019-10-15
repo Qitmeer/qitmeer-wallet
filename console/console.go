@@ -22,6 +22,23 @@ const (
 var w *wallet.Wallet
 var isWin = runtime.GOOS == "windows"
 
+func CreatWallet()  {
+	b:=checkWalletIeExist(config.Cfg)
+	if b {
+		log.Println("db is exist",filepath.Join(networkDir(config.Cfg.AppDataDir, config.ActiveNet), config.WalletDbName))
+		return
+	}else{
+		_,err:=createWallet()
+		if err!=nil{
+			log.Println("createWallet err:",err.Error())
+			return
+		}else{
+			log.Println("createWallet succ")
+		}
+		return
+	}
+}
+
 func StartConsole()  {
 	log.Println("config.Cfg.AppDataDir：",config.Cfg.AppDataDir)
 	b:=checkWalletIeExist(config.Cfg)

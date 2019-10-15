@@ -5,11 +5,10 @@
 package config
 
 import (
-	"log"
+	//"github.com/jessevdk/go-flags"
 	"bytes"
 	"crypto/rand"
 	"fmt"
-	"io/ioutil"
 	"math/big"
 	"os"
 	"os/user"
@@ -17,8 +16,7 @@ import (
 	"runtime"
 	"strings"
 	"sync"
-
-	"github.com/BurntSushi/toml"
+	"github.com/spf13/cobra"
 
 	"github.com/Qitmeer/qitmeer-lib/params"
 
@@ -46,8 +44,6 @@ var (
 )
 
 var (
-	InsecurePubPassphrase = "public"
-
 	activeParams *params.Params
 )
 
@@ -58,11 +54,11 @@ type Config struct {
 	DebugLevel string
 	LogDir     string
 
-	Network string // mainnet testnet privnet
+	Network string
 
 	//WalletRPC
-	UI            bool     // local web server UI
-	Listeners     []string // ["127.0.0.1:38130"]
+	UI            bool
+	Listeners     []string
 	ApiUrl        string
 	RPCUser       string
 	RPCPass       string
@@ -73,7 +69,7 @@ type Config struct {
 	DisableTLS    bool
 
 	//walletAPI
-	APIs []string // rpc support api list
+	APIs []string
 
 	//Qitmeerd
 	isLocal        bool
@@ -87,33 +83,48 @@ type Config struct {
 	QProxyUser     string
 	QProxyPass     string
 
-	WalletPass string
+	WalletPass string `short:"w" long:"wp" description:"Path to configuration file"`
 
 	// //qitmeerd RPC config
 	// QitmeerdSelect string // QitmeerdList[QitmeerdSelect]
 	// QitmeerdList   map[string]*client.Config
 }
 
-var Cfg *Config
+var Cfg =&Config{}
 var ActiveNet = &params.MainNetParams
 var once sync.Once
-
 func init(){
-	once.Do(func() {
+	//_, err := toml.DecodeFile("config.toml", &Cfg)
+	//if err != nil {
+	//	log.Println(err)
+	//}
+	//Cfg=NewDefaultConfig()
+	//RootCmd.PersistentFlags().StringVarP(&Cfg.DebugLevel, "Debuglevel", "d", "error", "RPC username")
+
+	//once.Do(func() {
 		//fmt.Println("执行init------------------------")
-		Cfg=NewDefaultConfig()
-		_, err := toml.DecodeFile("config.toml", &Cfg)
-		if err != nil {
-			log.Println(err)
-		}
-		if Cfg.AppDataDir ==""{
-			appData:=cleanAndExpandPath(Cfg.AppDataDir)
-			log.Println("appData：",appData)
-			Cfg.AppDataDir=appData
-		}
-		ActiveNet = utils.GetNetParams(Cfg.Network)
-	})
+		//Cfg=NewDefaultConfig()
+		//_, err := toml.DecodeFile("config.toml", &Cfg)
+		//if err != nil {
+		//	log.Println(err)
+		//}
+		//preParser := flags.NewParser(Cfg, flags.Default)
+		//_, err = preParser.Parse()
+		//if err != nil {
+		//	if e, ok := err.(*flags.Error); !ok || e.Type != flags.ErrHelp {
+		//		preParser.WriteHelp(os.Stderr)
+		//		return
+		//	}
+		//}
+		//if Cfg.AppDataDir ==""{
+		//	appData:=cleanAndExpandPath(Cfg.AppDataDir)
+		//	log.Println("appData：",appData)
+		//	Cfg.AppDataDir=appData
+		//}
+		//ActiveNet = utils.GetNetParams(Cfg.Network)
+	//})
 }
+
 // Check config rule
 func (cfg *Config) Check() error {
 
@@ -124,7 +135,24 @@ func (cfg *Config) Check() error {
 
 	return nil
 }
+var GenerateCmd = &cobra.Command{
+	Use:   "generate {number,default latest}",
+	Short: "generate {n}, cpu mine n blocks",
+	Example: `
+		generate
+		generate 1
+	`,
+	Run: func(cmd *cobra.Command, args []string) {
+		fmt.Println("Cfg.DebugLevel :",Cfg.DebugLevel)
+		fmt.Println("args[0]:",args[0])
+		fmt.Println("args[1]:",args[1])
+		fmt.Println("args[2]:",args[2])
+	},
+}
 
+
+
+/*
 // LoadConfig load config from file
 func LoadConfig(configFile string, isCreate bool, preCfg *Config) (cfg *Config, err error) {
 
@@ -161,12 +189,11 @@ func LoadConfig(configFile string, isCreate bool, preCfg *Config) (cfg *Config, 
 	preCfg.ConfigFile = configFile
 
 	return preCfg, nil
-}
+}*/
 
 // NewDefaultConfig make config by default value
 func NewDefaultConfig() (cfg *Config) {
 	cfg = &Config{
-		ConfigFile: DefaultConfigFile,
 		AppDataDir: defaultAppDataDir,
 		DebugLevel: defaultLogLevel,
 		LogDir:     defaultLogDir,

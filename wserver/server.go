@@ -112,6 +112,8 @@ func (wsvr *WalletServer) run() {
 		}
 		myStaticF := assets.NewMyStatic(staticF)
 
+		fmt.Println("wsvr.cfg.ApiUrl:",wsvr.cfg.ApiUrl)
+
 		myStaticF.AddFilter("/config.js", func() []byte {
 
 			//update config.js
