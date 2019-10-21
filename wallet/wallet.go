@@ -232,7 +232,7 @@ func (w *Wallet) ImportPrivateKey(scope waddrmgr.KeyScope, wif *utils.WIF,
 	if err != nil {
 		return "", err
 	}
-	//fmt.Println("props:", props)
+	fmt.Println("props:", props)
 	addrStr := addr.Encode()
 	log.Infof("Imported payment address %s", addrStr)
 
@@ -321,7 +321,7 @@ func Open(db walletdb.DB, pubPass []byte, cbs *waddrmgr.OpenCallbacks,
 		return nil, err
 	}
 
-	log.Info("Opened wallet") // TODO: log balance? last sync height?
+	log.Trace("Opened wallet") // TODO: log balance? last sync height?
 
 	w := &Wallet{
 		cfg: cfg,
@@ -804,9 +804,6 @@ func (w *Wallet) Updateblock(toHeight int64) error {
 	} else {
 		blockcount = strconv.FormatInt(toHeight, 10)
 	}
-	//fmt.Println("blockcount:", blockcount)
-	//fmt.Println("httpclienr:", w.Httpclient.RPCServer)
-	//fmt.Println("syny blockcount:", w.Manager.SyncedTo().Height)
 	if blockcount != "" {
 		blockheight, err := strconv.ParseInt(blockcount, 10, 32)
 		if err != nil {
@@ -819,12 +816,11 @@ func (w *Wallet) Updateblock(toHeight int64) error {
 		for h := localheight; h <= int32(blockheight); h++ {
 			blockhash, err := w.Httpclient.getBlockhash(int64(h))
 			if err != nil {
-				//fmt.Println("getblockhash err:", err.Error())
-				break
+				return err
 			}
 			er := w.SyncTx(blockhash)
 			if er != nil {
-				//fmt.Println("SyncTx err :", err.Error())
+				fmt.Println("SyncTx err :", err.Error())
 				return err
 			}
 			//fmt.Println(len(blockhash))
@@ -1003,7 +999,7 @@ func (w *Wallet) NewAddress(
 	if err != nil {
 		return nil, err
 	}
-	//fmt.Println("props:", props)
+	fmt.Println("props:", props)
 	//// Notify the rpc server about the newly created address.
 	//err = chainClient.NotifyReceived([]btcutil.Address{addr})
 	//if err != nil {
@@ -1405,7 +1401,7 @@ b:
 		}
 	}
 	if payAmout != types.Amount(0) {
-		fmt.Println("balance is not enough")
+		//fmt.Println("balance is not enough")
 		return nil, fmt.Errorf("balance is not enough")
 	}
 	b, err := tx.Serialize()

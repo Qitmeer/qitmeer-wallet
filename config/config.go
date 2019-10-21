@@ -16,7 +16,6 @@ import (
 	"runtime"
 	"strings"
 	"sync"
-	"github.com/spf13/cobra"
 
 	"github.com/Qitmeer/qitmeer-lib/params"
 
@@ -53,6 +52,7 @@ type Config struct {
 	AppDataDir string
 	DebugLevel string
 	LogDir     string
+	Create bool
 
 	Network string
 
@@ -90,10 +90,10 @@ type Config struct {
 	// QitmeerdList   map[string]*client.Config
 }
 
-var Cfg =&Config{}
+var Cfg =NewDefaultConfig()
 var ActiveNet = &params.MainNetParams
 var once sync.Once
-func init(){
+//func init(){
 	//_, err := toml.DecodeFile("config.toml", &Cfg)
 	//if err != nil {
 	//	log.Println(err)
@@ -123,7 +123,7 @@ func init(){
 		//}
 		//ActiveNet = utils.GetNetParams(Cfg.Network)
 	//})
-}
+//}
 
 // Check config rule
 func (cfg *Config) Check() error {
@@ -135,22 +135,6 @@ func (cfg *Config) Check() error {
 
 	return nil
 }
-var GenerateCmd = &cobra.Command{
-	Use:   "generate {number,default latest}",
-	Short: "generate {n}, cpu mine n blocks",
-	Example: `
-		generate
-		generate 1
-	`,
-	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("Cfg.DebugLevel :",Cfg.DebugLevel)
-		fmt.Println("args[0]:",args[0])
-		fmt.Println("args[1]:",args[1])
-		fmt.Println("args[2]:",args[2])
-	},
-}
-
-
 
 /*
 // LoadConfig load config from file

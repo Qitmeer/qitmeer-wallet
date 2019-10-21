@@ -86,7 +86,6 @@ func ListAccounts(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
 	if err != nil {
 		return nil, err
 	}
-	fmt.Println("results:",results)
 	for _, result := range results {
 		accountBalances[result.AccountName] = result.AccountBalance.ToCoin()
 	}
@@ -311,7 +310,6 @@ func Updateblock(icmd interface{},w *wallet.Wallet) error {
 	cmd := icmd.(*qitmeerjson.UpdateBlockToCmd)
 	err:=w.Updateblock(cmd.Toheight)
 	if(err!=nil){
-		fmt.Println("Updateblock err :",err.Error())
 		return err
 	}
 	return nil

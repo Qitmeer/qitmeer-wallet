@@ -25,12 +25,12 @@ var isWin = runtime.GOOS == "windows"
 func CreatWallet()  {
 	b:=checkWalletIeExist(config.Cfg)
 	if b {
-		log.Println("db is exist",filepath.Join(networkDir(config.Cfg.AppDataDir, config.ActiveNet), config.WalletDbName))
+		log.Fatalln("db is exist",filepath.Join(networkDir(config.Cfg.AppDataDir, config.ActiveNet), config.WalletDbName))
 		return
 	}else{
 		_,err:=createWallet()
 		if err!=nil{
-			log.Println("createWallet err:",err.Error())
+			log.Fatalln("createWallet err:",err.Error())
 			return
 		}else{
 			log.Println("createWallet succ")
@@ -39,6 +39,47 @@ func CreatWallet()  {
 	}
 }
 
+func OpenWallet(){
+	b:=checkWalletIeExist(config.Cfg)
+	var err error
+	if b {
+		load := wallet.NewLoader(config.ActiveNet, networkDir(config.Cfg.AppDataDir, config.ActiveNet), 250,config.Cfg)
+		w, err = load.OpenExistingWallet([]byte(config.Cfg.WalletPass), false)
+		if err != nil {
+			log.Fatalln("openWallet err:", err.Error())
+			return
+		}
+	}else{
+		log.Fatalln("Please create a wallet first,[qitmeer-wallet create ]")
+		return
+	}
+}
+
+func UnLock(password string) error{
+	err := w.UnLockManager([]byte(password))
+	if err != nil {
+		log.Fatalf("UnLock err:%s", "password error")
+		return err
+	}
+	return nil
+}
+
+func InitWallet(){
+	//log.Println("config.Cfg.AppDataDir：",config.Cfg.AppDataDir)
+	b:=checkWalletIeExist(config.Cfg)
+	var err error
+	if b {
+		load := wallet.NewLoader(config.ActiveNet, networkDir(config.Cfg.AppDataDir, config.ActiveNet), 250,config.Cfg)
+		w, err = load.OpenExistingWallet([]byte(config.Cfg.WalletPass), false)
+		if err != nil {
+			log.Fatalln("openWallet err:", err.Error())
+			return
+		}
+	}else{
+		log.Fatalln("Please create a wallet first,[qitmeer-wallet create --create]")
+		return
+	}
+}
 func StartConsole()  {
 	log.Println("config.Cfg.AppDataDir：",config.Cfg.AppDataDir)
 	b:=checkWalletIeExist(config.Cfg)
@@ -156,7 +197,7 @@ func StartConsole()  {
 			sendToAddress(arg1,float64(f32))
 			break
 		case "updateblock":
-			updateblock()
+			updateblock(0)
 			break
 		case "syncheight":
 			syncheight()
@@ -421,15 +462,16 @@ func sendToAddress(address string ,amount float64)( interface{}, error){
 	fmt.Println("sendToAddress :",msg)
 	return msg, nil
 }
-func updateblock()(  error){
+func updateblock(height int64)(  error){
 	cmd:=&qitmeerjson.UpdateBlockToCmd{
-		Toheight:0,
+		Toheight:height,
 	}
 	err := walletrpc.Updateblock(cmd, w)
 	if err != nil {
 		fmt.Println("err:", err.Error())
 		return err
 	}
+	fmt.Printf("update to block :%v succ",height)
 	return nil
 }
 func syncheight()(  error){

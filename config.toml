@@ -1,29 +1,14 @@
-#configFile=""
-#appDataDir=""
-debugLevel="info"
-#logDir=""
+#configFile="" #Your config.toml profile directory
+#appDataDir="" # Your DB storage path
+#logDir="" # log path
 
-network="testnet"
-#Listeners=["127.0.0.1:8132"]
-ApiUrl="127.0.0.1:38130"
-ui=true
-#RPCUser=""
-#RPCPass=""
-#RPCCert=""
-#RPCKey=""
-#RPCMaxClients=10
-#DisableRPC=false
-#DisableTLS=false
+#network="mainnet" #network mainnet,testnet,privnet default mainet
+#network="testnet"
+#network="privnet"
 
 #Qitmeerd
 QServer="47.88.220.44:8131"
 QUser="admin"
 QPass="123456"
-#QCert=""
-QNoTLS=true
-#QTLSSkipVerify =false
-#QProxy     =""
-#QProxyUser =""
-#QProxyPass =""
 
-WalletPass="public"
+WalletPass="public" #Wallet encryption code default public
