@@ -9,69 +9,77 @@ you can download from [release](https://github.com/Qitmeer/qitmeer-wallet/releas
 if you have golang environment, you can build it by yourself
 
 ```
-
 git clone https://github.com/Qitmeer/qitmeer-wallet.git
 
 go build
 
-
 ```
 
-## usage
-
-There are two ways to use it：RPC interface and Web interface.
-
-
-## RPC interface
+## Usage
 
 ```
-# start qitmeer-wallet
+Usage:
+  qitmeer-wallet [command]
 
-./qitmeer-wallet -n testnet --listens=127.0.0.1:38130 --rpcUser admin --rpcPass 123
+Available Commands:
+  create                create
+  createnewaccount      create new account
+  getAddressesByAccount get addresses by account
+  getbalance            getbalance
+  getlisttxbyaddr       get all transactions for address
+  help                  Help about any command
+  importprivkey         import prikey
+  listaccountsbalance   list Accounts Balance
+  sendtoaddress         send transaction
+  syncheight            Get the number of local synchronization blocks
+  updateblock           Update local block data
 
-# default RPC port is 38130
+Flags:
+  -a, --appdatadir string      wallet db path
+  -c, --configfile string      config file (default "config.toml")
+  -d, --debuglevel string      log level (default "error")
+  -h, --help                   help for qitmeer-wallet
+  -l, --logdir string          log data path
+  -n, --network string         network (default "testnet")
+  -P, --pubwalletpass string   data encryption password (default "public")
+  -p, --qpass string           qitmeer node password (default "123456")
+  -s, --qserver string         qitmeer node server (default "127.0.0.1:8030")
+  -u, --quser string           qitmeer node user (default "admin")
 
-# example
+Use "qitmeer-wallet [command] --help" for more information about a command.
 
-#curl
-
-curl -i -X POST -H 'Content-type':'application/json' --user uid:pwd -d '{"jsonrpc": "2.0","method": "getBalance","params": ["your-address"],"id": 1}' http://127.0.0.1:38130
 
 ```
-
-you can also use [qitmeer-cli](https://github.com/Qitmeer/qitmeer-cli) to access the qitmeer-wallet RPC interface.
-
-```
-./qitmeer-cli getbalance your-address
-```
-
-## Web interface
-
-```
-# start qitmeer-wallet
-
-./qitmeer-wallet --web
-
-# this will open http://127.0.0.1:38130 in your web browser
-
-```
-
-![Qitmeer Wallet](assets/wallet-info.png)
-
-
 
 ## How to use qitmeer-wallet console command model
 
-- create walllet
+1:  configure the config.toml file in the root directory
 
-    `
-        ./qitmeer-wallet -console
-    `
+    ```
+        #configFile="" #Your config.toml profile directory
+        #appDataDir="" # Your DB storage path
+        #logDir="" # log path
+        #network="mainnet" #network mainnet,testnet,privnet default testnet
+        network="testnet"
+        #network="privnet"
+        #Qitmeerd
+        QServer="47.88.220.44:8131"
+        QUser="admin"
+        QPass="123456"
+        WalletPass="public" #Wallet encryption code default public
+    
+    ```
+
+2:  create a wallet
+
+    ```
+    ./qitmeer-wallet create -a /root
+    
+    ```
     
     `#output`
     
     ```
-    Config.Cfg.AppDataDir:/root/.qitwallet
      # Wallet Password
      Enter the private passphrase for your new wallet:
      Confirm passphrase:
@@ -98,115 +106,29 @@ you can also use [qitmeer-cli](https://github.com/Qitmeer/qitmeer-cli) to access
      INFO [0022] Imported payment address TmmC1hUN5A2RJzX9ZWFZqHaDbKUf6NaA4D
      The wallet has been created successfully.
      ```
-    
-    
-- Import private key
 
-    `[wallet-cli]: importPrivKey 123456 `
+3:  update db (update to the specified block or update all,syncheight can view the current DB synchronization height)
+    
+    ./qitmeer-wallet  updateblock
+    ./qitmeer-wallet  updateblock 130 
+    
+    
+    
+4:  when creating a wallet, you can import seeds or import private keys using importprivkey.
+
+    `./qitmeer-wallet importprivkey 6eb6bbcd7ded317abc4ed5e373c2c8630dc4ad069470ad7ae72f5fb854423006` 
     
     `#output`
     
     `ImportPrivKey: OK`
-    
-- Create a new account
-    
-    `[wallet-cli]: createNewAcceount test`
-    
-    `#output`
-    
-    `CreateNewAccount: succ`
 
-- Check all your account addresses
-  
-  `[wallet-cli]: getAccountAndAddress`
-  
-  `#output`
-  
-  ```
-   Account: imported, address: TmgD1mu8zMMV9aWmJrXqYnWRhR9SBfDZG6
-   Account: imported, address: TmK8tyqW9hvoT1J1qXRzU8C4m6fZ6zigD4
-   Account: imported, address: Tmbsds jwzuGboFQ9GcKg6EUmrr3tokzozyF
-   ```
+    
+5:  must use updateback to see the balance change after the transfer transaction
 
-- View address balance
-
-    `[wallet-cli]: getbalance TmbsdsjwzuGboFQ9GcKg6EUmrr3tokzozyF`
-    
-    `#output`
-    
-    `Getbalance amount: 0.04497 MEER`
-    
-- Unlock Wallet Auto-lock after 15 minutes
-    
-    `[wallet-cli]: unlock 123456`
-    
-    `#output`
-    
-    `Unlock succ`
-    
-- Synchronized blocks are automatically updated by default and checked once a minute
-
-    `[wallet-cli]: updateblock`
-    
-    `#output`
-    
-    `updpateblock start`
-    
-- Transfer from a wallet requires unlocking the wallet first
-
-    `[wallet-cli]: sendToAddress TmbsdsjwzuGboFQ9GcKg6EUmrr3tokzozyF 0.01`
+    `./qitmeer-wallet sendtoaddress TmbsdsjwzuGboFQ9GcKg6EUmrr3tokzozyF 0.01 youpassword`
     
     `#output`
     
     `0e441ecee44defe28711103eef0cc3d01c187c257738150869c032fbbf96d4c9`
-    
-- View the current block synchronization number
 
-    `[wallet-cli]: syncheight`
-    
-    `#output`
-    
-    `5433`
-    
-
-- View all transaction records corresponding to address
-
-    `[wallet-cli]: getlistTXbyaddr TmbsdsjwzuGboFQ9GcKg6EUmrr3tokzozyF`
-  
-- View all transaction records corresponding to address
-
-    `[wallet-cli]: getlistTXbyaddr TmbsdsjwzuGboFQ9GcKg6EUmrr3tokzozyF`
-    
-
-  
-- exit
-
-    `[wallet-cli]: exit`
-    
-- help 
-
-    `[wallet-cli]: help`
-    
-    `#output`
-    
-    ```
-    Usage:
-                <command> [arguments]
-                The commands are:
-                <createNewAccount> : Create a new account. Parameter: [account]
-                <getbalance> : Query the specified address balance. Parameter: [address]
-                <getlisttxbyaddr> : Gets all transaction records at the specified address. Parameter: [address]
-                <getNewAddress> : Create a new address under the account. Parameter: [account]
-                <getAddressesByAccount> : Check all addresses under the account. Parameter: [account]
-                <getAccountByAddress> : Inquire about the account number of the address. Parameter: [address]
-                <importPrivKey> : Import private key. Parameter: [prikey]
-                <importWifPrivKey> : Import wif format private key. Parameter: [prikey]
-                <dumpPrivKey> : Export wif format private key by address. Parameter: [address]
-                <getAccountAndAddress> : Check all accounts and addresses. Parameter: []
-                <sendToAddress> : Transfer transaction. Parameter: [address] [num]
-                <updateblock> : Update Wallet Block. Parameter: []
-                <syncheight> : Current Synchronized Data Height. Parameter: []
-                <unlock> : Unlock Wallet. Parameter: [password]
-                <help> : help
-                <exit> : Exit command mode
-    ```
+    `./qitmeer-wallet updateback`
