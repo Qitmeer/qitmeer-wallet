@@ -122,6 +122,10 @@ func (cfg *htpc) getBlock(hash string, isDetail bool) (string, error) {
 	params := []interface{}{hash, isDetail}
 	return cfg.getResString("getBlock", params)
 }
+func (cfg *htpc) getBlockByOrder(i int64) (string, error) {
+	params := []interface{}{i}
+	return cfg.getResString("getBlockByOrder", params)
+}
 func (cfg *htpc) SendRawTransaction(tx string, allowHighFees bool) (string, error) {
 	params := []interface{}{tx, allowHighFees}
 	return cfg.getResString("sendRawTransaction", params)

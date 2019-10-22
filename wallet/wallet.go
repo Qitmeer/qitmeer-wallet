@@ -682,36 +682,36 @@ func (w *Wallet) insertTx(txins []types.TxOutPoint, txouts []wtxmgr.AddrTxOutput
 	return err
 }
 
-func (w *Wallet) SyncTx(h string) error {
+func (w *Wallet) SyncTx(h string) (clijson.BlockHttpResult,error) {
+	var block clijson.BlockHttpResult
 	tx, err := w.Httpclient.getBlock(h, true)
 	if err != nil {
 		fmt.Println("getblockcount err:", err.Error())
-		return err
+		return block,err
 	}
 	if tx == "" {
 		fmt.Println("tx is null")
-		return err
+		return block,err
 	}
 	//fmt.Println("tx is :", tx)
-	var block clijson.BlockHttpResult
 	if err := json.Unmarshal([]byte(tx), &block); err == nil {
 		txins, txouts, trrs, err := parseBlockTxs(block)
 		if err != nil {
 			fmt.Println("err :", err.Error())
-			return err
+			return block,err
 		}
 		err = w.insertTx(txins, txouts, trrs)
 		if err != nil {
 			fmt.Println("err :", err.Error())
-			return err
+			return block,err
 		}
 
 	} else {
 		fmt.Println(err)
-		return err
+		return block,err
 	}
 	//fmt.Println("tx:",tx)
-	return nil
+	return block,nil
 }
 
 func parseTx(tr corejson.TxRawResult,height int32) ([]types.TxOutPoint, []wtxmgr.AddrTxOutput, error) {
@@ -792,6 +792,43 @@ func (w *Wallet) GetSynceBlockHeight() int32 {
 	return height
 }
 
+
+var blockchan= make( chan string,20)
+
+func (w *Wallet) handleBlock()  {
+	for  {
+		blockhash := <- blockchan
+		br,er := w.SyncTx(blockhash)
+		if er != nil {
+			fmt.Println("SyncTx err :", er.Error())
+			continue
+		}
+		//fmt.Println(len(blockhash))
+		//fmt.Println("1")
+		//log.Info("localheight:", h, " blockhash:", blockhash)
+		hs, err := hash.NewHashFromStr(blockhash)
+		//fmt.Println("hs:",hs)
+		if err != nil {
+			fmt.Println("blockhash string to hash  err:", err.Error())
+			continue
+		}
+		stamp := &waddrmgr.BlockStamp{Hash: *hs, Height: br.Order}
+		err = walletdb.Update(w.db, func(tx walletdb.ReadWriteTx) error {
+			ns := tx.ReadWriteBucket(waddrmgrNamespaceKey)
+			err := w.Manager.SetSyncedTo(ns, stamp)
+			if err != nil {
+				fmt.Println("db err:", err.Error())
+				return err
+			}
+			return nil
+		})
+		if err != nil {
+			fmt.Println("blockhash string to hash  err:", err.Error())
+			continue
+		}
+	}
+}
+
 func (w *Wallet) Updateblock(toHeight int64) error {
 	var blockcount string
 	var err error
@@ -812,41 +849,39 @@ func (w *Wallet) Updateblock(toHeight int64) error {
 		}
 		//log.Info("getblockcount :", blockheight)
 		//localheight:=int32(1607)
+		go func() {
+			for i := 0; i < 10; i++ {
+				go w.handleBlock()
+			}
+			for {
+				if len(blockchan)==0 {
+					time.Sleep(5 * time.Second)
+					break;
+				}
+			}
+		}()
 		localheight := w.Manager.SyncedTo().Height + 1
 		for h := localheight; h <= int32(blockheight); h++ {
+			fmt.Printf("h :%v,blockheight:%v\n",h,blockheight)
 			blockhash, err := w.Httpclient.getBlockhash(int64(h))
 			if err != nil {
-				return err
-			}
-			er := w.SyncTx(blockhash)
-			if er != nil {
-				fmt.Println("SyncTx err :", err.Error())
-				return err
-			}
-			//fmt.Println(len(blockhash))
-			//fmt.Println("1")
-			//log.Info("localheight:", h, " blockhash:", blockhash)
-			hs, err := hash.NewHashFromStr(blockhash)
-			//fmt.Println("hs:",hs)
-			if err != nil {
-				fmt.Println("blockhash string to hash  err:", err.Error())
-				return err
-			}
-			stamp := &waddrmgr.BlockStamp{Hash: *hs, Height: h}
-			err = walletdb.Update(w.db, func(tx walletdb.ReadWriteTx) error {
-				ns := tx.ReadWriteBucket(waddrmgrNamespaceKey)
-				err := w.Manager.SetSyncedTo(ns, stamp)
-				if err != nil {
-					fmt.Println("db err:", err.Error())
-					return err
+				for {
+					if len(blockchan)==0 {
+						time.Sleep(5 * time.Second)
+						break;
+					}
 				}
-				return nil
-			})
-			if err != nil {
-				//fmt.Println("blockhash string to hash  err:", err.Error())
 				return err
 			}
-			//fmt.Println("localheight:", h, " blockhash:", blockhash)
+			blockchan <- blockhash
+
+			fmt.Printf("synced to height:%v\n", h)
+		}
+		for {
+			if len(blockchan)==0 {
+				time.Sleep(5 * time.Second)
+				break;
+			}
 		}
 	} else {
 		return fmt.Errorf("getblockcount fail ")
