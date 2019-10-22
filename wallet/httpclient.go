@@ -122,9 +122,9 @@ func (cfg *htpc) getBlock(hash string, isDetail bool) (string, error) {
 	params := []interface{}{hash, isDetail}
 	return cfg.getResString("getBlock", params)
 }
-func (cfg *htpc) getBlockByOrder(i int64) (string, error) {
-	params := []interface{}{i}
-	return cfg.getResString("getBlockByOrder", params)
+func (cfg *htpc) getBlockByOrder(i int64) ([]byte, error) {
+	params := []interface{}{i,true}
+	return cfg.getResByte("getBlockByOrder", params)
 }
 func (cfg *htpc) SendRawTransaction(tx string, allowHighFees bool) (string, error) {
 	params := []interface{}{tx, allowHighFees}
@@ -297,5 +297,19 @@ func (cfg *htpc) getResString(method string, args []interface{}) (rs string, err
 
 	rs = string(resResult)
 	//fmt.Println("rs:",rs)
+	return rs, err
+}
+func (cfg *htpc) getResByte(method string, args []interface{}) (rs []byte, err error) {
+	reqData, err := makeRequestData(rpcVersion, 1, method, args)
+	if err != nil {
+		err = fmt.Errorf("getResString [%s]: %s", method, err)
+		return
+	}
+
+	resResult, err := cfg.sendPostRequest(reqData)
+	if err != nil {
+		return
+	}
+	rs =resResult
 	return rs, err
 }
