@@ -682,19 +682,15 @@ func (w *Wallet) insertTx(txins []types.TxOutPoint, txouts []wtxmgr.AddrTxOutput
 	return err
 }
 
-func (w *Wallet) SyncTx(h string) (clijson.BlockHttpResult,error) {
+func (w *Wallet) SyncTx(order int64) (clijson.BlockHttpResult,error) {
 	var block clijson.BlockHttpResult
-	tx, err := w.Httpclient.getBlock(h, true)
+	blockByte, err := w.Httpclient.getBlockByOrder(order)
 	if err != nil {
-		fmt.Println("getblockcount err:", err.Error())
+		fmt.Println("getblockbyorder err:", err.Error())
 		return block,err
 	}
-	if tx == "" {
-		fmt.Println("tx is null")
-		return block,err
-	}
-	//fmt.Println("tx is :", tx)
-	if err := json.Unmarshal([]byte(tx), &block); err == nil {
+	//fmt.Println("SyncTx order:",order)
+	if err := json.Unmarshal(blockByte, &block); err == nil {
 		txins, txouts, trrs, err := parseBlockTxs(block)
 		if err != nil {
 			fmt.Println("err :", err.Error())
@@ -793,40 +789,70 @@ func (w *Wallet) GetSynceBlockHeight() int32 {
 }
 
 
-var blockchan= make( chan string,20)
+var orderchan= make( chan int64,20)
 
-func (w *Wallet) handleBlock()  {
-	for  {
-		blockhash := <- blockchan
-		br,er := w.SyncTx(blockhash)
+func (w *Wallet) handleBlock(order int64)  {
+	//for  {
+		//order := <- orderchan
+		_,er := w.SyncTx(order)
 		if er != nil {
-			fmt.Println("SyncTx err :", er.Error())
-			continue
+			fmt.Errorf("SyncTx err :", er.Error())
+			return
 		}
-		//fmt.Println(len(blockhash))
-		//fmt.Println("1")
-		//log.Info("localheight:", h, " blockhash:", blockhash)
-		hs, err := hash.NewHashFromStr(blockhash)
-		//fmt.Println("hs:",hs)
-		if err != nil {
-			fmt.Println("blockhash string to hash  err:", err.Error())
-			continue
-		}
-		stamp := &waddrmgr.BlockStamp{Hash: *hs, Height: br.Order}
-		err = walletdb.Update(w.db, func(tx walletdb.ReadWriteTx) error {
-			ns := tx.ReadWriteBucket(waddrmgrNamespaceKey)
-			err := w.Manager.SetSyncedTo(ns, stamp)
-			if err != nil {
-				fmt.Println("db err:", err.Error())
-				return err
-			}
-			return nil
-		})
-		if err != nil {
-			fmt.Println("blockhash string to hash  err:", err.Error())
-			continue
-		}
+		fmt.Println("完成:",order)
+		//hs, err := hash.NewHashFromStr(br.Hash)
+		//if err != nil {
+		//	fmt.Println("blockhash string to hash  err:", err.Error())
+		//	return
+		//}
+		//stamp := &waddrmgr.BlockStamp{Hash: *hs, Height: br.Order}
+		//err = walletdb.Update(w.db, func(tx walletdb.ReadWriteTx) error {
+		//	ns := tx.ReadWriteBucket(waddrmgrNamespaceKey)
+		//	err := w.Manager.SetSyncedTo(ns, stamp)
+		//	if err != nil {
+		//		fmt.Println("db err:", err.Error())
+		//		return err
+		//	}
+		//	return nil
+		//})
+		//if err != nil {
+		//	fmt.Println("blockhash string to hash  err:", err.Error())
+		//	//continue
+		//	return
+		//}
+	//}
+}
+
+func (w *Wallet) handleBlockSynced(order int64)  {
+	//for  {
+	//order := <- orderchan
+	br,er := w.SyncTx(order)
+	if er != nil {
+		fmt.Errorf("SyncTx err :", er.Error())
+		return
 	}
+	fmt.Println("synced to:",order)
+	hs, err := hash.NewHashFromStr(br.Hash)
+	if err != nil {
+		fmt.Errorf("blockhash string to hash  err:", err.Error())
+		return
+	}
+	stamp := &waddrmgr.BlockStamp{Hash: *hs, Height: br.Order}
+	err = walletdb.Update(w.db, func(tx walletdb.ReadWriteTx) error {
+		ns := tx.ReadWriteBucket(waddrmgrNamespaceKey)
+		err := w.Manager.SetSyncedTo(ns, stamp)
+		if err != nil {
+			fmt.Errorf("db err:", err.Error())
+			return err
+		}
+		return nil
+	})
+	if err != nil {
+		fmt.Errorf("blockhash string to hash  err:", err.Error())
+		//continue
+		return
+	}
+	//}
 }
 
 func (w *Wallet) Updateblock(toHeight int64) error {
@@ -841,51 +867,32 @@ func (w *Wallet) Updateblock(toHeight int64) error {
 	} else {
 		blockcount = strconv.FormatInt(toHeight, 10)
 	}
-	if blockcount != "" {
-		blockheight, err := strconv.ParseInt(blockcount, 10, 32)
-		if err != nil {
-			fmt.Println("string to int  err:", err.Error())
-			return err
-		}
-		//log.Info("getblockcount :", blockheight)
-		//localheight:=int32(1607)
-		go func() {
-			for i := 0; i < 10; i++ {
-				go w.handleBlock()
-			}
-			for {
-				if len(blockchan)==0 {
-					time.Sleep(5 * time.Second)
-					break;
-				}
-			}
-		}()
-		localheight := w.Manager.SyncedTo().Height + 1
-		for h := localheight; h <= int32(blockheight); h++ {
-			fmt.Printf("h :%v,blockheight:%v\n",h,blockheight)
-			blockhash, err := w.Httpclient.getBlockhash(int64(h))
-			if err != nil {
-				for {
-					if len(blockchan)==0 {
-						time.Sleep(5 * time.Second)
-						break;
-					}
-				}
-				return err
-			}
-			blockchan <- blockhash
-
-			fmt.Printf("synced to height:%v\n", h)
-		}
-		for {
-			if len(blockchan)==0 {
-				time.Sleep(5 * time.Second)
-				break;
-			}
-		}
-	} else {
-		return fmt.Errorf("getblockcount fail ")
+	blockheight, err := strconv.ParseInt(blockcount, 10, 32)
+	if err != nil {
+		fmt.Println("string to int  err:", err.Error())
+		return err
 	}
+	//log.Info("getblockcount :", blockheight)
+	//localheight:=int32(1607)
+	//go func() {
+	//	for  {
+	//		order := <- orderchan
+	//		w.handleBlockSynced(order)
+	//	}
+	//}()
+	localheight :=int64((w.Manager.SyncedTo().Height + 1))
+	for h := localheight; h <= blockheight; h++ {
+		//orderchan <- h
+		w.handleBlockSynced(h)
+		//fmt.Printf("synced to height:%v\n", h)
+	}
+	//for {
+	//	if len(orderchan)==0 {
+	//		time.Sleep(15 * time.Second)
+	//		//w.handleBlockSynced(blockheight)
+	//		break;
+	//	}
+	//}
 	//err = w.UpdateMempool()
 	//if err != nil {
 	//	fmt.Println("updateMempool err:", err.Error())

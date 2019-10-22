@@ -1,6 +1,9 @@
 package json
 
-import "github.com/Qitmeer/qitmeer-lib/core/json"
+import (
+	"github.com/Qitmeer/qitmeer-lib/core/json"
+	"time"
+)
 
 type BlockHttpResult struct {
 	Hash          string        `json:"hash"`
@@ -15,9 +18,10 @@ type BlockHttpResult struct {
 	Bits          string        `json:"bits"`
 	Difficulty    float64       `json:"difficulty"`
 	Nonce         uint64        `json:"nonce"`
-	Timestamp     string     `json:"timestamp"`
+	Timestamp     time.Time     `json:"timestamp"`
 	Parents       []string     `json:"parents"`
 	Children       []string     `json:"children"`
+
 	Txsvalid      bool          `json:"txsvalid"`
 }
 type PageTxRawResult struct {
