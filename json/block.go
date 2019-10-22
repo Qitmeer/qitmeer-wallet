@@ -18,6 +18,7 @@ type BlockHttpResult struct {
 	Timestamp     string     `json:"timestamp"`
 	Parents       []string     `json:"parents"`
 	Children       []string     `json:"children"`
+	Txsvalid      bool          `json:"txsvalid"`
 }
 type PageTxRawResult struct {
 	Total int32

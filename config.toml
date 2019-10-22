@@ -3,7 +3,7 @@
 #logDir="" # log path
 
 #network="mainnet" #network mainnet,testnet,privnet default mainet
-#network="testnet"
+network="testnet"
 #network="privnet"
 
 #Qitmeerd
