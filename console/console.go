@@ -1,8 +1,13 @@
 package console
 
 import (
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"github.com/Qitmeer/qitmeer-lib/crypto/bip39"
+	"github.com/Qitmeer/qitmeer-lib/crypto/ecc/secp256k1"
+	"github.com/Qitmeer/qitmeer-lib/crypto/seed"
+	"github.com/Qitmeer/qitmeer-lib/qx"
 	"github.com/Qitmeer/qitmeer-wallet/config"
 	"github.com/Qitmeer/qitmeer-wallet/json/qitmeerjson"
 	"github.com/Qitmeer/qitmeer-wallet/rpc/walletrpc"
@@ -476,6 +481,70 @@ func updateblock(height int64)(  error){
 func syncheight()(  error){
 	fmt.Println(w.Manager.SyncedTo().Height)
 	return nil
+}
+
+func generateMnemonic()(string,error){
+	entropyBuf, err := seed.GenerateSeed(uint16(32))
+	if err != nil {
+		return "", fmt.Errorf("Generate entropy err: %s", err)
+	}
+	mnemonic, err := bip39.NewMnemonic(entropyBuf)
+	if err != nil {
+		return "",err
+	}
+	return fmt.Sprintf("%s",mnemonic),nil
+}
+
+func  mnemonicToSeed(mnemonic string)(string,error){
+	seedBuf, err := bip39.NewSeedWithErrorChecking(mnemonic, "")
+	if err != nil {
+		return "",err
+	}
+	return fmt.Sprintf("%x",seedBuf[:]),nil
+}
+
+func  mnemonicToAddr(mnemonic string,network string)(string,error){
+	seed,err:=mnemonicToSeed(mnemonic)
+	if err!=nil{
+		return "",err
+	}
+	return seedToAddr(seed,network)
+}
+
+func seedToAddr(seed string,network string)(string,error){
+	pri,err:=qx.EcNew("secp256k1",seed)
+	if err!=nil{
+		return "",err
+	}
+	return priToAddr(pri,network)
+}
+func priToAddr(pri string ,network string)(string,error){
+	pub,err:=priToPub(pri,false)
+	if err!=nil{
+		return "",err
+	}
+	addr,err:=pubToAddr(pub,network)
+	if err!=nil{
+		return "",err
+	}
+	return addr,nil
+}
+
+func  priToPub(pri string ,uncompressed bool) (string,error) {
+	msg,err:=qx.EcPrivateKeyToEcPublicKey(uncompressed,pri)
+	if err != nil {
+		return "",err
+	}
+	return fmt.Sprintf("%s",msg),nil
+}
+func  pubToAddr(pub string ,net string) (string,error) {
+	serializedPubKey, err := hex.DecodeString(pub)
+	pubkey,err:=secp256k1.ParsePubKey(serializedPubKey)
+	msg,err:=qx.EcPubKeyToAddress(net,hex.EncodeToString(pubkey.SerializeCompressed()))
+	if err != nil {
+		return "",err
+	}
+	return fmt.Sprintf("%s",msg),nil
 }
 
 func unlock(password string) error{
