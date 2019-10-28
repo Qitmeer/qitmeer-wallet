@@ -9,6 +9,8 @@ QServer="47.88.220.44:8131"
 QUser="admin"
 QPass="123456"
 #WalletPass="public" #Wallet encryption code default public
+
+#web model
 #listeners=["127.0.0.1:8130"]
 #rpcUser="admin"
 #rpcPass="123"
