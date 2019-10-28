@@ -99,7 +99,7 @@ func LoadConfig(cmd *cobra.Command, args []string)  {
 	if cmd.Flag("pubwalletpass").Changed {
 		fileCfg.WalletPass = preCfg.WalletPass
 	}
-	log.SetLevel(log.TraceLevel)
+	//log.SetLevel(log.TraceLevel)
 
 	config.ActiveNet = utils.GetNetParams(fileCfg.Network)
 

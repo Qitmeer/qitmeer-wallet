@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/briandowns/spinner"
+	"os"
 	"strconv"
 	"sync"
 	"time"
@@ -95,24 +97,16 @@ func (wt *Wallet) Start() {
 
 	go wt.walletLocker()
 
-	var err error
-	wt.Httpclient, err = NewHtpc(wt.cfg.QUser, wt.cfg.QPass, wt.cfg.QServer,
-		wt.cfg.QCert, wt.cfg.QNoTLS, wt.cfg.QTLSSkipVerify,
-		wt.cfg.QProxy, wt.cfg.QProxyUser, wt.cfg.QProxyPass)
-	if err != nil {
-		log.Errorf("wallet start, NewHtpc err: %s", err)
-		return
-	}
 	go func() {
 
-		updateBlockTicker := time.NewTicker(60 * time.Second)
-		for {
-			select {
-			case <-updateBlockTicker.C:
-				log.Trace("Updateblock start")
-				wt.Updateblock(0)
-			}
-		}
+		//updateBlockTicker := time.NewTicker(60 * time.Second)
+		//for {
+		//	select {
+		//	case <-updateBlockTicker.C:
+		//		log.Trace("Updateblock start")
+		wt.Updateblock(0,true)
+		//	}
+		//}
 
 	}()
 }
@@ -686,7 +680,6 @@ func (w *Wallet) SyncTx(order int64) (clijson.BlockHttpResult,error) {
 	var block clijson.BlockHttpResult
 	blockByte, err := w.Httpclient.getBlockByOrder(order)
 	if err != nil {
-		fmt.Println("getblockbyorder err:", err.Error())
 		return block,err
 	}
 	//fmt.Println("SyncTx order:",order)
@@ -823,39 +816,33 @@ func (w *Wallet) handleBlock(order int64)  {
 	//}
 }
 
-func (w *Wallet) handleBlockSynced(order int64)  {
+func (w *Wallet) handleBlockSynced(order int64) error {
 	//for  {
 	//order := <- orderchan
 	br,er := w.SyncTx(order)
 	if er != nil {
-		fmt.Errorf("SyncTx err :", er.Error())
-		return
+		return  er
 	}
-	fmt.Println("synced to:",order)
 	hs, err := hash.NewHashFromStr(br.Hash)
 	if err != nil {
-		fmt.Errorf("blockhash string to hash  err:", err.Error())
-		return
+		return fmt.Errorf("blockhash string to hash  err:", err.Error())
 	}
 	stamp := &waddrmgr.BlockStamp{Hash: *hs, Height: br.Order}
 	err = walletdb.Update(w.db, func(tx walletdb.ReadWriteTx) error {
 		ns := tx.ReadWriteBucket(waddrmgrNamespaceKey)
 		err := w.Manager.SetSyncedTo(ns, stamp)
 		if err != nil {
-			fmt.Errorf("db err:", err.Error())
 			return err
 		}
 		return nil
 	})
 	if err != nil {
-		fmt.Errorf("blockhash string to hash  err:", err.Error())
-		//continue
-		return
+		return err
 	}
-	//}
+	return nil
 }
 
-func (w *Wallet) Updateblock(toHeight int64) error {
+func (w *Wallet) Updateblock(toHeight int64,newest bool) error {
 	var blockcount string
 	var err error
 	if toHeight == 0 {
@@ -869,7 +856,6 @@ func (w *Wallet) Updateblock(toHeight int64) error {
 	}
 	blockheight, err := strconv.ParseInt(blockcount, 10, 32)
 	if err != nil {
-		fmt.Println("string to int  err:", err.Error())
 		return err
 	}
 	//log.Info("getblockcount :", blockheight)
@@ -881,11 +867,43 @@ func (w *Wallet) Updateblock(toHeight int64) error {
 	//	}
 	//}()
 	localheight :=int64((w.Manager.SyncedTo().Height + 1))
-	for h := localheight; h <= blockheight; h++ {
-		//orderchan <- h
-		w.handleBlockSynced(h)
-		//fmt.Printf("synced to height:%v\n", h)
+	s := spinner.New(spinner.CharSets[36], 100*time.Millisecond)  // Build our new spinner
+	s.Color("bgBlack", "bold", "fgRed")
+	s.FinalMSG = "\nComplete!"
+	s.HideCursor=true
+	s.Writer = os.Stderr
+	s.Start()
+
+	if newest{
+		for  {
+			err:=w.handleBlockSynced(localheight)
+			if err==nil{
+				localheight++
+				msg:=fmt.Sprintf("%s/%s",strconv.FormatInt(localheight,10),strconv.FormatInt(blockheight,10))
+				s.Suffix= msg
+			}else{
+				msg:=fmt.Sprintf("%s/%s",strconv.FormatInt(localheight-1,10),strconv.FormatInt(localheight,10))
+				s.Suffix= msg
+				time.Sleep(30 * time.Second)
+			}
+		}
+	}else{
+		h := localheight;
+		for h <= blockheight {
+			//orderchan <- h
+			err :=w.handleBlockSynced(h)
+			if err !=nil{
+				return err
+			}else{
+				h++
+			}
+			msg:=fmt.Sprintf("%s/%s",strconv.FormatInt(h,10),strconv.FormatInt(blockheight,10))
+			s.Suffix= msg
+			//fmt.Printf("synced to height:%v\n", h)
+		}
+		s.Stop()
 	}
+
 	//for {
 	//	if len(orderchan)==0 {
 	//		time.Sleep(15 * time.Second)

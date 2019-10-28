@@ -475,7 +475,7 @@ func updateblock(height int64)(  error){
 		fmt.Println("err:", err.Error())
 		return err
 	}
-	fmt.Printf("update to block :%v succ",height)
+	//fmt.Printf("update to block :%v succ",height)
 	return nil
 }
 func syncheight()(  error){

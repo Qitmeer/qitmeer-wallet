@@ -59,8 +59,7 @@ func open_wallet() (*wallet.Wallet, error) {
 		fmt.Errorf("UnLockManager err:%s", err.Error())
 		return nil, err
 	}
-	w.Httpclient ,err= wallet.NewHtpc("admin", "123456", "47.88.220.44:8131",
-		"", true, true, "", "", "")
+	w.Httpclient ,err= wallet.NewHtpc()
 	if err!=nil{
 		fmt.Errorf("NewHtpc err:%s", err.Error())
 		return nil, err

@@ -6,6 +6,7 @@ import (
 	"crypto/x509"
 	"encoding/json"
 	"fmt"
+	"github.com/Qitmeer/qitmeer-wallet/config"
 	"io/ioutil"
 	"net"
 	"net/http"
@@ -28,18 +29,17 @@ type htpc struct {
 	httpclient *http.Client
 }
 
-func NewHtpc(RPCUser string, RPCPassword string, RPCServer string, RPCCert string,
-	NoTLS bool, TLSSkipVerify bool, Proxy string, ProxyUser string, ProxyPass string) (*htpc, error) {
+func NewHtpc() (*htpc, error) {
 	h := &htpc{
-		RPCUser:       RPCUser,
-		RPCPassword:   RPCPassword,
-		RPCServer:     RPCServer,
-		RPCCert:       RPCCert,
-		NoTLS:         NoTLS,
-		TLSSkipVerify: TLSSkipVerify,
-		Proxy:         Proxy,
-		ProxyUser:     ProxyUser,
-		ProxyPass:     ProxyPass,
+		RPCUser:       config.Cfg.QUser,
+		RPCPassword:   config.Cfg.QPass,
+		RPCServer:     config.Cfg.QServer,
+		RPCCert:       config.Cfg.QCert,
+		NoTLS:         config.Cfg.QNoTLS,
+		TLSSkipVerify: config.Cfg.QTLSSkipVerify,
+		Proxy:         config.Cfg.QProxy,
+		ProxyUser:     config.Cfg.QProxyUser,
+		ProxyPass:     config.Cfg.QProxyPass,
 	}
 	c, err := newHTTPClient(h)
 	if err != nil {
@@ -308,7 +308,7 @@ func (cfg *htpc) getResByte(method string, args []interface{}) (rs []byte, err e
 
 	resResult, err := cfg.sendPostRequest(reqData)
 	if err != nil {
-		return
+		return nil,err
 	}
 	rs =resResult
 	return rs, err
