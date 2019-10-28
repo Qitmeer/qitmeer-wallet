@@ -70,7 +70,7 @@ Use "qitmeer-wallet [command] --help" for more information about a command.
     
     ```
 
-2:  create a wallet
+2:  create a  wallet
 
     ```
     ./qitmeer-wallet create -a /root

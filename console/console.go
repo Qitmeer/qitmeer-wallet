@@ -80,12 +80,11 @@ func InitWallet(){
 		return
 	}
 }
-func StartConsole()  {
-	log.Println("config.Cfg.AppDataDir：",config.Cfg.AppDataDir)
+func startConsole()  {
 	b:=checkWalletIeExist(config.Cfg)
 	var err error
 	if b {
-		log.Println("db is exist",filepath.Join(networkDir(config.Cfg.AppDataDir, config.ActiveNet), config.WalletDbName))
+		//log.Println("db is exist",filepath.Join(networkDir(config.Cfg.AppDataDir, config.ActiveNet), config.WalletDbName))
 		load := wallet.NewLoader(config.ActiveNet, networkDir(config.Cfg.AppDataDir, config.ActiveNet), 250,config.Cfg)
 		w, err = load.OpenExistingWallet([]byte(config.Cfg.WalletPass), false)
 		if err != nil {

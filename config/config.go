@@ -5,7 +5,6 @@
 package config
 
 import (
-	//"github.com/jessevdk/go-flags"
 	"bytes"
 	"crypto/rand"
 	"fmt"
@@ -59,7 +58,6 @@ type Config struct {
 	//WalletRPC
 	UI            bool
 	Listeners     []string
-	ApiUrl        string
 	RPCUser       string
 	RPCPass       string
 	RPCCert       string
@@ -93,37 +91,6 @@ type Config struct {
 var Cfg =NewDefaultConfig()
 var ActiveNet = &params.MainNetParams
 var once sync.Once
-//func init(){
-	//_, err := toml.DecodeFile("config.toml", &Cfg)
-	//if err != nil {
-	//	log.Println(err)
-	//}
-	//Cfg=NewDefaultConfig()
-	//RootCmd.PersistentFlags().StringVarP(&Cfg.DebugLevel, "Debuglevel", "d", "error", "RPC username")
-
-	//once.Do(func() {
-		//fmt.Println("执行init------------------------")
-		//Cfg=NewDefaultConfig()
-		//_, err := toml.DecodeFile("config.toml", &Cfg)
-		//if err != nil {
-		//	log.Println(err)
-		//}
-		//preParser := flags.NewParser(Cfg, flags.Default)
-		//_, err = preParser.Parse()
-		//if err != nil {
-		//	if e, ok := err.(*flags.Error); !ok || e.Type != flags.ErrHelp {
-		//		preParser.WriteHelp(os.Stderr)
-		//		return
-		//	}
-		//}
-		//if Cfg.AppDataDir ==""{
-		//	appData:=cleanAndExpandPath(Cfg.AppDataDir)
-		//	log.Println("appData：",appData)
-		//	Cfg.AppDataDir=appData
-		//}
-		//ActiveNet = utils.GetNetParams(Cfg.Network)
-	//})
-//}
 
 // Check config rule
 func (cfg *Config) Check() error {
@@ -135,45 +102,6 @@ func (cfg *Config) Check() error {
 
 	return nil
 }
-
-/*
-// LoadConfig load config from file
-func LoadConfig(configFile string, isCreate bool, preCfg *Config) (cfg *Config, err error) {
-
-	if isCreate {
-		cfg = NewDefaultConfig()
-
-		//save default
-		buf := new(bytes.Buffer)
-		if err = toml.NewEncoder(buf).Encode(cfg); err != nil {
-
-			return nil, fmt.Errorf("LoadConfig err: %s", err)
-		}
-		err = ioutil.WriteFile(configFile, buf.Bytes(), 0666)
-		if err != nil {
-			return nil, fmt.Errorf("LoadConfig err: %s", err)
-		}
-		return
-	}
-
-	var fileExist bool
-	fileExist, err = utils.FileExists(configFile)
-	if err != nil {
-		return nil, fmt.Errorf("LoadConfig err: %s", err)
-	}
-	if !fileExist && configFile == DefaultConfigFile {
-		return preCfg, nil
-	}
-
-	_, err = toml.DecodeFile(configFile, preCfg)
-	if err != nil {
-		return nil, fmt.Errorf("LoadConfig err: %s", err)
-	}
-
-	preCfg.ConfigFile = configFile
-
-	return preCfg, nil
-}*/
 
 // NewDefaultConfig make config by default value
 func NewDefaultConfig() (cfg *Config) {
@@ -206,7 +134,7 @@ func NewDefaultConfig() (cfg *Config) {
 		QProxyUser:     "",
 		QProxyPass:     "",
 		WalletPass:     "public",
-		ApiUrl:         "127.0.0.1:38130",
+		UI:true,
 	}
 	return
 }
