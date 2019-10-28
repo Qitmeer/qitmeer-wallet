@@ -5,6 +5,7 @@ import (
 	"github.com/BurntSushi/toml"
 	"github.com/Qitmeer/qitmeer-wallet/config"
 	"github.com/Qitmeer/qitmeer-wallet/utils"
+	"github.com/Qitmeer/qitmeer-wallet/wserver"
 	"github.com/spf13/cobra"
 	log "github.com/sirupsen/logrus"
 	"strconv"
@@ -30,21 +31,20 @@ func BindFlags(){
 	Command.PersistentFlags().StringVarP(&preCfg.QUser, "quser", "u", "admin", "qitmeer node user")
 	Command.PersistentFlags().StringVarP(&preCfg.QPass, "qpass", "p", "123456", "qitmeer node password")
 	Command.PersistentFlags().StringVarP(&preCfg.WalletPass, "pubwalletpass", "P", "public", "data encryption password")
+
+	Command.PersistentFlags().BoolVar(&preCfg.UI, "ui", true, "Start Wallet with RPC and webUI interface")
+	Command.PersistentFlags().StringArrayVar(&preCfg.Listeners, "listeners", fileCfg.Listeners, "rpc listens")
+	Command.PersistentFlags().StringVar(&preCfg.RPCUser, "rpcUser", fileCfg.RPCUser, "rpc user,default by random")
+	Command.PersistentFlags().StringVar(&preCfg.RPCPass, "rpcPass", fileCfg.RPCPass, "rpc pass,default by random")
 }
 
 // LoadConfig config file and flags
 func LoadConfig(cmd *cobra.Command, args []string)  {
-	// debug
-	//if cmd.Flag("debug").Changed && preCfg.DebugLevel {
-	//
-	//	log.SetLevel(log.TraceLevel)
-	//}
 
 	// load configfile ane merge command ,but don't udpate configfile
 	_, err := toml.DecodeFile(preCfg.ConfigFile, fileCfg)
 	if err != nil {
 
-		//if not set config file and default cli.toml decode err, use default set only.
 		if !cmd.Flag("configfile").Changed {
 
 			if fExit, _ := utils.FileExists(preCfg.ConfigFile); fExit {
@@ -75,33 +75,18 @@ func LoadConfig(cmd *cobra.Command, args []string)  {
 	if cmd.Flag("create").Changed {
 		fileCfg.Create = preCfg.Create
 	}
-	//if cmd.Flag("listeners").Changed {
-	//	fileCfg.Listeners = preCfg.Listeners
-	//}
-	//if cmd.Flag("rpcuser").Changed {
-	//	fileCfg.RPCUser = preCfg.RPCUser
-	//}
-	//if cmd.Flag("rpcpass").Changed {
-	//	fileCfg.RPCPass = preCfg.RPCPass
-	//}
-	//
-	//if cmd.Flag("rpccert").Changed {
-	//	fileCfg.RPCCert = preCfg.RPCCert
-	//}
-	//if cmd.Flag("rpckey").Changed {
-	//	fileCfg.RPCKey = preCfg.RPCKey
-	//}
-	//if cmd.Flag("rpcmaxclients").Changed {
-	//	fileCfg.RPCMaxClients = preCfg.RPCMaxClients
-	//}
-	//
-	//if cmd.Flag("disablerpc").Changed {
-	//	fileCfg.DisableRPC = preCfg.DisableRPC
-	//}
-	//
-	//if cmd.Flag("disabletls").Changed {
-	//	fileCfg.DisableTLS = preCfg.DisableTLS
-	//}
+	if cmd.Flag("listeners").Changed {
+		fileCfg.Listeners = preCfg.Listeners
+	}
+	if cmd.Flag("rpcUser").Changed {
+		fileCfg.RPCUser = preCfg.RPCUser
+	}
+	if cmd.Flag("rpcPass").Changed {
+		fileCfg.RPCPass = preCfg.RPCPass
+	}
+	if cmd.Flag("ui").Changed {
+		fileCfg.UI = preCfg.UI
+	}
 	if cmd.Flag("qserver").Changed {
 		fileCfg.QServer = preCfg.QServer
 	}
@@ -114,28 +99,13 @@ func LoadConfig(cmd *cobra.Command, args []string)  {
 	if cmd.Flag("pubwalletpass").Changed {
 		fileCfg.WalletPass = preCfg.WalletPass
 	}
-	//log.SetLevel(log.TraceLevel)
-	//log.Debug("fileCfg: ", *fileCfg)
+	log.SetLevel(log.TraceLevel)
 
 	config.ActiveNet = utils.GetNetParams(fileCfg.Network)
 
 
-	//if fileCfg.Create{
-	//	CreatWallet()
-	//	return
-	//}
-	//
-	//InitWallet()
-
 	return
 
-	//save
-	// buf := new(bytes.Buffer)
-	// if err := toml.NewEncoder(buf).Encode(*fileCfg); err != nil {
-	// 	log.Fatal(err)
-	// }
-
-	//return ioutil.WriteFile(fileCfg.configFile, buf.Bytes(), 0666)
 }
 
 var createWalletCmd = &cobra.Command{
@@ -274,6 +244,48 @@ var syncheightCmd=&cobra.Command{
 	},
 }
 
+// interactive mode
+
+var interactiveCmd=&cobra.Command{
+	Use:"interactive",
+	Short:"interactive",
+	Example:`
+		Enter interactive mode
+		`,
+	Args: cobra.NoArgs,
+	Run: func(cmd *cobra.Command, args []string) {
+		startConsole()
+	},
+}
+
+// web mode
+
+var webCmd=&cobra.Command{
+	Use:"web",
+	Short:"web",
+	Example:`
+		Enter web mode
+		`,
+	Args: cobra.NoArgs,
+	Run: func(cmd *cobra.Command, args []string) {
+		qitmeerMain(fileCfg)
+	},
+}
+
+func qitmeerMain(cfg *config.Config) {
+	log.Trace("Qitmeer Main")
+	wsvr, err := wserver.NewWalletServer(cfg)
+	if err != nil {
+		log.Errorf("NewWalletServer err: %s", err)
+		return
+	}
+	wsvr.Start()
+
+	exitCh := make(chan int)
+	<-exitCh
+}
+
+
 func init()  {
 	Command.AddCommand(createWalletCmd)
 	Command.AddCommand(createNewAccountCmd)
@@ -285,4 +297,7 @@ func init()  {
 	Command.AddCommand(importPriKeyCmd)
 	Command.AddCommand(getAddressesByAccountCmd)
 	Command.AddCommand(listAccountsBalanceCmd)
+	Command.AddCommand(interactiveCmd)
+	Command.AddCommand(webCmd)
+
 }

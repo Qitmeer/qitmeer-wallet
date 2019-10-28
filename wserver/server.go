@@ -112,7 +112,6 @@ func (wsvr *WalletServer) run() {
 		}
 		myStaticF := assets.NewMyStatic(staticF)
 
-		fmt.Println("wsvr.cfg.ApiUrl:",wsvr.cfg.ApiUrl)
 
 		myStaticF.AddFilter("/config.js", func() []byte {
 
@@ -125,7 +124,7 @@ func (wsvr *WalletServer) run() {
 				RPCPass: "{{rpc_pass}}"
 			};
 			`
-			tmpl = strings.Replace(tmpl, "{{api_url}}", "http://"+wsvr.cfg.ApiUrl+"/api", -1)
+			tmpl = strings.Replace(tmpl, "{{api_url}}", "http://"+wsvr.cfg.Listeners[0]+"/api", -1)
 			tmpl = strings.Replace(tmpl, "{{rpc_user}}", wsvr.cfg.RPCUser, -1)
 			tmpl = strings.Replace(tmpl, "{{rpc_pass}}", wsvr.cfg.RPCPass, -1)
 
