@@ -143,7 +143,7 @@ func (cfg *htpc) sendPostRequest(marshalledJSON []byte) ([]byte, error) {
 	}
 	url := protocol + "://" + cfg.RPCServer
 	// if cfg.PrintJSON {
-	// 	fmt.Println(string(marshalledJSON))
+	// 	log.Info(string(marshalledJSON))
 	// }
 	bodyReader := bytes.NewReader(marshalledJSON)
 	httpRequest, err := http.NewRequest("POST", url, bodyReader)
@@ -188,7 +188,7 @@ func (cfg *htpc) sendPostRequest(marshalledJSON []byte) ([]byte, error) {
 
 	// If requested, print raw json response.
 	// if cfg.PrintJSON {
-	// 	fmt.Println(string(respBytes))
+	// 	log.Info(string(respBytes))
 	// }
 
 	// Unmarshal the response.
@@ -296,7 +296,7 @@ func (cfg *htpc) getResString(method string, args []interface{}) (rs string, err
 	}
 
 	rs = string(resResult)
-	//fmt.Println("rs:",rs)
+	//log.Info("rs:",rs)
 	return rs, err
 }
 func (cfg *htpc) getResByte(method string, args []interface{}) (rs []byte, err error) {

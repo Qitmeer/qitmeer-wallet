@@ -6,7 +6,7 @@ package waddrmgr
 
 import (
 	"time"
-	chainhash "github.com/Qitmeer/qitmeer-lib/common/hash"
+	chainhash "github.com/Qitmeer/qitmeer/common/hash"
 	"github.com/Qitmeer/qitmeer-wallet/walletdb"
 )
 

@@ -2,19 +2,19 @@ package waddrmgr
 
 import (
 	"fmt"
-	"github.com/Qitmeer/qitmeer-lib/common/hash"
-	"github.com/Qitmeer/qitmeer-lib/crypto/bip32"
+	"github.com/Qitmeer/qitmeer/common/hash"
+	"github.com/Qitmeer/qitmeer/crypto/bip32"
 	"github.com/Qitmeer/qitmeer-wallet/internal/zero"
 	"github.com/Qitmeer/qitmeer-wallet/utils"
 
-	"github.com/Qitmeer/qitmeer-lib/core/types"
+	"github.com/Qitmeer/qitmeer/core/types"
 	"sync"
 	//
-	//chaincfg "github.com/Qitmeer/qitmeer-lib/params"
+	//chaincfg "github.com/Qitmeer/qitmeer/params"
 	//"github.com/Qitmeer/qitmeer-wallet/internal/zero"
 	"github.com/Qitmeer/qitmeer-wallet/walletdb"
-	ecc "github.com/Qitmeer/qitmeer-lib/crypto/ecc/secp256k1"
-	addrs "github.com/Qitmeer/qitmeer-lib/core/address"
+	ecc "github.com/Qitmeer/qitmeer/crypto/ecc/secp256k1"
+	addrs "github.com/Qitmeer/qitmeer/core/address"
 )
 
 // DerivationPath represents a derivation path from a particular key manager's

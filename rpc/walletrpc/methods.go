@@ -3,9 +3,10 @@ package walletrpc
 import (
 	"encoding/hex"
 	"fmt"
-	"github.com/Qitmeer/qitmeer-lib/core/address"
-	"github.com/Qitmeer/qitmeer-lib/crypto/ecc/secp256k1"
-	"github.com/Qitmeer/qitmeer-lib/params"
+	"github.com/Qitmeer/qitmeer/core/address"
+	"github.com/Qitmeer/qitmeer/crypto/ecc/secp256k1"
+	"github.com/Qitmeer/qitmeer/log"
+	"github.com/Qitmeer/qitmeer/params"
 	util "github.com/Qitmeer/qitmeer-wallet/utils"
 	"github.com/Qitmeer/qitmeer-wallet/wallet/txrules"
 	"time"
@@ -20,8 +21,8 @@ import (
 	//"fmt"
 	"github.com/Qitmeer/qitmeer-wallet/json/qitmeerjson"
 	waddrmgr "github.com/Qitmeer/qitmeer-wallet/waddrmgs"
-	"github.com/Qitmeer/qitmeer-lib/core/types"
-	"github.com/Qitmeer/qitmeer-lib/engine/txscript"
+	"github.com/Qitmeer/qitmeer/core/types"
+	"github.com/Qitmeer/qitmeer/engine/txscript"
 	//"sync"
 	//"time"
 
@@ -263,7 +264,7 @@ func ImportPrivKey(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
 	switch {
 	case waddrmgr.IsError(err, waddrmgr.ErrDuplicateAddress):
 		// Do not return duplicate key errors to the client.
-		return nil, nil
+		return nil, fmt.Errorf("private key imported")
 	case waddrmgr.IsError(err, waddrmgr.ErrLocked):
 		return nil, &qitmeerjson.ErrWalletUnlockNeeded
 	}
@@ -318,7 +319,7 @@ func Getbalance(icmd interface{},w *wallet.Wallet) (interface{}, error) {
 	cmd := icmd.(*qitmeerjson.GetBalanceByAddressCmd)
 	m,err:=w.GetBalance(cmd.Address,int32(cmd.MinConf))
 	if(err!=nil){
-		fmt.Println("getbalance err :",err.Error())
+		log.Error("getbalance ","err ",err.Error())
 		return nil,err
 	}
 	return m, nil
@@ -332,7 +333,7 @@ func Getlisttxbyaddr(icmd interface{},w *wallet.Wallet) (interface{}, error) {
 	cmd := icmd.(*qitmeerjson.GetListTxByAddrCmd)
 	m,err:=w.GetListTxByAddr(cmd.Address,cmd.Stype,cmd.Page,cmd.PageSize)
 	if(err!=nil){
-		fmt.Println("getListTxByAddr err :",err.Error())
+		log.Error("getListTxByAddr "," err",err.Error())
 		return nil,err
 	}
 	return m, nil

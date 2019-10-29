@@ -16,7 +16,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/Qitmeer/qitmeer-lib/params"
+	"github.com/Qitmeer/qitmeer/params"
 
 	"github.com/Qitmeer/qitmeer-wallet/utils"
 )

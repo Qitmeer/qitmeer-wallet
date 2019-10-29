@@ -12,10 +12,9 @@ import (
 	"sync"
 	"time"
 
-	log "github.com/sirupsen/logrus"
 
-	// "github.com/Qitmeer/qitmeer-lib/log"
-	chaincfg "github.com/Qitmeer/qitmeer-lib/params"
+	"github.com/Qitmeer/qitmeer/log"
+	chaincfg "github.com/Qitmeer/qitmeer/params"
 	"github.com/Qitmeer/qitmeer-wallet/config"
 	waddrmgr "github.com/Qitmeer/qitmeer-wallet/waddrmgs"
 	"github.com/Qitmeer/qitmeer-wallet/walletdb"
@@ -192,10 +191,10 @@ func (l *Loader) OpenExistingWallet(pubPassphrase []byte, canConsolePrompt bool)
 
 	db, err := walletdb.Open("bdb", dbPath)
 	if err != nil {
-		log.Error("Failed to open database: %v", err)
+		log.Error("Failed to open database","err", err)
 		return nil, err
 	}
-	log.Trace("OpenExistingWallet", "open db", err)
+	log.Trace("OpenExistingWallet", "open db", "succ")
 
 	var cbs *waddrmgr.OpenCallbacks
 	if canConsolePrompt {
@@ -223,7 +222,7 @@ func (l *Loader) OpenExistingWallet(pubPassphrase []byte, canConsolePrompt bool)
 	log.Trace("OpenExistingWallet", "open ok", true)
 	w.Httpclient, err = NewHtpc()
 	if err != nil {
-		log.Errorf("wallet start, NewHtpc err: %s", err)
+		log.Error(fmt.Sprintf("wallet start, NewHtpc err: %s", err))
 		return nil, err
 	}
 

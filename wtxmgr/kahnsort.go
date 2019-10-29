@@ -5,8 +5,8 @@
 package wtxmgr
 
 import (
-	"github.com/Qitmeer/qitmeer-lib/core/types"
-	chainhash "github.com/Qitmeer/qitmeer-lib/common/hash"
+	"github.com/Qitmeer/qitmeer/core/types"
+	chainhash "github.com/Qitmeer/qitmeer/common/hash"
 )
 
 type graphNode struct {

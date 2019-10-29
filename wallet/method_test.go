@@ -2,7 +2,7 @@ package wallet
 
 import (
 	//"fmt"
-	//"github.com/Qitmeer/qitmeer-lib/params"
+	//"github.com/Qitmeer/qitmeer/params"
 	//"github.com/Qitmeer/qitmeer-wallet/waddrmgs"
 	//"github.com/Qitmeer/qitmeer-wallet/walletdb"
 	//"testing"
@@ -15,7 +15,7 @@ import (
 //	load:=NewLoader(activeNet,dbpath,250)
 //	w,err:=load.OpenExistingWallet([]byte("public"),false)
 //	if(err!=nil){
-//		fmt.Println("openWallet err:",err.Error())
+//		log.Info("openWallet err:",err.Error())
 //		return
 //	}
 //	err = walletdb.View(w.db, func(tx walletdb.ReadTx) error {
@@ -23,15 +23,15 @@ import (
 //		return w.Manager.Unlock(addrmgrNs, []byte("123456"))
 //	})
 //	if(err!=nil){
-//		fmt.Println("Manager.Unlock err:",err.Error())
+//		log.Info("Manager.Unlock err:",err.Error())
 //		return
 //	}
 //	//_,err=w.NextAccount(waddrmgr.KeyScopeBIP0044,"luoshan2")
 //	//as,err:=w.AccountBalances(waddrmgr.KeyScopeBIP0044,1)
 //	as,err:=w.AccountBalances(waddrmgr.KeyScopeBIP0044,1)
 //	if(err!=nil){
-//		fmt.Println("errr:",err.Error())
+//		log.Info("errr:",err.Error())
 //		return
 //	}
-//	fmt.Println("succc:",as)
+//	log.Info("succc:",as)
 //}

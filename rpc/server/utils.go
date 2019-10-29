@@ -40,11 +40,11 @@ import (
 	"unicode"
 	"unicode/utf8"
 
-	"github.com/Qitmeer/qitmeer-lib/common/network"
-	"github.com/Qitmeer/qitmeer-lib/common/util"
+	"github.com/Qitmeer/qitmeer/common/network"
+	"github.com/Qitmeer/qitmeer/common/util"
 
-	"github.com/Qitmeer/qitmeer-lib/crypto/certgen"
-	"github.com/Qitmeer/qitmeer-lib/log"
+	"github.com/Qitmeer/qitmeer/crypto/certgen"
+	"github.com/Qitmeer/qitmeer/log"
 )
 
 var (

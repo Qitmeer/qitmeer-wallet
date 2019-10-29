@@ -5,11 +5,11 @@ import (
 	"fmt"
 	"github.com/Qitmeer/qitmeer-wallet/wtxmgr"
 
-	"github.com/Qitmeer/qitmeer-lib/core/address"
-	"github.com/Qitmeer/qitmeer-lib/core/types"
-	"github.com/Qitmeer/qitmeer-lib/crypto/ecc/secp256k1"
-	"github.com/Qitmeer/qitmeer-lib/engine/txscript"
-	"github.com/Qitmeer/qitmeer-lib/params"
+	"github.com/Qitmeer/qitmeer/core/address"
+	"github.com/Qitmeer/qitmeer/core/types"
+	"github.com/Qitmeer/qitmeer/crypto/ecc/secp256k1"
+	"github.com/Qitmeer/qitmeer/engine/txscript"
+	"github.com/Qitmeer/qitmeer/params"
 
 	"github.com/Qitmeer/qitmeer-wallet/config"
 	"github.com/Qitmeer/qitmeer-wallet/json/qitmeerjson"
@@ -304,16 +304,6 @@ func (api API) SendToAddress(addressStr string, amount float64, comment string, 
 	return sendPairs(api.wt, pairs, waddrmgr.DefaultAccountNum, 1, txrules.DefaultRelayFeePerKb)
 }
 
-// func updateblock(icmd interface{}, w *Wallet) error {
-// 	cmd := icmd.(*qitmeerjson.UpdateBlockToCmd)
-// 	err := w.Updateblock(cmd.Toheight)
-// 	if err != nil {
-// 		fmt.Println("Updateblock err :", err.Error())
-// 		return err
-// 	}
-// 	return nil
-// }
-
 //GetBalance by address
 //
 // func getbalance(icmd interface{}, w *Wallet) (interface{}, error) {
@@ -321,7 +311,6 @@ func (api API) SendToAddress(addressStr string, amount float64, comment string, 
 func (api API) GetBalance(addrStr string, minConf int32) (*Balance, error) {
 	m, err := api.wt.GetBalance(addrStr, minConf)
 	if err != nil {
-		fmt.Println("getbalance err :", err.Error())
 		return nil, err
 	}
 	return m, nil

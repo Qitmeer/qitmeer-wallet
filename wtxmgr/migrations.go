@@ -3,7 +3,7 @@ package wtxmgr
 import (
 	"github.com/Qitmeer/qitmeer-wallet/walletdb"
 	"github.com/Qitmeer/qitmeer-wallet/walletdb/migration"
-	"github.com/Qitmeer/qitmeer-lib/log"
+	"github.com/Qitmeer/qitmeer/log"
 )
 
 // versions is a list of the different database versions. The last entry should

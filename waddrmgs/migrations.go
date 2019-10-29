@@ -3,9 +3,9 @@ package waddrmgr
 import (
 	"errors"
 	"fmt"
-	chaincfg "github.com/Qitmeer/qitmeer-lib/params"
+	chaincfg "github.com/Qitmeer/qitmeer/params"
 	"time"
-	"github.com/Qitmeer/qitmeer-lib/log"
+	"github.com/Qitmeer/qitmeer/log"
 	"github.com/Qitmeer/qitmeer-wallet/walletdb"
 	"github.com/Qitmeer/qitmeer-wallet/walletdb/migration"
 )

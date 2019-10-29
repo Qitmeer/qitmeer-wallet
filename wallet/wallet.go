@@ -11,15 +11,14 @@ import (
 	"sync"
 	"time"
 
-	log "github.com/sirupsen/logrus"
-
-	"github.com/Qitmeer/qitmeer-lib/common/hash"
-	"github.com/Qitmeer/qitmeer-lib/core/address"
-	corejson "github.com/Qitmeer/qitmeer-lib/core/json"
-	"github.com/Qitmeer/qitmeer-lib/core/types"
-	"github.com/Qitmeer/qitmeer-lib/engine/txscript"
-	chaincfg "github.com/Qitmeer/qitmeer-lib/params"
-	"github.com/Qitmeer/qitmeer-lib/qx"
+	"github.com/Qitmeer/qitmeer/log"
+	"github.com/Qitmeer/qitmeer/common/hash"
+	"github.com/Qitmeer/qitmeer/core/address"
+	corejson "github.com/Qitmeer/qitmeer/core/json"
+	"github.com/Qitmeer/qitmeer/core/types"
+	"github.com/Qitmeer/qitmeer/engine/txscript"
+	chaincfg "github.com/Qitmeer/qitmeer/params"
+	"github.com/Qitmeer/qitmeer/qx"
 
 	"github.com/Qitmeer/qitmeer-wallet/config"
 	clijson "github.com/Qitmeer/qitmeer-wallet/json"
@@ -226,9 +225,8 @@ func (w *Wallet) ImportPrivateKey(scope waddrmgr.KeyScope, wif *utils.WIF,
 	if err != nil {
 		return "", err
 	}
-	fmt.Println("props:", props)
 	addrStr := addr.Encode()
-	log.Infof("Imported payment address %s", addrStr)
+	log.Trace("ImportPrivateKey succ","address", addrStr)
 
 	// Return the payment address string of the imported private key.
 	return addrStr, nil
@@ -358,14 +356,12 @@ func (w *Wallet) GetTx(txid string) (string, error) {
 		txns := ns.NestedReadBucket(wtxmgr.BucketTxJson)
 		k, err := hash.NewHashFromStr(txid)
 		if err != nil {
-			fmt.Println("GetTx err:", err.Error())
 			return err
 		}
 		v := txns.Get(k.Bytes())
 		if v != nil {
 			err := json.Unmarshal(v, &trx)
 			if err != nil {
-				fmt.Println(" Unmarshal err:", err.Error())
 				return err
 			}
 		} else {
@@ -378,7 +374,6 @@ func (w *Wallet) GetTx(txid string) (string, error) {
 	}
 	b, err := json.Marshal(trx)
 	if err != nil {
-		fmt.Println("json.Marshal err：", err.Error())
 		return "", err
 	}
 	return string(b), nil
@@ -415,10 +410,9 @@ func (w *Wallet) GetAccountAndAddress(scope waddrmgr.KeyScope,
 			}
 			addroutputs := []AddrAndAddrTxOutput{}
 			for _, addr := range addrs {
-				//fmt.Println("addr:", addr)
+				//log.Info("addr:", addr)
 				addroutput, err := w.getAddrAndAddrTxOutputByAddr(addr.Encode(), requiredConfs)
 				if err != nil {
-					fmt.Println("getAddrAndAddrTxOutputByAddr err :", err.Error())
 					return err
 				}
 				addroutputs = append(addroutputs, *addroutput)
@@ -434,7 +428,6 @@ func (w *Wallet) GetAccountAndAddress(scope waddrmgr.KeyScope,
 }
 
 func (w *Wallet) getAddrAndAddrTxOutputByAddr(addr string, requiredConfs int32) (*AddrAndAddrTxOutput, error) {
-	log.Trace("getAddrAndAddrTxOutputByAddr")
 
 	ato := AddrAndAddrTxOutput{}
 	b := Balance{}
@@ -452,7 +445,6 @@ func (w *Wallet) getAddrAndAddrTxOutputByAddr(addr string, requiredConfs int32) 
 				to := wtxmgr.AddrTxOutput{}
 				err := wtxmgr.ReadAddrTxOutput(v, &to)
 				if err != nil {
-					fmt.Println("ReadAddrTxOutput err:", err.Error())
 					return err
 				}
 				txouts = append(txouts, to)
@@ -463,7 +455,6 @@ func (w *Wallet) getAddrAndAddrTxOutputByAddr(addr string, requiredConfs int32) 
 		return nil
 	})
 	if err != nil {
-		log.Tracef("ReadAddrTxOutput err: %s", err)
 		return nil, err
 	}
 
@@ -520,7 +511,7 @@ func (w *Wallet) GetListTxByAddr(addr string, stype int32, page int32, pageSize 
 	if stype == 0 {
 		dataLen = int32(len(at.Txoutput))
 		if startIndex > dataLen {
-			return nil, fmt.Errorf("暂无数据")
+			return nil, fmt.Errorf("No data")
 		} else {
 			if (startIndex + pageSize) > dataLen {
 				endIndex = dataLen
@@ -539,7 +530,7 @@ func (w *Wallet) GetListTxByAddr(addr string, stype int32, page int32, pageSize 
 		}
 		dataLen = int32(len(txhssin))
 		if startIndex > dataLen {
-			return nil, fmt.Errorf("暂无数据")
+			return nil, fmt.Errorf("No data")
 		} else {
 			if (startIndex + pageSize) > dataLen {
 				endIndex = dataLen
@@ -566,7 +557,6 @@ func (w *Wallet) GetListTxByAddr(addr string, stype int32, page int32, pageSize 
 			var txr corejson.TxRawResult
 			err := json.Unmarshal(v, &txr)
 			if err != nil {
-				fmt.Println("Unmarshal tx err:", err.Error())
 				return err
 			}
 			transactions = append(transactions, txr)
@@ -598,28 +588,24 @@ func (w *Wallet) insertTx(txins []types.TxOutPoint, txouts []wtxmgr.AddrTxOutput
 		//inns:=ns.NestedReadWriteBucket(wtxmgr.BucketAddrtxin)
 		outns := ns.NestedReadWriteBucket(wtxmgr.BucketAddrtxout)
 		for _, tr := range trrs {
-			//fmt.Println("save txid :",tr.Txid)
+			//log.Info("save txid :",tr.Txid)
 			k, err := hash.NewHashFromStr(tr.Txid)
 			if err != nil {
-				fmt.Println("format tx key to byte err:", err.Error())
 				return err
 			}
 			v, err := json.Marshal(tr)
 			if err != nil {
-				fmt.Println("format tx value to byte err:", err.Error())
 				return err
 			}
 			ks := k.Bytes()
 			err = txns.Put(ks, v)
 			if err != nil {
-				fmt.Println("save tx err:", err)
 				return err
 			}
 		}
 		for _, txo := range txouts {
 			err := w.TxStore.UpdateAddrTxOut(outns, &txo)
 			if err != nil {
-				fmt.Println("UpdateAddrTxOut err:", err.Error())
 				return err
 			}
 		}
@@ -631,24 +617,21 @@ func (w *Wallet) insertTx(txins []types.TxOutPoint, txouts []wtxmgr.AddrTxOutput
 			var txr corejson.TxRawResult
 			err := json.Unmarshal(v, &txr)
 			if err != nil {
-				fmt.Println("Unmarshal tx err:", err.Error())
 				return err
 			}
 			addr := txr.Vout[txi.OutIndex].ScriptPubKey.Addresses[0]
 			spendedOut, err := w.TxStore.GetAddrTxOut(outns, addr, txi)
 			if err != nil {
-				fmt.Println("GetAddrTxOut err:", err.Error())
 				return err
 			}
 			if spendedOut.Spend == 0 {
 				txHash, err := hash.NewHashFromStr(txr.Txid)
 				if err != nil {
-					fmt.Println("vin NewHashFromStr err :", err.Error())
 					return err
 				}
 				//blockhash,err:=hash.NewHashFromStr(txr.BlockHash)
 				//if(err!=nil){
-				//	fmt.Println("vin NewHashFromStr err :", err.Error())
+				//	log.Info("vin NewHashFromStr err :", err.Error())
 				//	return err
 				//}
 				//spendtoblock:=wtxmgr.Block{
@@ -666,7 +649,6 @@ func (w *Wallet) insertTx(txins []types.TxOutPoint, txouts []wtxmgr.AddrTxOutput
 
 				err = w.TxStore.UpdateAddrTxOut(outns, spendedOut)
 				if err != nil {
-					fmt.Println("UpdateAddrTxOut to spend err:", err.Error())
 					return err
 				}
 			}
@@ -682,24 +664,22 @@ func (w *Wallet) SyncTx(order int64) (clijson.BlockHttpResult,error) {
 	if err != nil {
 		return block,err
 	}
-	//fmt.Println("SyncTx order:",order)
+	//log.Info("SyncTx order:",order)
 	if err := json.Unmarshal(blockByte, &block); err == nil {
 		txins, txouts, trrs, err := parseBlockTxs(block)
 		if err != nil {
-			fmt.Println("err :", err.Error())
 			return block,err
 		}
 		err = w.insertTx(txins, txouts, trrs)
 		if err != nil {
-			fmt.Println("err :", err.Error())
 			return block,err
 		}
 
 	} else {
-		fmt.Println(err)
+		log.Error(err.Error())
 		return block,err
 	}
-	//fmt.Println("tx:",tx)
+	//log.Info("tx:",tx)
 	return block,nil
 }
 
@@ -708,7 +688,6 @@ func parseTx(tr corejson.TxRawResult,height int32) ([]types.TxOutPoint, []wtxmgr
 	var txouts []wtxmgr.AddrTxOutput
 	blockhash, err := hash.NewHashFromStr(tr.BlockHash)
 	if err != nil {
-		fmt.Println("vin NewHashFromStr err :", err.Error())
 		return nil, nil, err
 	}
 	block := wtxmgr.Block{
@@ -717,7 +696,6 @@ func parseTx(tr corejson.TxRawResult,height int32) ([]types.TxOutPoint, []wtxmgr
 	}
 	txid, err := hash.NewHashFromStr(tr.Txid)
 	if err != nil {
-		fmt.Println("vin NewHashFromStr err :", err.Error())
 		return nil, nil, err
 	}
 	for j := 0; j < len(tr.Vin); j++ {
@@ -727,7 +705,6 @@ func parseTx(tr corejson.TxRawResult,height int32) ([]types.TxOutPoint, []wtxmgr
 		} else {
 			hs, err := hash.NewHashFromStr(vi.Txid)
 			if err != nil {
-				fmt.Println("vin NewHashFromStr err :", err.Error())
 				return nil, nil, err
 			} else {
 				txin := types.TxOutPoint{
@@ -766,7 +743,6 @@ func parseBlockTxs(block clijson.BlockHttpResult) ([]types.TxOutPoint, []wtxmgr.
 		tx = append(tx, tr)
 		tin, tout, err := parseTx(tr,block.Height)
 		if err != nil {
-			fmt.Println("parseTx err:", err.Error())
 			return nil, nil, nil, err
 		} else {
 			txins = append(txins, tin...)
@@ -792,10 +768,9 @@ func (w *Wallet) handleBlock(order int64)  {
 			fmt.Errorf("SyncTx err :", er.Error())
 			return
 		}
-		fmt.Println("完成:",order)
 		//hs, err := hash.NewHashFromStr(br.Hash)
 		//if err != nil {
-		//	fmt.Println("blockhash string to hash  err:", err.Error())
+		//	log.Info("blockhash string to hash  err:", err.Error())
 		//	return
 		//}
 		//stamp := &waddrmgr.BlockStamp{Hash: *hs, Height: br.Order}
@@ -803,13 +778,13 @@ func (w *Wallet) handleBlock(order int64)  {
 		//	ns := tx.ReadWriteBucket(waddrmgrNamespaceKey)
 		//	err := w.Manager.SetSyncedTo(ns, stamp)
 		//	if err != nil {
-		//		fmt.Println("db err:", err.Error())
+		//		log.Info("db err:", err.Error())
 		//		return err
 		//	}
 		//	return nil
 		//})
 		//if err != nil {
-		//	fmt.Println("blockhash string to hash  err:", err.Error())
+		//	log.Info("blockhash string to hash  err:", err.Error())
 		//	//continue
 		//	return
 		//}
@@ -848,7 +823,7 @@ func (w *Wallet) Updateblock(toHeight int64,newest bool) error {
 	if toHeight == 0 {
 		blockcount, err = w.Httpclient.getblockCount()
 		if err != nil {
-			//fmt.Println("getblockcount err:", err.Error())
+			//log.Info("getblockcount err:", err.Error())
 			return err
 		}
 	} else {
@@ -867,14 +842,11 @@ func (w *Wallet) Updateblock(toHeight int64,newest bool) error {
 	//	}
 	//}()
 	localheight :=int64((w.Manager.SyncedTo().Height + 1))
-	s := spinner.New(spinner.CharSets[36], 100*time.Millisecond)  // Build our new spinner
-	s.Color("bgBlack", "bold", "fgRed")
-	s.FinalMSG = "\nComplete!"
-	s.HideCursor=true
-	s.Writer = os.Stderr
-	s.Start()
 
 	if newest{
+		s:=spinn()
+		log.Trace("newest ","newest",newest)
+		s.Start()
 		for  {
 			err:=w.handleBlockSynced(localheight)
 			if err==nil{
@@ -889,19 +861,27 @@ func (w *Wallet) Updateblock(toHeight int64,newest bool) error {
 		}
 	}else{
 		h := localheight;
-		for h <= blockheight {
-			//orderchan <- h
-			err :=w.handleBlockSynced(h)
-			if err !=nil{
-				return err
-			}else{
-				h++
+		var s *spinner.Spinner
+		if h <blockheight{
+			s=spinn()
+			s.Start()
+			log.Trace(fmt.Sprintf("localheight:%d,blockheight:%d",localheight,blockheight))
+			for h <blockheight {
+				//orderchan <- h
+				err :=w.handleBlockSynced(h)
+				if err !=nil{
+					return err
+				}else{
+					h++
+				}
+				msg:=fmt.Sprintf("%s/%s",strconv.FormatInt(h,10),strconv.FormatInt(blockheight,10))
+				s.Suffix= msg
+				//log.Info("synced to height:%v\n", h)
 			}
-			msg:=fmt.Sprintf("%s/%s",strconv.FormatInt(h,10),strconv.FormatInt(blockheight,10))
-			s.Suffix= msg
-			//fmt.Printf("synced to height:%v\n", h)
+			s.Stop()
+		}else{
+			fmt.Printf("Block data is up to date\n")
 		}
-		s.Stop()
 	}
 
 	//for {
@@ -913,22 +893,31 @@ func (w *Wallet) Updateblock(toHeight int64,newest bool) error {
 	//}
 	//err = w.UpdateMempool()
 	//if err != nil {
-	//	fmt.Println("updateMempool err:", err.Error())
+	//	log.Info("updateMempool err:", err.Error())
 	//	return err
 	//}
 	return nil
 }
 
+func spinn() *spinner.Spinner {
+	s := spinner.New(spinner.CharSets[36], 100*time.Millisecond)  // Build our new spinner
+	s.Color("bgBlack", "bold", "fgRed")
+	s.FinalMSG = "\nComplete!\n"
+	s.HideCursor=true
+	s.Writer = os.Stderr
+	return  s
+}
+
 //func (w *Wallet) UpdateMempool() error {
 //	txIdstr, err := w.Httpclient.getMempool()
 //	if err != nil {
-//		fmt.Println("getMempool err:", err.Error())
+//		log.Info("getMempool err:", err.Error())
 //		return err
 //	}
-//	fmt.Println("getMempool result:", txIdstr)
+//	log.Info("getMempool result:", txIdstr)
 //	var txIds []string
 //	if err := json.Unmarshal([]byte(txIdstr), &txIds); err != nil {
-//		fmt.Println("err:", err.Error())
+//		log.Info("err:", err.Error())
 //		return err
 //	}
 //	var txins []types.TxOutPoint
@@ -937,17 +926,17 @@ func (w *Wallet) Updateblock(toHeight int64,newest bool) error {
 //	for _, txid := range txIds {
 //		res, err := w.Httpclient.getRawTransaction(txid)
 //		if err != nil {
-//			fmt.Println("getRawTransaction err:", err.Error())
+//			log.Info("getRawTransaction err:", err.Error())
 //			return err
 //		}
 //		var txJson corejson.TxRawResult
 //		if err := json.Unmarshal([]byte(res), &txJson); err != nil {
-//			fmt.Println("err:", err.Error())
+//			log.Info("err:", err.Error())
 //			return err
 //		}
 //		txin, txout, err := parseTx(txJson)
 //		if err != nil {
-//			fmt.Println("parseTx err:", err.Error())
+//			log.Info("parseTx err:", err.Error())
 //			return err
 //		}
 //		txins = append(txins, txin...)
@@ -956,7 +945,7 @@ func (w *Wallet) Updateblock(toHeight int64,newest bool) error {
 //	}
 //	err = w.insertTx(txins, txouts, trrs)
 //	if err != nil {
-//		fmt.Println("insertTx err:", err.Error())
+//		log.Info("insertTx err:", err.Error())
 //		return err
 //	}
 //	return nil
@@ -985,12 +974,12 @@ func (w *Wallet) NextAccount(scope waddrmgr.KeyScope, name string) (uint32, erro
 			return err
 		}
 		props, err = manager.AccountProperties(addrmgrNs, account)
-		fmt.Println("props：", props)
 		return err
 	})
 	if err != nil {
-		log.Errorf("Cannot fetch new account properties for notification "+
-			"after account creation: %v", err)
+		log.Error("Cannot fetch new account properties for notification "+
+			"after account creation","err", err)
+		return account ,err
 	}
 	return account, err
 }
@@ -1059,7 +1048,6 @@ func (w *Wallet) NewAddress(
 	if err != nil {
 		return nil, err
 	}
-	fmt.Println("props:", props)
 	//// Notify the rpc server about the newly created address.
 	//err = chainClient.NotifyReceived([]btcutil.Address{addr})
 	//if err != nil {
@@ -1087,8 +1075,8 @@ func (w *Wallet) newAddress(addrmgrNs walletdb.ReadWriteBucket, account uint32,
 
 	props, err := manager.AccountProperties(addrmgrNs, account)
 	if err != nil {
-		log.Errorf("Cannot fetch account properties for notification "+
-			"after deriving next external address: %v", err)
+		log.Error(fmt.Sprintf("Cannot fetch account properties for notification "+
+			"after deriving next external address: %v", err))
 		return nil, nil, err
 	}
 
@@ -1114,7 +1102,7 @@ func (w *Wallet) DumpWIFPrivateKey(addr types.Address) (string, error) {
 		return "", fmt.Errorf("address %s is not a key type", addr)
 	}
 	//pri, err := pka.PrivKey()
-	//fmt.Printf("pri:%x\n", pri.SerializeSecret())
+	//log.Info("pri:%x\n", pri.SerializeSecret())
 	wif, err := pka.ExportPrivKey()
 	if err != nil {
 		return "", err
@@ -1180,7 +1168,6 @@ func (w *Wallet) Lock() {
 
 //// Locked returns whether the account manager for a wallet is locked.
 func (w *Wallet) Locked() bool {
-	log.Debug("wallet: Locked")
 	return <-w.lockState
 }
 
@@ -1297,7 +1284,7 @@ out:
 		timeout = nil
 		err := w.Manager.Lock()
 		if err != nil && !waddrmgr.IsError(err, waddrmgr.ErrLocked) {
-			log.Errorf("Could not lock wallet: %v", err)
+			log.Error("Could not lock wallet","err", err)
 		} else {
 			log.Info("The wallet has been locked")
 		}
@@ -1348,7 +1335,6 @@ func (w *Wallet) AccountName(scope waddrmgr.KeyScope, accountNumber uint32) (str
 }
 
 func (w *Wallet) GetUtxo(addr string)([]wtxmgr.Utxo, error){
-		log.Trace("getAddrAndAddrTxOutputByAddr")
 		var txouts []wtxmgr.AddrTxOutput
 		var utxos []wtxmgr.Utxo
 		//var txins []*types.TxOutPoint
@@ -1362,7 +1348,7 @@ func (w *Wallet) GetUtxo(addr string)([]wtxmgr.Utxo, error){
 					to := wtxmgr.AddrTxOutput{}
 					err := wtxmgr.ReadAddrTxOutput(v, &to)
 					if err != nil {
-						fmt.Println("ReadAddrTxOutput err:", err.Error())
+						log.Error("ReadAddrTxOutput err","err", err.Error())
 						return err
 					}
 					txouts = append(txouts, to)
@@ -1373,7 +1359,7 @@ func (w *Wallet) GetUtxo(addr string)([]wtxmgr.Utxo, error){
 			return nil
 		})
 		if err != nil {
-			log.Tracef("ReadAddrTxOutput err: %s", err)
+			log.Error("ReadAddrTxOutput err","err", err)
 			return nil, err
 		}
 
@@ -1417,7 +1403,7 @@ func (w *Wallet) SendOutputs(outputs []*types.TxOutput, account uint32,
 b:
 	for _, aaar := range aaars {
 		for _, output := range aaar.AddrsOutput {
-			//fmt.Println("output:", output)
+			//log.Info("output:", output)
 			if output.balance.UnspendAmount > payAmout {
 				addr, err := address.DecodeAddress(output.Addr)
 				sendAddress = output.Addr
@@ -1426,7 +1412,6 @@ b:
 				}
 				frompkscipt, err := txscript.PayToAddrScript(addr)
 				if err != nil {
-					fmt.Println("err:", err.Error())
 					return nil, err
 				}
 				pri, err := w.getPrivateKey(addr)
@@ -1461,30 +1446,28 @@ b:
 		}
 	}
 	if payAmout != types.Amount(0) {
-		//fmt.Println("balance is not enough")
+		//log.Info("balance is not enough")
 		return nil, fmt.Errorf("balance is not enough")
 	}
 	b, err := tx.Serialize()
 	if err != nil {
-		fmt.Println("err:", err.Error())
 		return nil, err
 	}
 	signTx, err := qx.TxSign(prk, hex.EncodeToString(b),w.chainParams.Name)
 	if err != nil {
-		fmt.Println("txSign err:", err.Error())
 		return nil, err
 	}
 	//mtxHex, err := marshal.MessageToHex(&message.MsgTx{Tx: signTx})
 	//if err != nil {
-	//	fmt.Println("txSign err:", err.Error())
+	//	log.Info("txSign err:", err.Error())
 	//	return nil, err
 	//}
-	//fmt.Println("txSign succ:", mtxHex)
+	//log.Info("txSign succ:", mtxHex)
 	msg, err := w.Httpclient.SendRawTransaction(signTx, false)
 	if err != nil {
 		return nil, err
 	} else {
-		fmt.Println("SendRawTransaction txSign response msg:", msg)
+		log.Info("SendRawTransaction txSign response msg","msg", msg)
 	}
 
 	err = walletdb.Update(w.db, func(tx walletdb.ReadWriteTx) error {
@@ -1495,73 +1478,16 @@ b:
 			txoutput.Spend = 1
 			err = w.TxStore.UpdateAddrTxOut(outns, &txoutput)
 			if err != nil {
-				fmt.Println("UpdateAddrTxOut to spend err:", err.Error())
+				log.Error("UpdateAddrTxOut to spend err","err", err.Error())
 				return err
 			}
 		}
 		return nil
 	})
 	if err != nil {
-		fmt.Println("UpdateAddrTxOut to spend err:", err.Error())
+		log.Error("UpdateAddrTxOut to spend err","err", err.Error())
 		return nil, err
 	}
 
 	return &signTx, nil
 }
-//func (w *Wallet) txSign(privkeyStr string, rawTxStr string) (*types.Transaction, error) {
-//	privkeyByte, err := hex.DecodeString(privkeyStr)
-//	if err != nil {
-//		return nil, err
-//	}
-//	if len(privkeyByte) != 32 {
-//		return nil, fmt.Errorf("invaid ec private key bytes: %d", len(privkeyByte))
-//	}
-//	privateKey, pubKey := ecc.Secp256k1.PrivKeyFromBytes(privkeyByte)
-//	h160 := hash.Hash160(pubKey.SerializeCompressed())
-//	fmt.Println("hex.EncodeToString(h160)：", hex.EncodeToString(h160))
-//
-//	addr, err := address.NewPubKeyHashAddress(h160, w.chainParams, ecc.ECDSA_Secp256k1)
-//	if err != nil {
-//		return nil, err
-//	}
-//	// Create a new script which pays to the provided address.
-//	pkScript, err := txscript.PayToAddrScript(addr)
-//	if err != nil {
-//		return nil, err
-//	}
-//
-//	if len(rawTxStr)%2 != 0 {
-//		return nil, fmt.Errorf("invaild raw transaction : %s", rawTxStr)
-//	}
-//	serializedTx, err := hex.DecodeString(rawTxStr)
-//	if err != nil {
-//		return nil, err
-//	}
-//
-//	var redeemTx types.Transaction
-//	err = redeemTx.Deserialize(bytes.NewReader(serializedTx))
-//	if err != nil {
-//		return nil, err
-//	}
-//	var kdb txscript.KeyClosure = func(types.Address) (ecc.PrivateKey, bool, error) {
-//		return privateKey, true, nil // compressed is true
-//	}
-//	var sigScripts [][]byte
-//	for i := range redeemTx.TxIn {
-//		sigScript, err := txscript.SignTxOutput(w.chainParams, &redeemTx, i, pkScript, txscript.SigHashAll, kdb, nil, nil, ecc.ECDSA_Secp256k1)
-//		if err != nil {
-//			return nil, err
-//		}
-//		sigScripts = append(sigScripts, sigScript)
-//	}
-//
-//	for i2 := range sigScripts {
-//		redeemTx.TxIn[i2].SignScript = sigScripts[i2]
-//	}
-//	return &redeemTx, nil
-//	//mtxHex, err := marshal.MessageToHex(&message.MsgTx{Tx: &redeemTx})
-//	//if err != nil {
-//	//	return "", err
-//	//}
-//	//return mtxHex, nil
-//}

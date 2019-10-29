@@ -4,7 +4,6 @@ import (
 	"errors"
 	"sort"
 
-	"github.com/Qitmeer/qitmeer-lib/log"
 	"github.com/Qitmeer/qitmeer-wallet/walletdb"
 )
 
@@ -128,21 +127,16 @@ func upgrade(mgr Manager) error {
 	// apply all of the newer versions in order to catch up to the latest.
 	case currentVersion < latestVersion:
 		versions := VersionsToApply(currentVersion, versions)
-		mgrName := mgr.Name()
+		//mgrName := mgr.Name()
 		ns := mgr.Namespace()
 
 		for _, version := range versions {
-			log.Info("Applying %v migration #%d", mgrName,
-				version.Number)
 
 			// We'll only run a migration if there is one available
 			// for this version.
 			if version.Migration != nil {
 				err := version.Migration(ns)
 				if err != nil {
-					log.Error("Unable to apply %v "+
-						"migration #%d: %v", mgrName,
-						version.Number, err)
 					return err
 				}
 			}
