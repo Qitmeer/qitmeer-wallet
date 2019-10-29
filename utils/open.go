@@ -12,7 +12,7 @@ func OpenBrowser(url string) error {
 	var cmd string
 	var args []string
 
-	//fmt.Println(runtime.GOOS)
+	//log.Info(runtime.GOOS)
 
 	switch runtime.GOOS {
 	case "windows":

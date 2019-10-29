@@ -4,17 +4,19 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"github.com/Qitmeer/qitmeer-lib/crypto/bip39"
-	"github.com/Qitmeer/qitmeer-lib/crypto/ecc/secp256k1"
-	"github.com/Qitmeer/qitmeer-lib/crypto/seed"
-	"github.com/Qitmeer/qitmeer-lib/qx"
+	"github.com/Qitmeer/qitmeer/crypto/bip39"
+	"github.com/Qitmeer/qitmeer/crypto/ecc/secp256k1"
+
+	//"github.com/Qitmeer/qitmeer/crypto/bip39"
+	//"github.com/Qitmeer/qitmeer/crypto/ecc/secp256k1"
+	//"github.com/Qitmeer/qitmeer/crypto/seed"
 	"github.com/Qitmeer/qitmeer-wallet/config"
 	"github.com/Qitmeer/qitmeer-wallet/json/qitmeerjson"
 	"github.com/Qitmeer/qitmeer-wallet/rpc/walletrpc"
 	"github.com/Qitmeer/qitmeer-wallet/util"
 	qjson "github.com/Qitmeer/qitmeer-wallet/json"
 	"github.com/Qitmeer/qitmeer-wallet/wallet"
-	"log"
+	"github.com/Qitmeer/qitmeer/qx"
 	"path/filepath"
 	"runtime"
 	"strconv"
@@ -30,41 +32,39 @@ var isWin = runtime.GOOS == "windows"
 func CreatWallet()  {
 	b:=checkWalletIeExist(config.Cfg)
 	if b {
-		log.Fatalln("db is exist",filepath.Join(networkDir(config.Cfg.AppDataDir, config.ActiveNet), config.WalletDbName))
+		fmt.Println("db is exist",filepath.Join(networkDir(config.Cfg.AppDataDir, config.ActiveNet), config.WalletDbName))
 		return
 	}else{
 		_,err:=createWallet()
 		if err!=nil{
-			log.Fatalln("createWallet err:",err.Error())
+			fmt.Println("createWallet err:",err.Error())
 			return
 		}else{
-			log.Println("createWallet succ")
+			fmt.Println("createWallet succ")
 		}
 		return
 	}
 }
 
-func OpenWallet(){
+func OpenWallet() error{
 	b:=checkWalletIeExist(config.Cfg)
 	var err error
 	if b {
 		load := wallet.NewLoader(config.ActiveNet, networkDir(config.Cfg.AppDataDir, config.ActiveNet), 250,config.Cfg)
 		w, err = load.OpenExistingWallet([]byte(config.Cfg.WalletPass), false)
 		if err != nil {
-			log.Fatalln("openWallet err:", err.Error())
-			return
+			return fmt.Errorf("openWallet err:%s\n", err.Error())
 		}
 	}else{
-		log.Fatalln("Please create a wallet first,[qitmeer-wallet create ]")
-		return
+		return fmt.Errorf("Please create a wallet first,[qitmeer-wallet create ]")
 	}
+	return nil
 }
 
 func UnLock(password string) error{
 	err := w.UnLockManager([]byte(password))
 	if err != nil {
-		log.Fatalf("UnLock err:%s", "password error")
-		return err
+		return fmt.Errorf("password error")
 	}
 	return nil
 }
@@ -77,11 +77,11 @@ func InitWallet(){
 		load := wallet.NewLoader(config.ActiveNet, networkDir(config.Cfg.AppDataDir, config.ActiveNet), 250,config.Cfg)
 		w, err = load.OpenExistingWallet([]byte(config.Cfg.WalletPass), false)
 		if err != nil {
-			log.Fatalln("openWallet err:", err.Error())
+			fmt.Println("openWallet err:", err.Error())
 			return
 		}
 	}else{
-		log.Fatalln("Please create a wallet first,[qitmeer-wallet create --create]")
+		fmt.Println("Please create a wallet first,[qitmeer-wallet create --create]")
 		return
 	}
 }
@@ -93,13 +93,13 @@ func startConsole()  {
 		load := wallet.NewLoader(config.ActiveNet, networkDir(config.Cfg.AppDataDir, config.ActiveNet), 250,config.Cfg)
 		w, err = load.OpenExistingWallet([]byte(config.Cfg.WalletPass), false)
 		if err != nil {
-			log.Println("openWallet err:", err.Error())
+			fmt.Println("openWallet err:", err.Error())
 			return
 		}
 	}else{
 		w,err=createWallet()
 		if err!=nil{
-			log.Println("createWallet err:",err.Error())
+			fmt.Println("createWallet err:",err.Error())
 			return
 		}
 		return
@@ -124,7 +124,7 @@ func startConsole()  {
 				break
 			}
 			if(err!=nil){
-				fmt.Println("getbalance err :",err.Error())
+				fmt.Println("getbalance err ","err",err.Error())
 				break
 			}
 			getbalance(Default_minconf,arg1)
@@ -213,7 +213,7 @@ func startConsole()  {
 			printHelp()
 			break
 		default:
-			printError("Wrong command " + cmd)
+			fmt.Printf("Wrong command %s\n " , cmd)
 			break
 		}
 	}
@@ -240,14 +240,15 @@ func printHelp() {
 	fmt.Println("\t<unlock> : Unlock Wallet. Parameter: [password]")
 	fmt.Println("\t<help> : help")
 	fmt.Println("\t<exit> : Exit command mode")
-	fmt.Println()
+	fmt.Println("")
 }
 
 func printPrompt() (cmd string, arg1 string, arg2 string) {
 	if isWin {
 		fmt.Printf("[%s]:", Name)
 	} else {
-		fmt.Printf("%c[4;%d;%dm[%s]: %c[0m", 0x1B, 0, 30, Name, 0x1B)
+		fmt.Printf("[%s]:", Name)
+		//fmt.Printf("%c[4;%d;%dm[%s]: %c[0m", 0x1B, 0, 30, Name, 0x1B)
 	}
 
 	var c, a1, a2 string
@@ -261,14 +262,6 @@ func printPrompt() (cmd string, arg1 string, arg2 string) {
 	}
 	return c, a1, a2
 }
-func printError(msg string) {
-	if isWin {
-		fmt.Println("error:", msg)
-	} else {
-		fmt.Printf("%c[4;0;%dm%s!%c[0m\n", 0x1B, 30, msg, 0x1B)
-	}
-
-}
 func checkWalletIeExist(cfg *config.Config) bool{
 	netDir := networkDir(cfg.AppDataDir, config.ActiveNet)
 	err:=checkCreateDir(netDir)
@@ -277,7 +270,7 @@ func checkWalletIeExist(cfg *config.Config) bool{
 	}
 	dbPath := filepath.Join(netDir, config.WalletDbName)
 	if fi,err:=util.FileExists(dbPath);err!=nil{
-		log.Println("FileExists err:",err.Error())
+		fmt.Println("FileExists ","err",err.Error())
 		return false
 	}else{
 		return fi
@@ -291,29 +284,29 @@ func createNewAccount(arg string) error {
 	}
 	msg, err := walletrpc.CreateNewAccount(cmd, w)
 	if err != nil {
-		fmt.Println("err:", err.Error())
+		fmt.Println("createNewAccount","err", err.Error())
 		return err
 	}
-	fmt.Println("createNewAccount :",msg)
+	fmt.Printf("%s",msg)
 	return nil
 }
-func getbalance(minconf int ,addr string) ( interface{}, error){
+func getbalance(minconf int ,addr string) ( *wallet.Balance, error){
 	cmd:=&qitmeerjson.GetBalanceByAddressCmd{
 		Address:addr,
 		MinConf:minconf,
 	}
 	b,err:=walletrpc.Getbalance(cmd,w)
 	if(err!=nil){
-		fmt.Println("err:",err.Error())
+		fmt.Println("getbalance","err",err.Error())
 		return nil,err
 	}
 	r:=b.(*wallet.Balance)
 	//fmt.Println("getbalance :",b)
 	//fmt.Println("getbalance  ConfirmAmount:",r.ConfirmAmount)
-	fmt.Println("getbalance  amount:",r.UnspendAmount)
+	//fmt.Printf("%d\n",r.UnspendAmount)
 	//fmt.Println("getbalance  SpendAmount:",r.SpendAmount)
 	//fmt.Println("getbalance  TotalAmount:",r.TotalAmount)
-	return b, nil
+	return r, nil
 }
 func  listAccountsBalance(min int)( interface{}, error){
 	cmd:=&qitmeerjson.ListAccountsCmd{
@@ -321,10 +314,10 @@ func  listAccountsBalance(min int)( interface{}, error){
 	}
 	msg, err := walletrpc.ListAccounts(cmd, w)
 	if err != nil {
-		fmt.Println("err:", err.Error())
+		fmt.Println("listAccountsBalance","err", err.Error())
 		return nil, err
 	}
-	fmt.Println("listAccounts :",msg)
+	fmt.Printf("%v\n",msg)
 	return msg, nil
 }
 
@@ -337,21 +330,17 @@ func getlisttxbyaddr(addr string)( interface{}, error){
 	}
 	result, err := walletrpc.Getlisttxbyaddr(cmd, w)
 	if err != nil {
-		fmt.Println("err:", err.Error())
+		fmt.Println("getlisttxbyaddr","err", err.Error())
 		return nil, err
-	}
-	if(err!=nil){
-		fmt.Errorf("getlisttxbyaddr err:%s",err.Error())
 	}else{
 		a:=result.(*qjson.PageTxRawResult)
-		fmt.Println("getlisttxbyaddr msg a.Total:",a.Total)
 		for _, t := range a.Transactions {
 			b,err:=json.Marshal(t)
 			if err!=nil{
 				fmt.Println("getlisttxbyaddr err:",err.Error())
 				return nil, err
 			}
-			fmt.Println("getlisttxbyaddr :",string(b))
+			fmt.Printf("%s\n",string(b))
 		}
 	}
 	return result, nil
@@ -366,10 +355,10 @@ func getNewAddress(account string) (interface{}, error) {
 	}
 	msg, err := walletrpc.GetNewAddress(cmd, w)
 	if err != nil {
-		fmt.Println("err:", err.Error())
+		fmt.Println("getNewAddress","err", err.Error())
 		return nil, err
 	}
-	fmt.Println("getNewAddress :",msg)
+	fmt.Printf("%s\n",msg)
 	return msg, nil
 }
 func getAddressesByAccount(account string) (interface{}, error) {
@@ -381,10 +370,10 @@ func getAddressesByAccount(account string) (interface{}, error) {
 	}
 	msg, err := walletrpc.GetAddressesByAccount(cmd, w)
 	if err != nil {
-		fmt.Println("err:", err.Error())
+		fmt.Println("getAddressesByAccount","err", err.Error())
 		return nil, err
 	}
-	fmt.Println("getAddressesByAccount :",msg)
+	fmt.Printf("%s\n",msg)
 	return msg, nil
 }
 func getAccountByAddress(address string) (interface{}, error) {
@@ -393,10 +382,10 @@ func getAccountByAddress(address string) (interface{}, error) {
 	}
 	msg, err := walletrpc.GetAccountByAddress(cmd, w)
 	if err != nil {
-		fmt.Println("err:", err.Error())
+		fmt.Println("getAccountByAddress","err", err.Error())
 		return nil, err
 	}
-	fmt.Println("getAccountByAddress :",msg)
+	fmt.Printf("%s\n",msg)
 	return msg, nil
 }
 func importPrivKey(privKey string) (interface{}, error) {
@@ -407,10 +396,10 @@ func importPrivKey(privKey string) (interface{}, error) {
 	}
 	msg, err := walletrpc.ImportPrivKey(cmd, w)
 	if err != nil {
-		fmt.Println("err:", err.Error())
+		fmt.Println("importPrivKey","err", err.Error())
 		return nil, err
 	}
-	fmt.Println("importPrivKey :",msg)
+	fmt.Printf("%s\n",msg)
 	return msg, nil
 }
 func importWifPrivKey(wifprivKey string) (interface{}, error) {
@@ -421,9 +410,10 @@ func importWifPrivKey(wifprivKey string) (interface{}, error) {
 	}
 	msg, err := walletrpc.ImportWifPrivKey(cmd, w)
 	if err != nil {
-		fmt.Println("err:", err.Error())
+		fmt.Println("importWifPrivKey","err", err.Error())
 		return nil, err
 	}
+	fmt.Printf("%s\n",msg)
 	return msg, nil
 }
 func dumpPrivKey(address string) (interface{}, error) {
@@ -432,10 +422,10 @@ func dumpPrivKey(address string) (interface{}, error) {
 	}
 	msg, err := walletrpc.DumpPrivKey(cmd, w)
 	if err != nil {
-		fmt.Println("err:", err.Error())
+		fmt.Println("dumpPrivKey","err", err.Error())
 		return nil, err
 	}
-	fmt.Println("dumpPrivKey :",msg)
+	fmt.Printf("%s\n",msg)
 	return msg, nil
 }
 func getAccountAndAddress(minconf int32) (interface{}, error) {
@@ -447,10 +437,9 @@ func getAccountAndAddress(minconf int32) (interface{}, error) {
 	a:=msg.([]wallet.AccountAndAddressResult)
 	for _ , result :=range a{
 		for _,r:= range result.AddrsOutput{
-			fmt.Println("account:",result.AccountName," ,address:",r.Addr)
+			fmt.Printf("account:%s,address:%s\n",result.AccountName,r.Addr)
 		}
 	}
-	//fmt.Println("getAccountAndAddress :",a[1].AddrsOutput[0].Addr)
 	return msg, nil
 }
 func sendToAddress(address string ,amount float64)( interface{}, error){
@@ -460,10 +449,10 @@ func sendToAddress(address string ,amount float64)( interface{}, error){
 	}
 	msg, err := walletrpc.SendToAddress(cmd, w)
 	if err != nil {
-		fmt.Println("err:", err.Error())
+		fmt.Println("sendToAddress:","error", err.Error())
 		return nil, err
 	}
-	fmt.Println("sendToAddress :",msg)
+	fmt.Printf("%s\n",msg)
 	return msg, nil
 }
 func updateblock(height int64)(  error){
@@ -472,28 +461,17 @@ func updateblock(height int64)(  error){
 	}
 	err := walletrpc.Updateblock(cmd, w)
 	if err != nil {
-		fmt.Println("err:", err.Error())
+		fmt.Println("updateblock:","error", err.Error())
 		return err
 	}
-	//fmt.Printf("update to block :%v succ",height)
+	//fmt.Println("update to block :%v succ",height)
 	return nil
 }
 func syncheight()(  error){
-	fmt.Println(w.Manager.SyncedTo().Height)
+	fmt.Printf("%d\n",w.Manager.SyncedTo().Height)
 	return nil
 }
 
-func generateMnemonic()(string,error){
-	entropyBuf, err := seed.GenerateSeed(uint16(32))
-	if err != nil {
-		return "", fmt.Errorf("Generate entropy err: %s", err)
-	}
-	mnemonic, err := bip39.NewMnemonic(entropyBuf)
-	if err != nil {
-		return "",err
-	}
-	return fmt.Sprintf("%s",mnemonic),nil
-}
 
 func  mnemonicToSeed(mnemonic string)(string,error){
 	seedBuf, err := bip39.NewSeedWithErrorChecking(mnemonic, "")
@@ -538,6 +516,7 @@ func  priToPub(pri string ,uncompressed bool) (string,error) {
 	return fmt.Sprintf("%s",msg),nil
 }
 func  pubToAddr(pub string ,net string) (string,error) {
+
 	serializedPubKey, err := hex.DecodeString(pub)
 	pubkey,err:=secp256k1.ParsePubKey(serializedPubKey)
 	msg,err:=qx.EcPubKeyToAddress(net,hex.EncodeToString(pubkey.SerializeCompressed()))
@@ -550,7 +529,7 @@ func  pubToAddr(pub string ,net string) (string,error) {
 func unlock(password string) error{
 	err :=walletrpc.Unlock(password,w)
 	if err != nil {
-		fmt.Println("unlock err:", err.Error())
+		fmt.Println("unlock","err", err.Error())
 		return err
 	}else{
 		fmt.Println("unlock succ")

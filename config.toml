@@ -5,7 +5,7 @@
 network="testnet"
 #network="privnet"
 #Qitmeerd
-QServer="47.88.220.44:8131"
+QServer="127.0.0.1:8131"
 QUser="admin"
 QPass="123456"
 #WalletPass="public" #Wallet encryption code default public

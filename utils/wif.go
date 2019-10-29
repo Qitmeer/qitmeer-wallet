@@ -6,10 +6,10 @@ import (
 	"fmt"
 
 	
-	"github.com/Qitmeer/qitmeer-lib/crypto/ecc/secp256k1"
-	"github.com/Qitmeer/qitmeer-lib/params"
-	"github.com/Qitmeer/qitmeer-lib/common/hash"
-	"github.com/Qitmeer/qitmeer-lib/common/encode/base58"
+	"github.com/Qitmeer/qitmeer/crypto/ecc/secp256k1"
+	"github.com/Qitmeer/qitmeer/params"
+	"github.com/Qitmeer/qitmeer/common/hash"
+	"github.com/Qitmeer/qitmeer/common/encode/base58"
 )
 
 // ErrMalformedPrivateKey describes an error where a WIF-encoded private
@@ -148,7 +148,6 @@ func (w *WIF) String() string {
 	}
 	cksum := hash.DoubleHashB(a)[:4]
 	a = append(a, cksum...)
-	fmt.Println("a:",a)
 	return base58.Encode(a)
 }
 

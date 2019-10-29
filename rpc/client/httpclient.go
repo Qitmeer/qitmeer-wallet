@@ -132,7 +132,7 @@ func (rpcClient *RPCClient) sendPostRequest(path string, marshalledJSON []byte) 
 
 	// If requested, print raw json response.
 	// if cfg.PrintJSON {
-	// 	fmt.Println(string(respBytes))
+	// 	log.Info(string(respBytes))
 	// }
 
 	// Unmarshal the response.

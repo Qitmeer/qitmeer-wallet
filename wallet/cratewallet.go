@@ -2,12 +2,12 @@ package wallet
 
 import (
 	"bufio"
-	"fmt"
+	"github.com/Qitmeer/qitmeer/log"
 	"os"
 	"path/filepath"
 	"time"
 
-	"github.com/Qitmeer/qitmeer-lib/crypto/ecc/secp256k1"
+	"github.com/Qitmeer/qitmeer/crypto/ecc/secp256k1"
 
 	"github.com/Qitmeer/qitmeer-wallet/config"
 	"github.com/Qitmeer/qitmeer-wallet/internal/legacy/keystore"
@@ -67,7 +67,6 @@ func CreateWallet(cfg *config.Config, walletPass string) error {
 		loader.RunAfterLoad(func(w *Wallet) {
 			defer legacyKeyStore.Lock()
 
-			fmt.Println("Importing addresses from existing wallet...")
 
 			lockChan := make(chan time.Time, 1)
 			defer func() {
@@ -75,23 +74,23 @@ func CreateWallet(cfg *config.Config, walletPass string) error {
 			}()
 			err := w.Unlock(privPass, lockChan)
 			if err != nil {
-				fmt.Printf("ERR: Failed to unlock new wallet "+
-					"during old wallet key import: %v", err)
+				log.Error("CreateWallet Failed to unlock new wallet "+
+					"during old wallet key import","err", err)
 				return
 			}
 
 			err = convertLegacyKeystore(legacyKeyStore, w)
 			if err != nil {
-				fmt.Printf("ERR: Failed to import keys from old "+
-					"wallet format: %v", err)
+				log.Error("CreateWallet Failed to import keys from old "+
+					"wallet format","err", err)
 				return
 			}
 
 			// Remove the legacy key store.
 			err = os.Remove(keystorePath)
 			if err != nil {
-				fmt.Printf("WARN: Failed to remove legacy wallet "+
-					"from'%s'\n", keystorePath)
+				log.Error("CreateWallet Failed to remove legacy wallet ","keystorePath", keystorePath)
+				return
 			}
 		})
 	}
@@ -104,7 +103,6 @@ func CreateWallet(cfg *config.Config, walletPass string) error {
 	if err != nil {
 		return err
 	}
-	fmt.Println("pubPass:", string(pubPass))
 	// Ascertain the wallet generation seed.  This will either be an
 	// automatically generated value the user has already confirmed or a
 	// value the user has entered which has already been validated.
@@ -113,14 +111,14 @@ func CreateWallet(cfg *config.Config, walletPass string) error {
 		return err
 	}
 
-	fmt.Println("Creating the wallet...")
+	log.Info("Creating the wallet...")
 	w, err := loader.CreateNewWallet(pubPass, privPass, seed, time.Now())
 	if err != nil {
 		return err
 	}
 
 	w.Manager.Close()
-	fmt.Println("The wallet has been created successfully.")
+	log.Info("The wallet has been created successfully.")
 	return nil
 }
 
@@ -138,8 +136,7 @@ func convertLegacyKeystore(legacyKeyStore *keystore.Store, w *Wallet) error {
 		case keystore.PubKeyAddress:
 			privKey, err := addr.PrivKey()
 			if err != nil {
-				fmt.Printf("WARN: Failed to obtain private key "+
-					"for address %v: %v\n", addr.Address(),
+				log.Error("convertLegacyKeystore Failed to obtain private key ","address", addr.Address(),"err",
 					err)
 				continue
 			}
@@ -147,16 +144,15 @@ func convertLegacyKeystore(legacyKeyStore *keystore.Store, w *Wallet) error {
 			wif, err := utils.NewWIF((*secp256k1.PrivateKey)(privKey),
 				netParams, addr.Compressed())
 			if err != nil {
-				fmt.Printf("WARN: Failed to create wallet "+
-					"import format for address %v: %v\n",
-					addr.Address(), err)
+				log.Info("convertLegacyKeystore Failed to create wallet import format","address ",
+					addr.Address(),"err", err)
 				continue
 			}
-			fmt.Println("wif:", wif)
+			log.Trace("convertLegacyKeystore","wif", wif)
 			//_, err = w.ImportPrivateKey(waddrmgr.KeyScopeBIP0044,
 			//	wif, &blockStamp, false)
 			//if err != nil {
-			//	fmt.Printf("WARN: Failed to import private "+
+			//	log.Info("WARN: Failed to import private "+
 			//		"key for address %v: %v\n",
 			//		addr.Address(), err)
 			//	continue
@@ -165,15 +161,15 @@ func convertLegacyKeystore(legacyKeyStore *keystore.Store, w *Wallet) error {
 		//case keystore.ScriptAddress:
 		//	_, err := w.ImportP2SHRedeemScript(addr.Script())
 		//	if err != nil {
-		//		fmt.Printf("WARN: Failed to import "+
+		//		log.Info("WARN: Failed to import "+
 		//			"pay-to-script-hash script for "+
 		//			"address %v: %v\n", addr.Address(), err)
 		//		continue
 		//	}
 
 		default:
-			fmt.Printf("WARN: Skipping unrecognized legacy "+
-				"keystore type: %T\n", addr)
+			log.Info("convertLegacyKeystore Skipping unrecognized legacy "+
+				"keystore type","addr", addr)
 			continue
 		}
 	}

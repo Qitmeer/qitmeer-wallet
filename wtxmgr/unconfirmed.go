@@ -6,10 +6,10 @@
 package wtxmgr
 
 import (
-	"github.com/Qitmeer/qitmeer-lib/core/types"
+	"github.com/Qitmeer/qitmeer/core/types"
 	"github.com/Qitmeer/qitmeer-wallet/walletdb"
-	"github.com/Qitmeer/qitmeer-lib/log"
-	chainhash "github.com/Qitmeer/qitmeer-lib/common/hash"
+	"github.com/Qitmeer/qitmeer/log"
+	chainhash "github.com/Qitmeer/qitmeer/common/hash"
 )
 
 // insertMemPoolTx inserts the unmined transaction record.  It also marks
@@ -34,7 +34,7 @@ func (s *Store) insertMemPoolTx(ns walletdb.ReadWriteBucket, rec *TxRecord) erro
 		}
 	}
 
-	log.Info("Inserting unconfirmed transaction %v", rec.Hash)
+	log.Trace("Inserting unconfirmed transaction ","rec.Hash", rec.Hash)
 	v, err := valueTxRecord(rec)
 	if err != nil {
 		return err

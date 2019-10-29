@@ -17,14 +17,13 @@ import (
 	"sync/atomic"
 	"time"
 
-	log "github.com/sirupsen/logrus"
-
+	"github.com/Qitmeer/qitmeer/log"
 	mapset "github.com/deckarep/golang-set"
 	"golang.org/x/net/context"
 
-	"github.com/Qitmeer/qitmeer-lib/common/util"
-	// "github.com/Qitmeer/qitmeer-lib/config"
-	//"github.com/Qitmeer/qitmeer-lib/log"
+	"github.com/Qitmeer/qitmeer/common/util"
+	// "github.com/Qitmeer/qitmeer/config"
+	//"github.com/Qitmeer/qitmeer/log"
 )
 
 // API describes the set of methods offered over the RPC interface
@@ -306,7 +305,7 @@ const (
 // jsonRPCRead handles reading and responding to RPC messages.
 func (s *RpcServer) jsonRPCRead(w http.ResponseWriter, r *http.Request) {
 	if atomic.LoadInt32(&s.run) != 1 { // server stopped
-		fmt.Println("RpcServer jsonRPCRead s.run ")
+		log.Info("RpcServer jsonRPCRead s.run ")
 		//return
 	}
 	// discard dumb empty requests
@@ -332,7 +331,6 @@ func (s *RpcServer) jsonRPCRead(w http.ResponseWriter, r *http.Request) {
 	codec := NewJSONCodec(&httpReadWriteNopCloser{body, w})
 	defer codec.Close()
 
-	log.Trace("jsonRPCRead")
 
 	s.ServeSingleRequest(ctx, codec, OptionMethodInvocation)
 }

@@ -8,9 +8,9 @@ package txrules
 
 import (
 	"errors"
-	"github.com/Qitmeer/qitmeer-lib/core/types"
-	"github.com/Qitmeer/qitmeer-lib/core/serialization"
-	"github.com/Qitmeer/qitmeer-lib/engine/txscript"
+	"github.com/Qitmeer/qitmeer/core/types"
+	"github.com/Qitmeer/qitmeer/core/serialization"
+	"github.com/Qitmeer/qitmeer/engine/txscript"
 )
 
 // DefaultRelayFeePerKb is the default minimum relay fee policy for a mempool.

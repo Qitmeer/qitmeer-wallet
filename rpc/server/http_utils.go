@@ -8,7 +8,7 @@ import (
 	"mime"
 	"net/http"
 
-	"github.com/Qitmeer/qitmeer-lib/core/types"
+	"github.com/Qitmeer/qitmeer/core/types"
 )
 
 const (
