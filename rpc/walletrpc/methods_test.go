@@ -59,8 +59,7 @@ func open_wallet() (*wallet.Wallet, error) {
 		fmt.Errorf("UnLockManager err:%s", err.Error())
 		return nil, err
 	}
-	w.Httpclient ,err= wallet.NewHtpc("admin", "123456", "47.88.220.44:8131",
-		"", true, true, "", "", "")
+	w.Httpclient ,err= wallet.NewHtpc()
 	if err!=nil{
 		fmt.Errorf("NewHtpc err:%s", err.Error())
 		return nil, err
@@ -285,11 +284,20 @@ func test_wif(w *wallet.Wallet) error {
 }
 
 func TestWallet_Method(t *testing.T) {
-	w, err := open_wallet()
-	if err != nil {
-		fmt.Println("open_wallet err:", err)
+	serializedPubKey, err := hex.DecodeString("049ed083b4d2a923c9736c3186444610de68576e4314b03e2b638b4738a1741c460f23f8921dbdf6cbf0a3b67fc53734ad5c05116f55d41abc8d78f10aa1e4f2a2")
+	pu,err:=secp256k1.ParsePubKey(serializedPubKey)
+	if err!=nil{
+		fmt.Print(err.Error())
 		return
 	}
+	fmt.Printf("pu.SerializeCompressed()：%x\n",pu.SerializeCompressed())
+	fmt.Printf("pu.SerializeUncompressed()：%x\n",pu.SerializeUncompressed())
+
+	//w, err := open_wallet()
+	//if err != nil {
+	//	fmt.Println("open_wallet err:", err)
+	//	return
+	//}
 	//w.UpdateMempool()
 	//
 	//test_wallet_createNewAccount(w)
@@ -300,7 +308,7 @@ func TestWallet_Method(t *testing.T) {
 	//
 	//test_wallet_getNewAddress(w)
 	//test_wallet_getAddressesByAccount(w)
-	test_wallet_listAccounts(w)
+	//test_wallet_listAccounts(w)
 	//
 	//
 	//
@@ -327,7 +335,7 @@ func TestWallet_Method(t *testing.T) {
 	//
 	//test_wallet_getlisttxbyaddr(w)
 
-	test_wallet_updateblock(w)
+	//test_wallet_updateblock(w)
 	//str,err:=w.GetTx("e44b7a7c361c7f220811f07a6c051ea95967c56dff0d255e62c29908597c320d")
 	////str,err:=w.GetTx("2c0cbf455ee3ae055261db248efa136e09c9742634b1a769c6f1be49c4a689f0")
 	//if(err!=nil){

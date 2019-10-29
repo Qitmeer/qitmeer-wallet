@@ -99,7 +99,7 @@ func LoadConfig(cmd *cobra.Command, args []string)  {
 	if cmd.Flag("pubwalletpass").Changed {
 		fileCfg.WalletPass = preCfg.WalletPass
 	}
-	log.SetLevel(log.TraceLevel)
+	//log.SetLevel(log.TraceLevel)
 
 	config.ActiveNet = utils.GetNetParams(fileCfg.Network)
 
@@ -246,11 +246,11 @@ var syncheightCmd=&cobra.Command{
 
 // interactive mode
 
-var interactiveCmd=&cobra.Command{
-	Use:"interactive",
-	Short:"interactive",
+var consoleCmd=&cobra.Command{
+	Use:"console",
+	Short:"console",
 	Example:`
-		Enter interactive mode
+		Enter console mode
 		`,
 	Args: cobra.NoArgs,
 	Run: func(cmd *cobra.Command, args []string) {
@@ -287,6 +287,16 @@ func qitmeerMain(cfg *config.Config) {
 
 
 func init()  {
+
+	QxCmd.AddCommand(generatemnemonicCmd)
+	QxCmd.AddCommand(mnemonictoseedCmd)
+	QxCmd.AddCommand(seedtopriCmd)
+	QxCmd.AddCommand(pritopubCmd)
+	QxCmd.AddCommand(mnemonictoaddrCmd)
+	QxCmd.AddCommand(seedtoaddrCmd)
+	QxCmd.AddCommand(pritoaddrCmd)
+	QxCmd.AddCommand(pubtoaddrCmd)
+
 	Command.AddCommand(createWalletCmd)
 	Command.AddCommand(createNewAccountCmd)
 	Command.AddCommand(getbalanceCmd)
@@ -297,7 +307,7 @@ func init()  {
 	Command.AddCommand(importPriKeyCmd)
 	Command.AddCommand(getAddressesByAccountCmd)
 	Command.AddCommand(listAccountsBalanceCmd)
-	Command.AddCommand(interactiveCmd)
+	Command.AddCommand(consoleCmd)
 	Command.AddCommand(webCmd)
-
+	Command.AddCommand(QxCmd)
 }
