@@ -6,17 +6,17 @@ import (
 	"path/filepath"
 	"time"
 
-	log "github.com/sirupsen/logrus"
 
-	"github.com/Qitmeer/qitmeer-lib/crypto/bip32"
-	"github.com/Qitmeer/qitmeer-lib/crypto/bip39"
-	"github.com/Qitmeer/qitmeer-lib/crypto/ecc/secp256k1"
-	"github.com/Qitmeer/qitmeer-lib/crypto/seed"
+	"github.com/Qitmeer/qitmeer/crypto/bip32"
+	"github.com/Qitmeer/qitmeer/crypto/bip39"
+	"github.com/Qitmeer/qitmeer/crypto/ecc/secp256k1"
+	"github.com/Qitmeer/qitmeer/crypto/seed"
 
 	"github.com/Qitmeer/qitmeer-wallet/config"
 	"github.com/Qitmeer/qitmeer-wallet/utils"
 	waddrmgr "github.com/Qitmeer/qitmeer-wallet/waddrmgs"
 	"github.com/Qitmeer/qitmeer-wallet/wallet"
+	"github.com/Qitmeer/qitmeer/log"
 )
 
 // API wallet
@@ -39,7 +39,7 @@ func (api *API) Status() (status *ResStatus, err error) {
 
 	wtExist, err := api.wSvr.WtLoader.WalletExists()
 	if err != nil {
-		log.Warnf("api Status WalletExists err: %s", err)
+		log.Error("api Status WalletExists ","err", err)
 		return nil, fmt.Errorf("check wallet exist err: %s", err)
 	}
 
@@ -58,7 +58,7 @@ func (api *API) Status() (status *ResStatus, err error) {
 	// } else {
 	status.Stats = "unlock"
 	// }
-	log.Debug("wallet api: status", status)
+	log.Debug("wallet api","status", status)
 	return
 }
 
@@ -74,10 +74,8 @@ func (api *API) Create(seed string, walletPass string) error {
 
 //Recove wallet by mnemonic
 func (api *API) Recove(mnemonic string, walletPass string) error {
-	fmt.Println("mnemonic string:", mnemonic)
 	seedBuf, err := bip39.NewSeedWithErrorChecking(mnemonic, "")
 	if err != nil {
-		fmt.Println("errr:", err.Error())
 		return &crateError{Code: -1, Msg: fmt.Sprintf("seed hex err: %s ", err)}
 	}
 	return api.createWallet(seedBuf, walletPass)
@@ -93,7 +91,6 @@ func (api *API) Open(walletPubPass string) error {
 	walletPubPassBuf := []byte(wallet.InsecurePubPassphrase)
 	wt, err := api.wSvr.WtLoader.OpenExistingWallet(walletPubPassBuf, false)
 	if err != nil {
-		log.Warnf("api OpenExistingWallet err: %s", err)
 		return fmt.Errorf("open wallet err: %s", err)
 	}
 	log.Trace("api open ok")
@@ -111,8 +108,7 @@ func (api *API) Open(walletPubPass string) error {
 		}()
 		err := w.Unlock([]byte("123456"), lockChan)
 		if err != nil {
-			fmt.Printf("ERR: Failed to unlock new wallet "+
-				"during old wallet key import: %v", err)
+			log.Error("Failed to unlock new wallet during old wallet key import","err", err)
 			return
 		}
 		log.Trace("api open RunAfterLoad end")
@@ -125,18 +121,18 @@ func (api *API) Open(walletPubPass string) error {
 
 // createWallet by seed and walletPass
 func (api *API) createWallet(seed []byte, walletPass string) error {
-	log.Trace("createWallet", api.cfg.Network)
-	fmt.Printf("seed:%x\n", seed)
+	log.Trace("createWallet","network", api.cfg.Network)
+	log.Trace("createWallet","seed", seed)
 
 	activeNetParams := utils.GetNetParams(api.cfg.Network)
-	log.Trace("createWallet", activeNetParams.Name)
+	log.Trace("createWallet","activeNetParams.Name", activeNetParams.Name)
 
 	dbDir := filepath.Join(api.cfg.AppDataDir, activeNetParams.Name)
 	loader := wallet.NewLoader(activeNetParams, dbDir, 250, api.cfg)
 
 	walletExist, err := loader.WalletExists()
 	if err != nil {
-		log.Errorf("createWallet load wallet err: %s", err)
+		log.Error("createWallet load wallet"," err", err)
 		return &crateError{Code: -1, Msg: fmt.Sprintf("load Wallet err: %s ", err)}
 	}
 	if walletExist {
@@ -145,33 +141,33 @@ func (api *API) createWallet(seed []byte, walletPass string) error {
 
 	wt, err := loader.CreateNewWallet([]byte(wallet.InsecurePubPassphrase), []byte(walletPass), seed, time.Now())
 	if err != nil {
-		log.Errorf("createWallet loader CreateNewWallet err: %s", err)
+		log.Error("createWallet loader CreateNewWallet ","err", err)
 		return &crateError{Code: -1, Msg: fmt.Sprintf("createWallet loader CreateNewWallet err: %s ", err)}
 	}
 
 	//import master key addr
 	seedKey, err := bip32.NewMasterKey(seed)
 	if err != nil {
-		log.Errorf("createWallet NewMasterKey err: %s", err)
+		log.Error("createWallet NewMasterKey ","err", err)
 		return &crateError{Code: -1, Msg: fmt.Sprintf("createWallet NewMasterKey err: %err", err)}
 	}
-	log.Tracef("createWallet import master key: %x\n", seedKey.Key)
+	log.Trace("createWallet import master key","seedKey.Key", seedKey.Key)
 
 	pri, _ := secp256k1.PrivKeyFromBytes(seedKey.Key)
 	wif, err := utils.NewWIF(pri, activeNetParams, true)
 	if err != nil {
-		log.Errorf("createWallet private key decode failed: %s", err)
+		log.Error("createWallet private key decode failed","err", err)
 		return &crateError{Code: -1, Msg: fmt.Sprintf("createWallet private key decode failed: %s", err)}
 	}
 	if !wif.IsForNet(activeNetParams) {
-		log.Errorf("createWallet Key is not intended for: %s %s", activeNetParams.Name, err)
+		log.Error("createWallet Key is not intended for", "err", err)
 		return &crateError{Code: -1, Msg: fmt.Sprintf("createWallet Key is not intended for: %s", err)}
 	}
 	wt.UnLockManager([]byte(walletPass))
 
 	_, err = wt.ImportPrivateKey(waddrmgr.KeyScopeBIP0044, wif, nil, false)
 	if err != nil {
-		log.Errorf("createWallet ImportPrivateKey err: %s", err)
+		log.Error("createWallet ImportPrivateKey"," err", err)
 		return &crateError{Code: -1, Msg: fmt.Sprintf("createWallet ImportPrivateKey err: %s", err)}
 	}
 

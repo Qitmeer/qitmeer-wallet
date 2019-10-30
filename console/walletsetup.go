@@ -11,16 +11,16 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/Qitmeer/qitmeer-lib/crypto/bip32"
-	btcec "github.com/Qitmeer/qitmeer-lib/crypto/ecc/secp256k1"
+	"github.com/Qitmeer/qitmeer/crypto/bip32"
+	btcec "github.com/Qitmeer/qitmeer/crypto/ecc/secp256k1"
 	"github.com/Qitmeer/qitmeer-wallet/config"
 	"github.com/Qitmeer/qitmeer-wallet/internal/legacy/keystore"
 	"github.com/Qitmeer/qitmeer-wallet/internal/prompt"
 	"github.com/Qitmeer/qitmeer-wallet/utils"
 	waddrmgr "github.com/Qitmeer/qitmeer-wallet/waddrmgs"
 
-	"github.com/Qitmeer/qitmeer-lib/crypto/ecc/secp256k1"
-	chaincfg "github.com/Qitmeer/qitmeer-lib/params"
+	"github.com/Qitmeer/qitmeer/crypto/ecc/secp256k1"
+	chaincfg "github.com/Qitmeer/qitmeer/params"
 	"github.com/Qitmeer/qitmeer-wallet/wallet"
 	"github.com/Qitmeer/qitmeer-wallet/walletdb"
 )

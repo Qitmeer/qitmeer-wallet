@@ -2,13 +2,14 @@ package wtxmgr
 
 import (
 	"bytes"
-	"github.com/Qitmeer/qitmeer-lib/common/math"
+	"fmt"
+	"github.com/Qitmeer/qitmeer/common/math"
 	"time"
 
-	chainhash "github.com/Qitmeer/qitmeer-lib/common/hash"
-	"github.com/Qitmeer/qitmeer-lib/core/types"
-	"github.com/Qitmeer/qitmeer-lib/log"
-	chaincfg "github.com/Qitmeer/qitmeer-lib/params"
+	chainhash "github.com/Qitmeer/qitmeer/common/hash"
+	"github.com/Qitmeer/qitmeer/core/types"
+	"github.com/Qitmeer/qitmeer/log"
+	chaincfg "github.com/Qitmeer/qitmeer/params"
 	"github.com/Qitmeer/qitmeer-wallet/walletdb"
 )
 // Block contains the minimum amount of data to uniquely identify any block on
@@ -407,8 +408,8 @@ func (s *Store) insertMinedTx(ns walletdb.ReadWriteBucket, rec *TxRecord,
 	// If this transaction previously existed within the store as unmined,
 	// we'll need to remove it from the unmined bucket.
 	if v := existsRawUnmined(ns, rec.Hash[:]); v != nil {
-		log.Info("Marking unconfirmed transaction %v mined in block %d",
-			&rec.Hash, block.Height)
+		log.Info(fmt.Sprintf("Marking unconfirmed transaction %v mined in block %d",
+			&rec.Hash, block.Height))
 
 		if err := s.deleteUnminedTx(ns, rec); err != nil {
 			return err
@@ -549,8 +550,7 @@ func (s *Store) rollback(ns walletdb.ReadWriteBucket, height int32) error {
 
 		heightsToRemove = append(heightsToRemove, it.elem.Height)
 
-		log.Info("Rolling back %d transactions from block %v height %d",
-			len(b.transactions), b.Hash, b.Height)
+		log.Info("Rolling back transactions","transactions" ,len(b.transactions),"block",b.Hash,"height",b.Height)
 
 		for i := range b.transactions {
 			txHash := &b.transactions[i]

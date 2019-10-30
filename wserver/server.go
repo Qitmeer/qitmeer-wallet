@@ -8,13 +8,13 @@ import (
 	"strings"
 
 	"github.com/julienschmidt/httprouter"
-	log "github.com/sirupsen/logrus"
 
 	"github.com/Qitmeer/qitmeer-wallet/assets"
 	"github.com/Qitmeer/qitmeer-wallet/config"
 	"github.com/Qitmeer/qitmeer-wallet/rpc/server"
 	"github.com/Qitmeer/qitmeer-wallet/utils"
 	"github.com/Qitmeer/qitmeer-wallet/wallet"
+	"github.com/Qitmeer/qitmeer/log"
 )
 
 //WalletServer wallet api server
@@ -88,7 +88,7 @@ func NewWalletServer(cfg *config.Config) (wSvr *WalletServer, err error) {
 func (wsvr *WalletServer) run() {
 	defer func() {
 		if rev := recover(); rev != nil {
-			log.Println("WalletServer run recover: ", rev)
+			log.Trace("WalletServer.run","WalletServer run recover ", rev)
 			go wsvr.run()
 		}
 	}()
@@ -107,7 +107,7 @@ func (wsvr *WalletServer) run() {
 	if wsvr.cfg.UI {
 		staticF, err := assets.GetStatic()
 		if err != nil {
-			log.Println("server run err: ", err)
+			log.Error("server run ","err ", err)
 			return
 		}
 		myStaticF := assets.NewMyStatic(staticF)
@@ -151,10 +151,10 @@ func (wsvr *WalletServer) run() {
 
 	for _, addr := range wsvr.cfg.Listeners {
 		go func() {
-			log.Infof("WalletServer listening on %s", addr)
+			log.Trace("WalletServer listening on","addr", addr)
 			err := http.ListenAndServe(addr, router)
 			if err != nil {
-				log.Errorf("server listen err: %v", err)
+				log.Error("server listen"," err", err)
 				wsvr.exitCh <- true
 				return
 			}
@@ -191,7 +191,7 @@ func (wsvr *WalletServer) Start() error {
 
 // StartAPI if wallet open ok start api
 func (wsvr *WalletServer) StartAPI() {
-	log.Trace("StartAPI", wsvr.cfg.APIs)
+	log.Trace("StartAPI","api", wsvr.cfg.APIs)
 	for _, api := range wsvr.cfg.APIs {
 		switch api {
 		case "account":

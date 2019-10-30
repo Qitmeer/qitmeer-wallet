@@ -7,8 +7,11 @@ import (
 	"github.com/Qitmeer/qitmeer-wallet/utils"
 	"github.com/Qitmeer/qitmeer-wallet/wserver"
 	"github.com/spf13/cobra"
-	log "github.com/sirupsen/logrus"
+	"github.com/Qitmeer/qitmeer/log"
+	"os"
+	"path/filepath"
 	"strconv"
+	"strings"
 )
 
 var Command = &cobra.Command{
@@ -22,7 +25,7 @@ var fileCfg =config.Cfg
 func BindFlags(){
 	preCfg=&config.Config{}
 	Command.PersistentFlags().StringVarP(&preCfg.ConfigFile, "configfile", "c", "config.toml", "config file")
-	Command.PersistentFlags().StringVarP(&preCfg.DebugLevel, "debuglevel", "d", "error", "log level")
+	Command.PersistentFlags().StringVarP(&preCfg.DebugLevel, "debuglevel", "d", "error", "Logging level {trace, debug, info, warn, error, critical}")
 	Command.PersistentFlags().StringVarP(&preCfg.AppDataDir, "appdatadir", "a", "", "wallet db path")
 	Command.PersistentFlags().StringVarP(&preCfg.LogDir, "logdir", "l", "", "log data path")
 	Command.PersistentFlags().StringVarP(&preCfg.Network, "network", "n", "testnet", "network")
@@ -48,13 +51,13 @@ func LoadConfig(cmd *cobra.Command, args []string)  {
 		if !cmd.Flag("configfile").Changed {
 
 			if fExit, _ := utils.FileExists(preCfg.ConfigFile); fExit {
-				log.Fatalln("config file err: %s", err)
+				log.Error(fmt.Sprintf("config file err: %s", err))
 				return
 			}
 
 			return
 		}
-		log.Fatalln("config file err: %s", err)
+		log.Error(fmt.Sprintf("config file err: %s", err))
 		return
 	}
 
@@ -99,13 +102,39 @@ func LoadConfig(cmd *cobra.Command, args []string)  {
 	if cmd.Flag("pubwalletpass").Changed {
 		fileCfg.WalletPass = preCfg.WalletPass
 	}
-	//log.SetLevel(log.TraceLevel)
-
 	config.ActiveNet = utils.GetNetParams(fileCfg.Network)
 
+	funcName := "LoadConfig"
+	// Parse, validate, and set debug log level(s).
+	if err := parseAndSetDebugLevels(fileCfg.DebugLevel); err != nil {
+		err := fmt.Errorf("%s: %v", funcName, err.Error())
+		fmt.Fprintln(os.Stderr, err)
+		return
+	}
+	InitLogRotator(filepath.Join(fileCfg.LogDir, "wallet.log"))
 
 	return
 
+}
+
+
+func parseAndSetDebugLevels(debugLevel string) error {
+
+	// When the specified string doesn't have any delimters, treat it as
+	// the log level for all subsystems.
+	if !strings.Contains(debugLevel, ",") && !strings.Contains(debugLevel, "=") {
+		// Validate debug log level.
+		lvl, err := log.LvlFromString(debugLevel)
+		if err != nil {
+			str := "the specified debug level [%v] is invalid"
+			return fmt.Errorf(str, debugLevel)
+		}
+		// Change the logging level for all subsystems.
+		Glogger().Verbosity(lvl)
+		return nil
+	}
+	// TODO support log for subsystem
+	return nil
 }
 
 var createWalletCmd = &cobra.Command{
@@ -123,22 +152,51 @@ var createNewAccountCmd=&cobra.Command{
 	Example:"createnewaccount test password",
 	Args: cobra.MinimumNArgs(2),
 	Run: func(cmd *cobra.Command, args []string) {
-		OpenWallet()
-		UnLock(args[1])
+		err:=OpenWallet()
+		if err!=nil{
+			fmt.Println(err.Error())
+			return
+		}
+		err=UnLock(args[1])
+		if err!=nil{
+			fmt.Println(err.Error())
+			return
+		}
 		createNewAccount(args[0])
 	},
 }
 
 var getbalanceCmd=&cobra.Command{
-	Use:"getbalance {address}",
+	Use:"getbalance {address} {string ,company : i(int64),f(float),default i }",
 	Short:"getbalance",
 	Example:`
-		getbalance TmWMuY9q5dUutUTGikhqTVKrnDMG34dEgb5
+		getbalance TmWMuY9q5dUutUTGikhqTVKrnDMG34dEgb5	i
+		getbalance TmWMuY9q5dUutUTGikhqTVKrnDMG34dEgb5	f
 		`,
 	Args: cobra.MinimumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		OpenWallet()
-		getbalance(Default_minconf,args[0])
+		err:=OpenWallet()
+		if err!=nil{
+			fmt.Println(err.Error())
+			return
+		}
+		company:="i"
+		b,err:=getbalance(Default_minconf,args[0])
+		if err!=nil{
+			fmt.Println(err.Error())
+			return
+		}
+		if len(args)>1 {
+			if args[1]!="i"{
+				company="f"
+			}
+		}
+		if company == "i"{
+			fmt.Printf("%s\n",b.UnspendAmount.String())
+		}else{
+			fmt.Printf("%f\n",b.UnspendAmount.ToCoin())
+		}
+
 	},
 }
 var sendToAddressCmd=&cobra.Command{
@@ -149,23 +207,31 @@ var sendToAddressCmd=&cobra.Command{
 		`,
 	Args: cobra.MinimumNArgs(2),
 	Run: func(cmd *cobra.Command, args []string) {
-		OpenWallet()
+		err:=OpenWallet()
+		if err!=nil{
+			fmt.Println(err.Error())
+			return
+		}
 		f32,err := strconv.ParseFloat(args[1],32)
 		if(err!=nil){
-			log.Fatal("getAccountAndAddress err :",err.Error())
+			log.Error("sendtoaddress ","error",err.Error())
 			return
 		}
 		sendToAddress(args[0],float64(f32))
 	},
 }
 var getAddressesByAccountCmd=&cobra.Command{
-	Use:"getAddressesByAccount {string ,account,defalut imported} ",
+	Use:"getaddressesbyaccount {string ,account,defalut imported} ",
 	Short:"get addresses by account ",
 	Example:`
-		getAddressesByAccount imported
+		getaddressesbyaccount imported
 		`,
 	Run: func(cmd *cobra.Command, args []string) {
-		OpenWallet()
+		err:=OpenWallet()
+		if err!=nil{
+			fmt.Println(err.Error())
+			return
+		}
 		account :="imported"
 		if len(args)>0{
 			account=args[0]
@@ -181,8 +247,16 @@ var importPriKeyCmd=&cobra.Command{
 		`,
 	Args: cobra.MinimumNArgs(2),
 	Run: func(cmd *cobra.Command, args []string) {
-		OpenWallet()
-		UnLock(args[1])
+		err:=OpenWallet()
+		if err!=nil{
+			fmt.Println(err.Error())
+			return
+		}
+		err=UnLock(args[1])
+		if err!=nil{
+			fmt.Println(err.Error())
+			return
+		}
 		importPrivKey(args[0])
 	},
 }
@@ -194,7 +268,11 @@ var listAccountsBalanceCmd=&cobra.Command{
 		`,
 	Args: cobra.NoArgs,
 	Run: func(cmd *cobra.Command, args []string) {
-		OpenWallet()
+		err:=OpenWallet()
+		if err!=nil{
+			fmt.Println(err.Error())
+			return
+		}
 		listAccountsBalance(Default_minconf)
 	},
 }
@@ -206,7 +284,11 @@ var getlisttxbyaddrCmd=&cobra.Command{
 		`,
 	Args: cobra.MinimumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		OpenWallet()
+		err:=OpenWallet()
+		if err!=nil{
+			fmt.Println(err.Error())
+			return
+		}
 		getlisttxbyaddr(args[0])
 	},
 }
@@ -218,13 +300,17 @@ var updateblockCmd=&cobra.Command{
 		updateblock 12
 		`,
 	Run: func(cmd *cobra.Command, args []string) {
-		OpenWallet()
+		err:=OpenWallet()
+		if err!=nil{
+			fmt.Println(err.Error())
+			return
+		}
 		var height = int64(0)
 		if(len(args)>0){
 			var err error
 			height, err = strconv.ParseInt(args[0], 10, 64)
 			if err != nil {
-				fmt.Println("Argument is not of type int")
+				log.Info("Argument is not of type int")
 				return
 			}
 		}
@@ -239,7 +325,11 @@ var syncheightCmd=&cobra.Command{
 		`,
 	Args: cobra.NoArgs,
 	Run: func(cmd *cobra.Command, args []string) {
-		OpenWallet()
+		err:=OpenWallet()
+		if err!=nil{
+			fmt.Println(err.Error())
+			return
+		}
 		syncheight()
 	},
 }
@@ -276,7 +366,7 @@ func qitmeerMain(cfg *config.Config) {
 	log.Trace("Qitmeer Main")
 	wsvr, err := wserver.NewWalletServer(cfg)
 	if err != nil {
-		log.Errorf("NewWalletServer err: %s", err)
+		log.Error(fmt.Sprintf("NewWalletServer err: %s", err))
 		return
 	}
 	wsvr.Start()

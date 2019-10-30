@@ -1,8 +1,8 @@
 package console
 
 import (
-	"fmt"
-	"github.com/Qitmeer/qitmeer-lib/qx"
+	"github.com/Qitmeer/qitmeer/log"
+	"github.com/Qitmeer/qitmeer/qx"
 	"github.com/spf13/cobra"
 )
 
@@ -21,12 +21,13 @@ var generatemnemonicCmd=&cobra.Command{
 		`,
 	Args: cobra.NoArgs,
 	Run: func(cmd *cobra.Command, args []string) {
-		msg,err:=generateMnemonic()
+
+		msg,err:=qx.NewEntropy(32)
 		if err!=nil{
-			fmt.Println(err.Error())
+			log.Info(err.Error())
 			return
 		}
-		fmt.Print(msg)
+		qx.MnemonicNew(msg)
 	},
 }
 var mnemonictoseedCmd=&cobra.Command{
@@ -37,12 +38,7 @@ var mnemonictoseedCmd=&cobra.Command{
 		`,
 	Args: cobra.MinimumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		msg,err:=mnemonicToSeed(args[0])
-		if err!=nil{
-			fmt.Println(err.Error())
-			return
-		}
-		fmt.Print(msg)
+		qx.MnemonicToSeed("",args[0])
 	},
 }
 var seedtopriCmd=&cobra.Command{
@@ -55,10 +51,10 @@ var seedtopriCmd=&cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		msg,err:=qx.EcNew("secp256k1",args[0])
 		if err!=nil{
-			fmt.Println(err.Error())
+			log.Info(err.Error())
 			return
 		}
-		fmt.Print(msg)
+		log.Info(msg)
 	},
 }
 var pritopubCmd=&cobra.Command{
@@ -79,10 +75,10 @@ var pritopubCmd=&cobra.Command{
 		}
 		msg,err:=priToPub(args[0],b)
 		if err!=nil{
-			fmt.Println(err.Error())
+			log.Info(err.Error())
 			return
 		}
-		fmt.Print(msg)
+		log.Info(msg)
 	},
 }
 var pubtoaddrCmd=&cobra.Command{
@@ -94,15 +90,15 @@ var pubtoaddrCmd=&cobra.Command{
 	Args: cobra.MinimumNArgs(2),
 	Run: func(cmd *cobra.Command, args []string) {
 		if args[1]!="mainnet" && args[1]!="privnet"&&args[1]!="testnet"{
-			fmt.Print("Wrong network type")
+			log.Info("Wrong network type")
 			return
 		}
 		msg,err:=pubToAddr(args[0],args[1])
 		if err!=nil{
-			fmt.Println(err.Error())
+			log.Info(err.Error())
 			return
 		}
-		fmt.Print(msg)
+		log.Info(msg)
 	},
 }
 
@@ -116,15 +112,15 @@ var mnemonictoaddrCmd=&cobra.Command{
 	Args: cobra.MinimumNArgs(2),
 	Run: func(cmd *cobra.Command, args []string) {
 		if args[1]!="mainnet" && args[1]!="privnet"&&args[1]!="testnet"{
-			fmt.Print("Wrong network type")
+			log.Info("Wrong network type")
 			return
 		}
 		msg,err:=mnemonicToAddr(args[0],args[1])
 		if err!=nil{
-			fmt.Println(err.Error())
+			log.Info(err.Error())
 			return
 		}
-		fmt.Print(msg)
+		log.Info(msg)
 	},
 }
 var seedtoaddrCmd=&cobra.Command{
@@ -136,15 +132,15 @@ var seedtoaddrCmd=&cobra.Command{
 	Args: cobra.MinimumNArgs(2),
 	Run: func(cmd *cobra.Command, args []string) {
 		if args[1]!="mainnet" && args[1]!="privnet"&&args[1]!="testnet"{
-			fmt.Print("Wrong network type")
+			log.Info("Wrong network type")
 			return
 		}
 		msg,err:=seedToAddr(args[0],args[1])
 		if err!=nil{
-			fmt.Println(err.Error())
+			log.Info(err.Error())
 			return
 		}
-		fmt.Print(msg)
+		log.Info(msg)
 	},
 }
 
@@ -157,14 +153,14 @@ var pritoaddrCmd=&cobra.Command{
 	Args: cobra.MinimumNArgs(2),
 	Run: func(cmd *cobra.Command, args []string) {
 		if args[1]!="mainnet" && args[1]!="privnet"&&args[1]!="testnet"{
-			fmt.Print("Wrong network type")
+			log.Info("Wrong network type")
 			return
 		}
 		msg,err:=priToAddr(args[0],args[1])
 		if err!=nil{
-			fmt.Println(err.Error())
+			log.Info(err.Error())
 			return
 		}
-		fmt.Print(msg)
+		log.Info(msg)
 	},
 }

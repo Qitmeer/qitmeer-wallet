@@ -1,7 +1,7 @@
 package json
 
 import (
-	"github.com/Qitmeer/qitmeer-lib/core/json"
+	"github.com/Qitmeer/qitmeer/core/json"
 	"time"
 )
 

@@ -21,3 +21,4 @@ front/package-lock.json
 *.sln
 *.sw?
 *.exe
+*.*.bak

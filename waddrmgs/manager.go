@@ -8,15 +8,15 @@ import (
 	"crypto/rand"
 	"crypto/sha512"
 	"fmt"
-	"github.com/Qitmeer/qitmeer-lib/core/types"
-	chaincfg "github.com/Qitmeer/qitmeer-lib/params"
+	"github.com/Qitmeer/qitmeer/core/types"
+	chaincfg "github.com/Qitmeer/qitmeer/params"
 	"github.com/Qitmeer/qitmeer-wallet/internal/zero"
 	"github.com/Qitmeer/qitmeer-wallet/walletdb"
 	"sync"
 	"time"
 	"github.com/Qitmeer/qitmeer-wallet/snacl"
-	"github.com/Qitmeer/qitmeer-lib/crypto/bip32"
-	ecc "github.com/Qitmeer/qitmeer-lib/crypto/ecc/secp256k1"
+	"github.com/Qitmeer/qitmeer/crypto/bip32"
+	ecc "github.com/Qitmeer/qitmeer/crypto/ecc/secp256k1"
 )
 
 const (
@@ -531,7 +531,7 @@ func Create(ns walletdb.ReadWriteBucket, seed, pubPassphrase, privPassphrase []b
 
 
 	// Save the initial synced to state.
-	//fmt.Println("&syncInfo.syncedTo ：",&syncInfo.syncedTo)
+	//log.Info("&syncInfo.syncedTo ：",&syncInfo.syncedTo)
 	err = PutSyncedTo(ns, &syncInfo.syncedTo)
 	if err != nil {
 		return maybeConvertDbError(err)
