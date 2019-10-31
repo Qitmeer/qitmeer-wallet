@@ -24,7 +24,7 @@ import (
 const (
 	defaultCAFilename       = "qit.cert"
 	defaultConfigFilename   = "config.toml"
-	defaultLogLevel         = "debug"
+	defaultLogLevel         = "info"
 	defaultLogDirname       = "logs"
 	defaultLogFilename      = "wallet.log"
 	defaultRPCMaxClients    = 10

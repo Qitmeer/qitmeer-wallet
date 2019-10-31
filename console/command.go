@@ -25,7 +25,7 @@ var fileCfg =config.Cfg
 func BindFlags(){
 	preCfg=&config.Config{}
 	Command.PersistentFlags().StringVarP(&preCfg.ConfigFile, "configfile", "c", "config.toml", "config file")
-	Command.PersistentFlags().StringVarP(&preCfg.DebugLevel, "debuglevel", "d", "error", "Logging level {trace, debug, info, warn, error, critical}")
+	Command.PersistentFlags().StringVarP(&preCfg.DebugLevel, "debuglevel", "d", "info", "Logging level {trace, debug, info, warn, error, critical}")
 	Command.PersistentFlags().StringVarP(&preCfg.AppDataDir, "appdatadir", "a", "", "wallet db path")
 	Command.PersistentFlags().StringVarP(&preCfg.LogDir, "logdir", "l", "", "log data path")
 	Command.PersistentFlags().StringVarP(&preCfg.Network, "network", "n", "testnet", "network")
@@ -344,6 +344,11 @@ var consoleCmd=&cobra.Command{
 		`,
 	Args: cobra.NoArgs,
 	Run: func(cmd *cobra.Command, args []string) {
+		b:=checkWalletIeExist(config.Cfg)
+		if b ==false{
+			fmt.Println("Please create a wallet first,[qitmeer-wallet create ]")
+			return
+		}
 		startConsole()
 	},
 }
@@ -358,6 +363,11 @@ var webCmd=&cobra.Command{
 		`,
 	Args: cobra.NoArgs,
 	Run: func(cmd *cobra.Command, args []string) {
+		b:=checkWalletIeExist(config.Cfg)
+		if b ==false{
+			fmt.Println("Please create a wallet first,[qitmeer-wallet create ]")
+			return
+		}
 		qitmeerMain(fileCfg)
 	},
 }

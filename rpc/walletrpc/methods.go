@@ -309,7 +309,7 @@ func SendToAddress(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
 
 func Updateblock(icmd interface{},w *wallet.Wallet) error {
 	cmd := icmd.(*qitmeerjson.UpdateBlockToCmd)
-	err:=w.Updateblock(cmd.Toheight,false)
+	err:=w.Updateblock(cmd.Toheight)
 	if(err!=nil){
 		return err
 	}
