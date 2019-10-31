@@ -100,7 +100,7 @@ func (wt *Wallet) Start() {
 
 	go func() {
 
-		updateBlockTicker := time.NewTicker(60 * time.Second)
+		updateBlockTicker := time.NewTicker(30 * time.Second)
 		for {
 			select {
 			case <-updateBlockTicker.C:
