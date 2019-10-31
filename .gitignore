@@ -20,5 +20,5 @@ front/package-lock.json
 *.njsproj
 *.sln
 *.sw?
-*.exe
+*.exe*
 *.*.bak
