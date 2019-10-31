@@ -247,8 +247,8 @@ func printPrompt() (cmd string, arg1 string, arg2 string) {
 	if isWin {
 		fmt.Printf("[%s]:", Name)
 	} else {
-		fmt.Printf("[%s]:", Name)
-		//fmt.Printf("%c[4;%d;%dm[%s]: %c[0m", 0x1B, 0, 30, Name, 0x1B)
+		//fmt.Printf("[%s]:", Name)
+		fmt.Printf("%c[4;%d;%dm[%s]: %c[0m", 0x1B, 0, 30, Name, 0x1B)
 	}
 
 	var c, a1, a2 string
