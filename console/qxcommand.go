@@ -12,7 +12,6 @@ var QxCmd=&cobra.Command{
 	Long:              `qitmeer wallet qx util`,
 }
 
-
 var generatemnemonicCmd=&cobra.Command{
 	Use:"generatemnemonic",
 	Short:"generate mnemonic",
