@@ -127,7 +127,20 @@ func startConsole()  {
 				fmt.Println("getbalance err ","err",err.Error())
 				break
 			}
-			getbalance(Default_minconf,arg1)
+			company:="i"
+			b,err:=getbalance(Default_minconf,arg1)
+			if err!=nil{
+				fmt.Println(err.Error())
+				return
+			}
+			if arg2!="" &&  arg2 !="i"{
+				company="f"
+			}
+			if company == "i"{
+				fmt.Printf("%s\n",b.UnspendAmount.String())
+			}else{
+				fmt.Printf("%f\n",b.UnspendAmount.ToCoin())
+			}
 			break
 		//case "listAccountsBalance":
 		//	listAccountsBalance(Default_minconf)
