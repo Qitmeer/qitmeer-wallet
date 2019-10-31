@@ -50,6 +50,8 @@ const (
 	recoveryBatchSize = 2000
 )
 
+var UploadRun = false
+
 // Wallet qitmeer-wallet
 type Wallet struct {
 	cfg *config.Config
@@ -98,14 +100,21 @@ func (wt *Wallet) Start() {
 
 	go func() {
 
-		//updateBlockTicker := time.NewTicker(60 * time.Second)
-		//for {
-		//	select {
-		//	case <-updateBlockTicker.C:
-		//		log.Trace("Updateblock start")
-		wt.Updateblock(0,true)
-		//	}
-		//}
+		updateBlockTicker := time.NewTicker(60 * time.Second)
+		for {
+			select {
+			case <-updateBlockTicker.C:
+				if UploadRun ==false{
+					log.Trace("Updateblock start")
+					UploadRun = true
+					err :=wt.Updateblock(0)
+					if err!=nil{
+						log.Error("Start.Updateblock err","err",err.Error())
+					}
+					UploadRun = false
+				}
+			}
+		}
 
 	}()
 }
@@ -817,7 +826,7 @@ func (w *Wallet) handleBlockSynced(order int64) error {
 	return nil
 }
 
-func (w *Wallet) Updateblock(toHeight int64,newest bool) error {
+func (w *Wallet) Updateblock(toHeight int64) error {
 	var blockcount string
 	var err error
 	if toHeight == 0 {
@@ -843,29 +852,29 @@ func (w *Wallet) Updateblock(toHeight int64,newest bool) error {
 	//}()
 	localheight :=int64((w.Manager.SyncedTo().Height + 1))
 
-	if newest{
-		s:=spinn()
-		log.Trace("newest ","newest",newest)
-		s.Start()
-		for  {
-			err:=w.handleBlockSynced(localheight)
-			if err==nil{
-				localheight++
-				msg:=fmt.Sprintf("%s/%s",strconv.FormatInt(localheight,10),strconv.FormatInt(blockheight,10))
-				s.Suffix= msg
-			}else{
-				msg:=fmt.Sprintf("%s/%s",strconv.FormatInt(localheight-1,10),strconv.FormatInt(localheight,10))
-				s.Suffix= msg
-				time.Sleep(30 * time.Second)
-			}
-		}
-	}else{
+	//if newest{
+	//	s:=spinn()
+	//	log.Trace("newest ","newest",newest)
+	//	s.Start()
+	//	for  {
+	//		err:=w.handleBlockSynced(localheight)
+	//		if err==nil{
+	//			localheight++
+	//			msg:=fmt.Sprintf("%s/%s",strconv.FormatInt(localheight,10),strconv.FormatInt(blockheight,10))
+	//			s.Suffix= msg
+	//		}else{
+	//			msg:=fmt.Sprintf("%s/%s",strconv.FormatInt(localheight-1,10),strconv.FormatInt(localheight,10))
+	//			s.Suffix= msg
+	//			time.Sleep(30 * time.Second)
+	//		}
+	//	}
+	//}else{
 		h := localheight;
-		var s *spinner.Spinner
+		//var s *spinner.Spinner
 		if h <blockheight{
-			s=spinn()
-			s.Start()
 			log.Trace(fmt.Sprintf("localheight:%d,blockheight:%d",localheight,blockheight))
+			//s=spinn()
+			//s.Start()
 			for h <blockheight {
 				//orderchan <- h
 				err :=w.handleBlockSynced(h)
@@ -874,15 +883,17 @@ func (w *Wallet) Updateblock(toHeight int64,newest bool) error {
 				}else{
 					h++
 				}
-				msg:=fmt.Sprintf("%s/%s",strconv.FormatInt(h,10),strconv.FormatInt(blockheight,10))
-				s.Suffix= msg
+				fmt.Fprintf(os.Stdout, "update blcok:%s/%s\r",strconv.FormatInt(h,10),strconv.FormatInt(blockheight,10))
+				//msg:=fmt.Sprintf("update blcok:%s/%s",strconv.FormatInt(h,10),strconv.FormatInt(blockheight,10))
+				//s.Suffix= msg
 				//log.Info("synced to height:%v\n", h)
 			}
-			s.Stop()
+			fmt.Print("\nsucc\n")
+			//s.Stop()
 		}else{
-			fmt.Printf("Block data is up to date\n")
+			fmt.Println("Block data is up to date")
 		}
-	}
+	//}
 
 	//for {
 	//	if len(orderchan)==0 {
