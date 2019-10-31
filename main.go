@@ -5,7 +5,7 @@ import (
 	"github.com/Qitmeer/qitmeer/log"
 	"os"
 )
-var rootCmd =console.Command
+var rootCmd =console.RootCmd
 
 
 func init()  {

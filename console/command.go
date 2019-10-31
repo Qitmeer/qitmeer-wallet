@@ -14,9 +14,14 @@ import (
 	"strings"
 )
 
+var RootCmd =&cobra.Command{
+		Use:              "qitmeer-wallet",
+	}
+
 var Command = &cobra.Command{
-	Use:               "qitmeer-wallet",
-	Long:              `qitmeer wallet util`,
+	Use:               "qc",
+	Short:				"qitmeer wallet command",
+	Long:              `qitmeer wallet command`,
 	PersistentPreRun:LoadConfig,
 }
 
@@ -387,7 +392,8 @@ func qitmeerMain(cfg *config.Config) {
 
 
 func init()  {
-
+	RootCmd.AddCommand(Command)
+	RootCmd.AddCommand(QxCmd)
 	QxCmd.AddCommand(generatemnemonicCmd)
 	QxCmd.AddCommand(mnemonictoseedCmd)
 	QxCmd.AddCommand(seedtopriCmd)
@@ -409,5 +415,6 @@ func init()  {
 	Command.AddCommand(listAccountsBalanceCmd)
 	Command.AddCommand(consoleCmd)
 	Command.AddCommand(webCmd)
-	Command.AddCommand(QxCmd)
+	//Command.AddCommand(QxCmd)
+
 }
