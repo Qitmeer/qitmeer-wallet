@@ -22,32 +22,68 @@ Usage:
   qitmeer-wallet [command]
 
 Available Commands:
+  help        Help about any command
+  qc          qitmeer wallet command
+  qx          qx util
+
+Flags:
+  -h, --help   help for qitmeer-wallet
+
+
+Usage:
+  qitmeer-wallet qc [command]
+
+Available Commands:
+  console               console
   create                create
   createnewaccount      create new account
-  getAddressesByAccount get addresses by account
+  getaddressesbyaccount get addresses by account
   getbalance            getbalance
   getlisttxbyaddr       get all transactions for address
-  help                  Help about any command
   importprivkey         import prikey
   listaccountsbalance   list Accounts Balance
   sendtoaddress         send transaction
   syncheight            Get the number of local synchronization blocks
   updateblock           Update local block data
+  web                   web
 
 Flags:
-  -a, --appdatadir string      wallet db path
-  -c, --configfile string      config file (default "config.toml")
-  -d, --debuglevel string      log level (default "error")
-  -h, --help                   help for qitmeer-wallet
-  -l, --logdir string          log data path
-  -n, --network string         network (default "testnet")
-  -P, --pubwalletpass string   data encryption password (default "public")
-  -p, --qpass string           qitmeer node password (default "123456")
-  -s, --qserver string         qitmeer node server (default "127.0.0.1:8030")
-  -u, --quser string           qitmeer node user (default "admin")
+  -a, --appdatadir string       wallet db path
+  -c, --configfile string       config file (default "config.toml")
+      --create                  Create a new wallet
+  -d, --debuglevel string       Logging level {trace, debug, info, warn, error, critical} (default "info")
+  -h, --help                    help for qc
+      --listeners stringArray   rpc listens (default [127.0.0.1:38130])
+  -l, --logdir string           log data path
+  -n, --network string          network (default "testnet")
+  -P, --pubwalletpass string    data encryption password (default "public")
+  -p, --qpass string            qitmeer node password (default "123456")
+  -s, --qserver string          qitmeer node server (default "127.0.0.1:8030")
+  -u, --quser string            qitmeer node user (default "admin")
+      --rpcPass string          rpc pass,default by random (default "yKR6RvDiwgSEt9he9GJUzWnk")
+      --rpcUser string          rpc user,default by random (default "l6Jm57B5")
+      --ui                      Start Wallet with RPC and webUI interface (default true)
 
-Use "qitmeer-wallet [command] --help" for more information about a command.
+Use "qitmeer-wallet qc [command] --help" for more information about a command.
 
+
+Usage:
+  qitmeer-wallet qx [command]
+
+Available Commands:
+  generatemnemonic generate mnemonic
+  mnemonictoaddr   mnemonic to address
+  mnemonictoseed   mnemonic to seed
+  pritoaddr        private key to address
+  pritopub         private key to public key
+  pubtoaddr        public key to address
+  seedtoaddr       seed to address
+  seedtopri        Seed private key
+
+Flags:
+  -h, --help   help for qx
+
+Use "qitmeer-wallet qx [command] --help" for more information about a command.
 
 ```
 
