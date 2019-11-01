@@ -127,7 +127,20 @@ func startConsole()  {
 				fmt.Println("getbalance err ","err",err.Error())
 				break
 			}
-			getbalance(Default_minconf,arg1)
+			company:="i"
+			b,err:=getbalance(Default_minconf,arg1)
+			if err!=nil{
+				fmt.Println(err.Error())
+				return
+			}
+			if arg2!="" &&  arg2 !="i"{
+				company="f"
+			}
+			if company == "i"{
+				fmt.Printf("%s\n",b.UnspendAmount.String())
+			}else{
+				fmt.Printf("%f\n",b.UnspendAmount.ToCoin())
+			}
 			break
 		//case "listAccountsBalance":
 		//	listAccountsBalance(Default_minconf)
@@ -247,8 +260,8 @@ func printPrompt() (cmd string, arg1 string, arg2 string) {
 	if isWin {
 		fmt.Printf("[%s]:", Name)
 	} else {
-		fmt.Printf("[%s]:", Name)
-		//fmt.Printf("%c[4;%d;%dm[%s]: %c[0m", 0x1B, 0, 30, Name, 0x1B)
+		//fmt.Printf("[%s]:", Name)
+		fmt.Printf("%c[4;%d;%dm[%s]: %c[0m", 0x1B, 0, 30, Name, 0x1B)
 	}
 
 	var c, a1, a2 string
@@ -464,7 +477,6 @@ func updateblock(height int64)(  error){
 		fmt.Println("updateblock:","error", err.Error())
 		return err
 	}
-	//fmt.Println("update to block :%v succ",height)
 	return nil
 }
 func syncheight()(  error){

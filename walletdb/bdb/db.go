@@ -5,8 +5,10 @@
 package bdb
 
 import (
+	"fmt"
 	"io"
 	"os"
+	"time"
 
 	//"github.com/coreos/bbolt"
 	bbolt "go.etcd.io/bbolt"
@@ -346,6 +348,9 @@ func openDB(dbPath string, create bool) (walletdb.DB, error) {
 		return nil, walletdb.ErrDbDoesNotExist
 	}
 
-	boltDB, err := bbolt.Open(dbPath, 0600, nil)
+	boltDB, err := bbolt.Open(dbPath, 0600, &bbolt.Options{Timeout:10*time.Second})
+	if err!=nil && err.Error()=="timeout"{
+		return (*db)(boltDB), fmt.Errorf("DB is already in use, please check if other modes are running.")
+	}
 	return (*db)(boltDB), convertErr(err)
 }
