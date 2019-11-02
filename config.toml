@@ -8,6 +8,8 @@ network="testnet"
 QServer="127.0.0.1:8131"
 QUser="admin"
 QPass="123456"
+QNoTLS=false
+QTLSSkipVerify=true
 #WalletPass="public" #Wallet encryption code default public
 
 #web model
