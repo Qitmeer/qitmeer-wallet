@@ -39,6 +39,9 @@ func BindFlags(){
 	Command.PersistentFlags().StringVarP(&preCfg.QUser, "quser", "u", "admin", "qitmeer node user")
 	Command.PersistentFlags().StringVarP(&preCfg.QPass, "qpass", "p", "123456", "qitmeer node password")
 	Command.PersistentFlags().StringVarP(&preCfg.WalletPass, "pubwalletpass", "P", "public", "data encryption password")
+	Command.PersistentFlags().BoolVar(&preCfg.QNoTLS, "qnotls", fileCfg.QNoTLS, "tls")
+	Command.PersistentFlags().StringVar(&preCfg.QCert, "qcert", fileCfg.QCert, "Certificate path")
+	Command.PersistentFlags().BoolVar(&preCfg.QTLSSkipVerify, "qtlsskipverify", fileCfg.QTLSSkipVerify, "tls skipverify")
 
 	Command.PersistentFlags().BoolVar(&preCfg.UI, "ui", true, "Start Wallet with RPC and webUI interface")
 	Command.PersistentFlags().StringArrayVar(&preCfg.Listeners, "listeners", fileCfg.Listeners, "rpc listens")
@@ -106,6 +109,15 @@ func LoadConfig(cmd *cobra.Command, args []string)  {
 	}
 	if cmd.Flag("pubwalletpass").Changed {
 		fileCfg.WalletPass = preCfg.WalletPass
+	}
+	if cmd.Flag("qnotls").Changed {
+		fileCfg.QNoTLS = preCfg.QNoTLS
+	}
+	if cmd.Flag("qcert").Changed {
+		fileCfg.QCert = preCfg.QCert
+	}
+	if cmd.Flag("qtlsskipverify").Changed {
+		fileCfg.QTLSSkipVerify = preCfg.QTLSSkipVerify
 	}
 	config.ActiveNet = utils.GetNetParams(fileCfg.Network)
 
