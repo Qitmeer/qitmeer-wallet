@@ -3,6 +3,7 @@ package console
 
 import (
 	"fmt"
+	"github.com/peterh/liner"
 	"io"
 	"io/ioutil"
 	"os"
@@ -148,11 +149,11 @@ func (c *Console) Interactive() {
 			line, err := c.prompter.PromptInput(<-scheduler)
 			if err != nil {
 				// In case of an error, either clear the prompt or fail
-				//if err == liner.ErrPromptAborted { // ctrl-C
-				//	prompt, indents, input = c.prompt, 0, ""
-				//	scheduler <- ""
-				//	continue
-				//}
+				if err == liner.ErrPromptAborted { // ctrl-C
+					prompt, indents, input = c.prompt, 0, ""
+					scheduler <- ""
+					continue
+				}
 				close(scheduler)
 				return
 			}
@@ -222,7 +223,6 @@ func (c *Console) Interactive() {
 				case "createNewAccount":
 					createNewAccount(arg1)
 					break
-					//Tmjc34zWMTAASHTwcNtPppPujFKVK5SeuaJ
 				case "getbalance":
 					if arg1==""{
 						fmt.Println("Please enter your address.")
