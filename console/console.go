@@ -1,18 +1,12 @@
 package console
 
 import (
-	"bufio"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"github.com/Qitmeer/qitmeer/crypto/bip39"
 	"github.com/Qitmeer/qitmeer/crypto/ecc/secp256k1"
-	"os"
-	"strings"
 
-	//"github.com/Qitmeer/qitmeer/crypto/bip39"
-	//"github.com/Qitmeer/qitmeer/crypto/ecc/secp256k1"
-	//"github.com/Qitmeer/qitmeer/crypto/seed"
 	"github.com/Qitmeer/qitmeer-wallet/config"
 	"github.com/Qitmeer/qitmeer-wallet/json/qitmeerjson"
 	"github.com/Qitmeer/qitmeer-wallet/rpc/walletrpc"
@@ -71,27 +65,10 @@ func UnLock(password string) error{
 	return nil
 }
 
-func InitWallet(){
-	//log.Println("config.Cfg.AppDataDir：",config.Cfg.AppDataDir)
-	b:=checkWalletIeExist(config.Cfg)
-	var err error
-	if b {
-		load := wallet.NewLoader(config.ActiveNet, networkDir(config.Cfg.AppDataDir, config.ActiveNet), 250,config.Cfg)
-		w, err = load.OpenExistingWallet([]byte(config.Cfg.WalletPass), false)
-		if err != nil {
-			fmt.Println("openWallet err:", err.Error())
-			return
-		}
-	}else{
-		fmt.Println("Please create a wallet first,[qitmeer-wallet create --create]")
-		return
-	}
-}
 func startConsole()  {
 	b:=checkWalletIeExist(config.Cfg)
 	var err error
 	if b {
-		//log.Println("db is exist",filepath.Join(networkDir(config.Cfg.AppDataDir, config.ActiveNet), config.WalletDbName))
 		load := wallet.NewLoader(config.ActiveNet, networkDir(config.Cfg.AppDataDir, config.ActiveNet), 250,config.Cfg)
 		w, err = load.OpenExistingWallet([]byte(config.Cfg.WalletPass), false)
 		if err != nil {
@@ -113,135 +90,6 @@ func startConsole()  {
 		return
 	}
 	con.Interactive()
-	//reader := bufio.NewReader(os.Stdin)
-	//for {
-	//	cmd, arg1, arg2 := promptt()
-	//	//cmd, arg1, arg2 := readPrompt(reader)
-	//	//cmd, arg1, arg2 := printPrompt()
-	//	//fmt.Println("arg1:",arg1,"arg2:",arg2)
-	//	if cmd == "exit" {
-	//		break
-	//	}
-	//	if cmd == "re" {
-	//		continue
-	//	}
-	//	switch cmd {
-	//	case "createNewAccount":
-	//		createNewAccount(arg1)
-	//		break
-	//		//Tmjc34zWMTAASHTwcNtPppPujFKVK5SeuaJ
-	//	case "getbalance":
-	//		if arg1==""{
-	//			fmt.Println("Please enter your address.")
-	//			break
-	//		}
-	//		if(err!=nil){
-	//			fmt.Println("getbalance err ","err",err.Error())
-	//			break
-	//		}
-	//		company:="i"
-	//		b,err:=getbalance(Default_minconf,arg1)
-	//		if err!=nil{
-	//			fmt.Println(err.Error())
-	//			return
-	//		}
-	//		if arg2!="" &&  arg2 !="i"{
-	//			company="f"
-	//		}
-	//		if company == "i"{
-	//			fmt.Printf("%s\n",b.UnspendAmount.String())
-	//		}else{
-	//			fmt.Printf("%f\n",b.UnspendAmount.ToCoin())
-	//		}
-	//		break
-	//	//case "listAccountsBalance":
-	//	//	listAccountsBalance(Default_minconf)
-	//	//	break
-	//	case "getlisttxbyaddr":
-	//		if arg1 == ""{
-	//			fmt.Println("getlisttxbyaddr err :Please enter your address.")
-	//			break
-	//		}
-	//		getlisttxbyaddr(arg1)
-	//		break
-	//	case "getNewAddress":
-	//		if arg1 == ""{
-	//			fmt.Println("getNewAddress err :Please enter your account.")
-	//			break
-	//		}
-	//		getNewAddress(arg1)
-	//		break
-	//	case "getAddressesByAccount":
-	//		if arg1 == ""{
-	//			fmt.Println("getAddressesByAccount err :Please enter your account.")
-	//			break
-	//		}
-	//		getAddressesByAccount(arg1)
-	//		break
-	//	case "getAccountByAddress":
-	//		if arg1 == ""{
-	//			fmt.Println("getAccountByAddress err :Please enter your address.")
-	//			break
-	//		}
-	//		getAccountByAddress(arg1)
-	//		break
-	//	case "importPrivKey":
-	//		if arg1 == ""{
-	//			fmt.Println("importPrivKey err :Please enter your privkey.")
-	//			break
-	//		}
-	//		importPrivKey(arg1)
-	//		break
-	//	case "importWifPrivKey":
-	//		if arg1 == ""{
-	//			fmt.Println("importWifPrivKey err :Please enter your wif privkey.")
-	//			break
-	//		}
-	//		importWifPrivKey(arg1)
-	//		break
-	//	case "dumpPrivKey":
-	//		if arg1 == ""{
-	//			fmt.Println("dumpPrivKey err :Please enter your address.")
-	//			break
-	//		}
-	//		dumpPrivKey(arg1)
-	//		break
-	//	case "getAccountAndAddress":
-	//		getAccountAndAddress(int32(Default_minconf))
-	//		break
-	//	case "sendToAddress":
-	//		if arg1 =="" {
-	//			fmt.Println("getAccountAndAddress err : Please enter the receipt address.")
-	//			break
-	//		}
-	//		if arg2 == ""{
-	//			fmt.Println("getAccountAndAddress err : Please enter the amount of transfer.")
-	//			break
-	//		}
-	//		f32,err := strconv.ParseFloat(arg2,32)
-	//		if(err!=nil){
-	//			fmt.Println("getAccountAndAddress err :",err.Error())
-	//			break
-	//		}
-	//		sendToAddress(arg1,float64(f32))
-	//		break
-	//	case "updateblock":
-	//		updateblock(0)
-	//		break
-	//	case "syncheight":
-	//		syncheight()
-	//		break
-	//	case "unlock":
-	//		unlock(arg1)
-	//		break
-	//	case "help":
-	//		printHelp()
-	//		break
-	//	default:
-	//		fmt.Printf("Wrong command %s\n " , cmd)
-	//		break
-	//	}
-	//}
 }
 
 func printHelp() {
@@ -268,66 +116,6 @@ func printHelp() {
 	fmt.Println("")
 }
 
-func promptt()  (cmd string, arg1 string, arg2 string){
-	str,err:= Stdin.PromptInput("cli:")
-	if err!=nil {
-		fmt.Println("err:",err.Error())
-		return "re", "", ""
-	}
-	fmt.Println("str :",str)
-	if str == "exit"{
-		return "exit", "", ""
-	}
-	return "re", "", ""
-}
-
-func readPrompt(reader *bufio.Reader) (cmd string, arg1 string, arg2 string) {
-	fmt.Printf("[%s]:", "readPrompt")
-	cmdString, err := reader.ReadString('\n')
-	if err != nil {
-		fmt.Fprintln(os.Stderr, err)
-	}
-	cmdString = strings.TrimSuffix(cmdString, "\n")
-	arrCommandStr := strings.Fields(cmdString)
-	var c, a1, a2 string
-	if len(arrCommandStr)==0 {
-		fmt.Println("there is nothing inputs")
-		return "re", a1, a2
-	}else{
-		for  i, arg := range arrCommandStr{
-			if  i == 0{
-				c = arg
-			}else if i ==1 {
-				a1 = arg
-			}else if i==2 {
-				a2 = arg
-			}else{
-				break
-			}
-		}
-	}
-	return c, a1, a2
-}
-
-func printPrompt() (cmd string, arg1 string, arg2 string) {
-	if isWin {
-		fmt.Printf("[%s]:", Name)
-	} else {
-		//fmt.Printf("[%s]:", Name)
-		fmt.Printf("%c[4;%d;%dm[%s]: %c[0m", 0x1B, 0, 30, Name, 0x1B)
-	}
-
-	var c, a1, a2 string
-	count, err := fmt.Scanln(&c, &a1, &a2)
-	if err != nil {
-
-	}
-	if count == 0 {
-		fmt.Println("there is nothing inputs")
-		return "re", a1, a2
-	}
-	return c, a1, a2
-}
 func checkWalletIeExist(cfg *config.Config) bool{
 	netDir := networkDir(cfg.AppDataDir, config.ActiveNet)
 	err:=checkCreateDir(netDir)
@@ -367,11 +155,6 @@ func getbalance(minconf int ,addr string) ( *wallet.Balance, error){
 		return nil,err
 	}
 	r:=b.(*wallet.Balance)
-	//fmt.Println("getbalance :",b)
-	//fmt.Println("getbalance  ConfirmAmount:",r.ConfirmAmount)
-	//fmt.Printf("%d\n",r.UnspendAmount)
-	//fmt.Println("getbalance  SpendAmount:",r.SpendAmount)
-	//fmt.Println("getbalance  TotalAmount:",r.TotalAmount)
 	return r, nil
 }
 func  listAccountsBalance(min int)( interface{}, error){
