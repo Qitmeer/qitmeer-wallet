@@ -113,7 +113,15 @@ func startConsole()  {
 		fmt.Println("err:",err.Error())
 		return
 	}
-	con.Interactive()
+	for {
+		// Read the next user input
+		line, err := con.prompter.PromptInput("> ")
+		if err != nil {
+			return
+		}
+		// User input retrieved, send for interpretation and loop
+		fmt.Println("line:",line)
+	}
 	return
 	//reader := bufio.NewReader(os.Stdin)
 	for {
