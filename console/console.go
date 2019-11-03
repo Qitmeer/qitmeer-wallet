@@ -262,7 +262,7 @@ func printHelp() {
 }
 
 func readPrompt(reader *bufio.Reader) (cmd string, arg1 string, arg2 string) {
-	fmt.Printf("[%s]:", Name)
+	fmt.Printf("[%s]:", "readPrompt")
 	cmdString, err := reader.ReadString('\n')
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
