@@ -107,6 +107,14 @@ func startConsole()  {
 		}
 		return
 	}
+	c :=Config{DataDir:"D:\\ttttttttt"}
+	con,err:=New(c)
+	if err !=nil{
+		fmt.Println("err:",err.Error())
+		return
+	}
+	con.Interactive()
+	return
 	//reader := bufio.NewReader(os.Stdin)
 	for {
 		cmd, arg1, arg2 := promptt()
@@ -263,7 +271,7 @@ func printHelp() {
 }
 
 func promptt()  (cmd string, arg1 string, arg2 string){
-	str,err:= Stdin.Prompt("cli:")
+	str,err:= Stdin.PromptInput("cli:")
 	if err!=nil {
 		fmt.Println("err:",err.Error())
 		return "re", "", ""
