@@ -9,14 +9,14 @@ import (
 	"os/signal"
 	"path/filepath"
 	"regexp"
+	"strconv"
 	"strings"
 	"syscall"
 	"github.com/mattn/go-colorable"
-	"github.com/peterh/liner"
+	//"github.com/peterh/liner"
 )
 
 var (
-	passwordRegexp = regexp.MustCompile(`personal.[nus]`)
 	onlyWhitespace = regexp.MustCompile(`^\s*$`)
 	exit           = regexp.MustCompile(`^\s*exit\s*;*\s*$`)
 )
@@ -69,9 +69,9 @@ func New(config Config) (*Console, error) {
 		printer:  config.Printer,
 		histPath: filepath.Join(config.DataDir, HistoryFile),
 	}
-	if err := os.MkdirAll(config.DataDir, 0700); err != nil {
-		return nil, err
-	}
+	//if err := os.MkdirAll(config.DataDir, 0700); err != nil {
+	//	return nil, err
+	//}
 	if err := console.init(config.Preload); err != nil {
 		return nil, err
 	}
@@ -148,11 +148,11 @@ func (c *Console) Interactive() {
 			line, err := c.prompter.PromptInput(<-scheduler)
 			if err != nil {
 				// In case of an error, either clear the prompt or fail
-				if err == liner.ErrPromptAborted { // ctrl-C
-					prompt, indents, input = c.prompt, 0, ""
-					scheduler <- ""
-					continue
-				}
+				//if err == liner.ErrPromptAborted { // ctrl-C
+				//	prompt, indents, input = c.prompt, 0, ""
+				//	scheduler <- ""
+				//	continue
+				//}
 				close(scheduler)
 				return
 			}
@@ -193,7 +193,7 @@ func (c *Console) Interactive() {
 			}
 			// If all the needed lines are present, save the command and run
 			if indents <= 0 {
-				if len(input) > 0 && input[0] != ' ' && !passwordRegexp.MatchString(input) {
+				if len(input) > 0 && input[0] != ' '  {
 					if command := strings.TrimSpace(input); len(c.history) == 0 || command != c.history[len(c.history)-1] {
 						c.history = append(c.history, command)
 						if c.prompter != nil {
@@ -201,8 +201,136 @@ func (c *Console) Interactive() {
 						}
 					}
 				}
-				fmt.Println("input :",input)
-				input = ""
+				var cmd ,arg1,arg2 string
+				is:=strings.Fields(input)
+				for i,str:= range is{
+					if i == 0{
+						cmd = str
+					}else if i == 1{
+						arg1 =str
+					}else if i==2{
+						arg2 = str
+					}
+				}
+				if cmd == "exit" {
+					break
+				}
+				if cmd == "re" {
+					continue
+				}
+				switch cmd {
+				case "createNewAccount":
+					createNewAccount(arg1)
+					break
+					//Tmjc34zWMTAASHTwcNtPppPujFKVK5SeuaJ
+				case "getbalance":
+					if arg1==""{
+						fmt.Println("Please enter your address.")
+						break
+					}
+					company:="i"
+					b,err:=getbalance(Default_minconf,arg1)
+					if err!=nil{
+						fmt.Println(err.Error())
+						return
+					}
+					if arg2!="" &&  arg2 !="i"{
+						company="f"
+					}
+					if company == "i"{
+						fmt.Printf("%s\n",b.UnspendAmount.String())
+					}else{
+						fmt.Printf("%f\n",b.UnspendAmount.ToCoin())
+					}
+					break
+				//case "listAccountsBalance":
+				//	listAccountsBalance(Default_minconf)
+				//	break
+				case "getlisttxbyaddr":
+					if arg1 == ""{
+						fmt.Println("getlisttxbyaddr err :Please enter your address.")
+						break
+					}
+					getlisttxbyaddr(arg1)
+					break
+				case "getNewAddress":
+					if arg1 == ""{
+						fmt.Println("getNewAddress err :Please enter your account.")
+						break
+					}
+					getNewAddress(arg1)
+					break
+				case "getAddressesByAccount":
+					if arg1 == ""{
+						fmt.Println("getAddressesByAccount err :Please enter your account.")
+						break
+					}
+					getAddressesByAccount(arg1)
+					break
+				case "getAccountByAddress":
+					if arg1 == ""{
+						fmt.Println("getAccountByAddress err :Please enter your address.")
+						break
+					}
+					getAccountByAddress(arg1)
+					break
+				case "importPrivKey":
+					if arg1 == ""{
+						fmt.Println("importPrivKey err :Please enter your privkey.")
+						break
+					}
+					importPrivKey(arg1)
+					break
+				case "importWifPrivKey":
+					if arg1 == ""{
+						fmt.Println("importWifPrivKey err :Please enter your wif privkey.")
+						break
+					}
+					importWifPrivKey(arg1)
+					break
+				case "dumpPrivKey":
+					if arg1 == ""{
+						fmt.Println("dumpPrivKey err :Please enter your address.")
+						break
+					}
+					dumpPrivKey(arg1)
+					break
+				case "getAccountAndAddress":
+					getAccountAndAddress(int32(Default_minconf))
+					break
+				case "sendToAddress":
+					if arg1 =="" {
+						fmt.Println("getAccountAndAddress err : Please enter the receipt address.")
+						break
+					}
+					if arg2 == ""{
+						fmt.Println("getAccountAndAddress err : Please enter the amount of transfer.")
+						break
+					}
+					f32,err := strconv.ParseFloat(arg2,32)
+					if(err!=nil){
+						fmt.Println("getAccountAndAddress err :",err.Error())
+						break
+					}
+					sendToAddress(arg1,float64(f32))
+					break
+				case "updateblock":
+					updateblock(0)
+					break
+				case "syncheight":
+					syncheight()
+					break
+				case "unlock":
+					unlock(arg1)
+					break
+				case "help":
+					printHelp()
+					break
+				default:
+					fmt.Printf("Wrong command %s\n " , cmd)
+					break
+				}
+				input=""
 			}
 		}
 	}

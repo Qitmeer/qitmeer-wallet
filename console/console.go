@@ -22,11 +22,10 @@ import (
 	"github.com/Qitmeer/qitmeer/qx"
 	"path/filepath"
 	"runtime"
-	"strconv"
 )
 
 const (
-	Name     = "wallet-cli"
+	Name     = "wallet-cli:"
 	Default_minconf =16
 )
 var w *wallet.Wallet
@@ -107,151 +106,142 @@ func startConsole()  {
 		}
 		return
 	}
-	c :=Config{DataDir:"D:\\ttttttttt"}
+	c :=Config{Prompt:Name}
 	con,err:=New(c)
 	if err !=nil{
 		fmt.Println("err:",err.Error())
 		return
 	}
-	for {
-		// Read the next user input
-		line, err := con.prompter.PromptInput("> ")
-		if err != nil {
-			return
-		}
-		// User input retrieved, send for interpretation and loop
-		fmt.Println("line:",line)
-	}
-	return
+	con.Interactive()
 	//reader := bufio.NewReader(os.Stdin)
-	for {
-		cmd, arg1, arg2 := promptt()
-		//cmd, arg1, arg2 := readPrompt(reader)
-		//cmd, arg1, arg2 := printPrompt()
-		//fmt.Println("arg1:",arg1,"arg2:",arg2)
-		if cmd == "exit" {
-			break
-		}
-		if cmd == "re" {
-			continue
-		}
-		switch cmd {
-		case "createNewAccount":
-			createNewAccount(arg1)
-			break
-			//Tmjc34zWMTAASHTwcNtPppPujFKVK5SeuaJ
-		case "getbalance":
-			if arg1==""{
-				fmt.Println("Please enter your address.")
-				break
-			}
-			if(err!=nil){
-				fmt.Println("getbalance err ","err",err.Error())
-				break
-			}
-			company:="i"
-			b,err:=getbalance(Default_minconf,arg1)
-			if err!=nil{
-				fmt.Println(err.Error())
-				return
-			}
-			if arg2!="" &&  arg2 !="i"{
-				company="f"
-			}
-			if company == "i"{
-				fmt.Printf("%s\n",b.UnspendAmount.String())
-			}else{
-				fmt.Printf("%f\n",b.UnspendAmount.ToCoin())
-			}
-			break
-		//case "listAccountsBalance":
-		//	listAccountsBalance(Default_minconf)
-		//	break
-		case "getlisttxbyaddr":
-			if arg1 == ""{
-				fmt.Println("getlisttxbyaddr err :Please enter your address.")
-				break
-			}
-			getlisttxbyaddr(arg1)
-			break
-		case "getNewAddress":
-			if arg1 == ""{
-				fmt.Println("getNewAddress err :Please enter your account.")
-				break
-			}
-			getNewAddress(arg1)
-			break
-		case "getAddressesByAccount":
-			if arg1 == ""{
-				fmt.Println("getAddressesByAccount err :Please enter your account.")
-				break
-			}
-			getAddressesByAccount(arg1)
-			break
-		case "getAccountByAddress":
-			if arg1 == ""{
-				fmt.Println("getAccountByAddress err :Please enter your address.")
-				break
-			}
-			getAccountByAddress(arg1)
-			break
-		case "importPrivKey":
-			if arg1 == ""{
-				fmt.Println("importPrivKey err :Please enter your privkey.")
-				break
-			}
-			importPrivKey(arg1)
-			break
-		case "importWifPrivKey":
-			if arg1 == ""{
-				fmt.Println("importWifPrivKey err :Please enter your wif privkey.")
-				break
-			}
-			importWifPrivKey(arg1)
-			break
-		case "dumpPrivKey":
-			if arg1 == ""{
-				fmt.Println("dumpPrivKey err :Please enter your address.")
-				break
-			}
-			dumpPrivKey(arg1)
-			break
-		case "getAccountAndAddress":
-			getAccountAndAddress(int32(Default_minconf))
-			break
-		case "sendToAddress":
-			if arg1 =="" {
-				fmt.Println("getAccountAndAddress err : Please enter the receipt address.")
-				break
-			}
-			if arg2 == ""{
-				fmt.Println("getAccountAndAddress err : Please enter the amount of transfer.")
-				break
-			}
-			f32,err := strconv.ParseFloat(arg2,32)
-			if(err!=nil){
-				fmt.Println("getAccountAndAddress err :",err.Error())
-				break
-			}
-			sendToAddress(arg1,float64(f32))
-			break
-		case "updateblock":
-			updateblock(0)
-			break
-		case "syncheight":
-			syncheight()
-			break
-		case "unlock":
-			unlock(arg1)
-			break
-		case "help":
-			printHelp()
-			break
-		default:
-			fmt.Printf("Wrong command %s\n " , cmd)
-			break
-		}
-	}
+	//for {
+	//	cmd, arg1, arg2 := promptt()
+	//	//cmd, arg1, arg2 := readPrompt(reader)
+	//	//cmd, arg1, arg2 := printPrompt()
+	//	//fmt.Println("arg1:",arg1,"arg2:",arg2)
+	//	if cmd == "exit" {
+	//		break
+	//	}
+	//	if cmd == "re" {
+	//		continue
+	//	}
+	//	switch cmd {
+	//	case "createNewAccount":
+	//		createNewAccount(arg1)
+	//		break
+	//		//Tmjc34zWMTAASHTwcNtPppPujFKVK5SeuaJ
+	//	case "getbalance":
+	//		if arg1==""{
+	//			fmt.Println("Please enter your address.")
+	//			break
+	//		}
+	//		if(err!=nil){
+	//			fmt.Println("getbalance err ","err",err.Error())
+	//			break
+	//		}
+	//		company:="i"
+	//		b,err:=getbalance(Default_minconf,arg1)
+	//		if err!=nil{
+	//			fmt.Println(err.Error())
+	//			return
+	//		}
+	//		if arg2!="" &&  arg2 !="i"{
+	//			company="f"
+	//		}
+	//		if company == "i"{
+	//			fmt.Printf("%s\n",b.UnspendAmount.String())
+	//		}else{
+	//			fmt.Printf("%f\n",b.UnspendAmount.ToCoin())
+	//		}
+	//		break
+	//	//case "listAccountsBalance":
+	//	//	listAccountsBalance(Default_minconf)
+	//	//	break
+	//	case "getlisttxbyaddr":
+	//		if arg1 == ""{
+	//			fmt.Println("getlisttxbyaddr err :Please enter your address.")
+	//			break
+	//		}
+	//		getlisttxbyaddr(arg1)
+	//		break
+	//	case "getNewAddress":
+	//		if arg1 == ""{
+	//			fmt.Println("getNewAddress err :Please enter your account.")
+	//			break
+	//		}
+	//		getNewAddress(arg1)
+	//		break
+	//	case "getAddressesByAccount":
+	//		if arg1 == ""{
+	//			fmt.Println("getAddressesByAccount err :Please enter your account.")
+	//			break
+	//		}
+	//		getAddressesByAccount(arg1)
+	//		break
+	//	case "getAccountByAddress":
+	//		if arg1 == ""{
+	//			fmt.Println("getAccountByAddress err :Please enter your address.")
+	//			break
+	//		}
+	//		getAccountByAddress(arg1)
+	//		break
+	//	case "importPrivKey":
+	//		if arg1 == ""{
+	//			fmt.Println("importPrivKey err :Please enter your privkey.")
+	//			break
+	//		}
+	//		importPrivKey(arg1)
+	//		break
+	//	case "importWifPrivKey":
+	//		if arg1 == ""{
+	//			fmt.Println("importWifPrivKey err :Please enter your wif privkey.")
+	//			break
+	//		}
+	//		importWifPrivKey(arg1)
+	//		break
+	//	case "dumpPrivKey":
+	//		if arg1 == ""{
+	//			fmt.Println("dumpPrivKey err :Please enter your address.")
+	//			break
+	//		}
+	//		dumpPrivKey(arg1)
+	//		break
+	//	case "getAccountAndAddress":
+	//		getAccountAndAddress(int32(Default_minconf))
+	//		break
+	//	case "sendToAddress":
+	//		if arg1 =="" {
+	//			fmt.Println("getAccountAndAddress err : Please enter the receipt address.")
+	//			break
+	//		}
+	//		if arg2 == ""{
+	//			fmt.Println("getAccountAndAddress err : Please enter the amount of transfer.")
+	//			break
+	//		}
+	//		f32,err := strconv.ParseFloat(arg2,32)
+	//		if(err!=nil){
+	//			fmt.Println("getAccountAndAddress err :",err.Error())
+	//			break
+	//		}
+	//		sendToAddress(arg1,float64(f32))
+	//		break
+	//	case "updateblock":
+	//		updateblock(0)
+	//		break
+	//	case "syncheight":
+	//		syncheight()
+	//		break
+	//	case "unlock":
+	//		unlock(arg1)
+	//		break
+	//	case "help":
+	//		printHelp()
+	//		break
+	//	default:
+	//		fmt.Printf("Wrong command %s\n " , cmd)
+	//		break
+	//	}
+	//}
 }
 
 func printHelp() {
