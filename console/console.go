@@ -107,9 +107,10 @@ func startConsole()  {
 		}
 		return
 	}
-	reader := bufio.NewReader(os.Stdin)
+	//reader := bufio.NewReader(os.Stdin)
 	for {
-		cmd, arg1, arg2 := readPrompt(reader)
+		cmd, arg1, arg2 := promptt()
+		//cmd, arg1, arg2 := readPrompt(reader)
 		//cmd, arg1, arg2 := printPrompt()
 		//fmt.Println("arg1:",arg1,"arg2:",arg2)
 		if cmd == "exit" {
@@ -259,6 +260,19 @@ func printHelp() {
 	fmt.Println("\t<help> : help")
 	fmt.Println("\t<exit> : Exit command mode")
 	fmt.Println("")
+}
+
+func promptt()  (cmd string, arg1 string, arg2 string){
+	str,err:= Stdin.Prompt("cli:")
+	if err!=nil {
+		fmt.Println("err:",err.Error())
+		return "re", "", ""
+	}
+	fmt.Println("str :",str)
+	if str == "exit"{
+		return "exit", "", ""
+	}
+	return "re", "", ""
 }
 
 func readPrompt(reader *bufio.Reader) (cmd string, arg1 string, arg2 string) {
