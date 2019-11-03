@@ -1,11 +1,14 @@
 package console
 
 import (
+	"bufio"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"github.com/Qitmeer/qitmeer/crypto/bip39"
 	"github.com/Qitmeer/qitmeer/crypto/ecc/secp256k1"
+	"os"
+	"strings"
 
 	//"github.com/Qitmeer/qitmeer/crypto/bip39"
 	//"github.com/Qitmeer/qitmeer/crypto/ecc/secp256k1"
@@ -104,8 +107,10 @@ func startConsole()  {
 		}
 		return
 	}
+	reader := bufio.NewReader(os.Stdin)
 	for {
-		cmd, arg1, arg2 := printPrompt()
+		cmd, arg1, arg2 := readPrompt(reader)
+		//cmd, arg1, arg2 := printPrompt()
 		//fmt.Println("arg1:",arg1,"arg2:",arg2)
 		if cmd == "exit" {
 			break
@@ -254,6 +259,34 @@ func printHelp() {
 	fmt.Println("\t<help> : help")
 	fmt.Println("\t<exit> : Exit command mode")
 	fmt.Println("")
+}
+
+func readPrompt(reader *bufio.Reader) (cmd string, arg1 string, arg2 string) {
+	fmt.Printf("[%s]:", Name)
+	cmdString, err := reader.ReadString('\n')
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
+	}
+	cmdString = strings.TrimSuffix(cmdString, "\n")
+	arrCommandStr := strings.Fields(cmdString)
+	var c, a1, a2 string
+	if len(arrCommandStr)==0 {
+		fmt.Println("there is nothing inputs")
+		return "re", a1, a2
+	}else{
+		for  i, arg := range arrCommandStr{
+			if  i == 0{
+				c = arg
+			}else if i ==1 {
+				a1 = arg
+			}else if i==2 {
+				a2 = arg
+			}else{
+				break
+			}
+		}
+	}
+	return c, a1, a2
 }
 
 func printPrompt() (cmd string, arg1 string, arg2 string) {
