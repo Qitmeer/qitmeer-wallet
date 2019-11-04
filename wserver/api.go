@@ -52,12 +52,11 @@ func (api *API) Status() (status *ResStatus, err error) {
 		status.Stats = "closed"
 		return
 	}
-
-	// if api.wSvr.Wt.Locked() {
-	// 	status.Stats = "lock"
-	// } else {
-	status.Stats = "unlock"
-	// }
+	if api.wSvr.Wt.Locked() {
+		status.Stats = "lock"
+	} else {
+		status.Stats = "unlock"
+	}
 	log.Debug("wallet api","status", status)
 	return
 }
@@ -81,14 +80,27 @@ func (api *API) Recove(mnemonic string, walletPass string) error {
 	return api.createWallet(seedBuf, walletPass)
 }
 
+func (api *API) Unlockwallet(walletPriPass string) error {
+	if api.wSvr.Wt.Locked() {
+		err := api.wSvr.Wt.Unlock([]byte(walletPriPass), time.After(10*time.Minute))
+		if err != nil {
+			log.Error("Failed to unlock new wallet during old wallet key import","err", err)
+			return err
+		}
+	} else {
+		return nil
+	}
+	return nil
+}
+
 //Open wallet
-func (api *API) Open(walletPubPass string) error {
+func (api *API) Open() error {
+	log.Trace(fmt.Sprintf("Open wallet password:%s",config.Cfg.WalletPass))
 	if api.wSvr.Wt != nil {
 		log.Trace("api open wallet already open ")
 		return nil
 	}
-
-	walletPubPassBuf := []byte(wallet.InsecurePubPassphrase)
+	walletPubPassBuf := []byte(config.Cfg.WalletPass)
 	wt, err := api.wSvr.WtLoader.OpenExistingWallet(walletPubPassBuf, false)
 	if err != nil {
 		return fmt.Errorf("open wallet err: %s", err)
@@ -100,18 +112,18 @@ func (api *API) Open(walletPubPass string) error {
 
 		w.Start()
 
-		log.Trace("api open RunAfterLoad")
-
-		lockChan := make(chan time.Time, 1)
-		defer func() {
-			lockChan <- time.Time{}
-		}()
-		err := w.Unlock([]byte("123456"), lockChan)
-		if err != nil {
-			log.Error("Failed to unlock new wallet during old wallet key import","err", err)
-			return
-		}
-		log.Trace("api open RunAfterLoad end")
+		//log.Trace("api open RunAfterLoad")
+		//
+		//lockChan := make(chan time.Time, 1)
+		//defer func() {
+		//	lockChan <- time.Time{}
+		//}()
+		//err := w.Unlock([]byte(walletPriPass), lockChan)
+		//if err != nil {
+		//	log.Error("Failed to unlock new wallet during old wallet key import","err", err)
+		//	return
+		//}
+		//log.Trace("api open RunAfterLoad end")
 	})
 
 	api.wSvr.StartAPI()
