@@ -52,7 +52,7 @@ func OpenWallet() error{
 			return fmt.Errorf("openWallet err:%s\n", err.Error())
 		}
 	}else{
-		return fmt.Errorf("Please create a wallet first,[qitmeer-wallet create ]")
+		return fmt.Errorf("Please create a wallet first,[qitmeer-wallet qc create ]")
 	}
 	return nil
 }

@@ -363,7 +363,7 @@ var consoleCmd=&cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		b:=checkWalletIeExist(config.Cfg)
 		if b ==false{
-			fmt.Println("Please create a wallet first,[qitmeer-wallet create ]")
+			fmt.Println("Please create a wallet first,[qitmeer-wallet qc create ]")
 			return
 		}
 		startConsole()
@@ -382,7 +382,7 @@ var webCmd=&cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		b:=checkWalletIeExist(config.Cfg)
 		if b ==false{
-			fmt.Println("Please create a wallet first,[qitmeer-wallet create ]")
+			fmt.Println("Please create a wallet first,[qitmeer-wallet qc create ]")
 			return
 		}
 		qitmeerMain(fileCfg)
