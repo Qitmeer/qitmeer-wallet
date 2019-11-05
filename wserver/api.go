@@ -82,7 +82,7 @@ func (api *API) Recove(mnemonic string, walletPass string) error {
 
 func (api *API) Unlockwallet(walletPriPass string) error {
 	if api.wSvr.Wt.Locked() {
-		err := api.wSvr.Wt.Unlock([]byte(walletPriPass), time.After(10*time.Minute))
+		err := api.wSvr.Wt.Unlock([]byte(walletPriPass), time.After(60*time.Minute))
 		if err != nil {
 			log.Error("Failed to unlock new wallet during old wallet key import","err", err)
 			return err
