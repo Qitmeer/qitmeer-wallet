@@ -103,7 +103,7 @@ func NewDefaultConfig() (cfg *Config) {
 		DebugLevel: defaultLogLevel,
 		LogDir:     defaultLogDir,
 
-		Network: "mainnet",
+		Network: "testnet",
 
 		Listeners:     []string{"127.0.0.1:38130"},
 		RPCUser:       randStr(8),

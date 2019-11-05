@@ -120,7 +120,6 @@ func LoadConfig(cmd *cobra.Command, args []string)  {
 		fileCfg.QTLSSkipVerify = preCfg.QTLSSkipVerify
 	}
 	config.ActiveNet = utils.GetNetParams(fileCfg.Network)
-
 	funcName := "LoadConfig"
 	// Parse, validate, and set debug log level(s).
 	if err := parseAndSetDebugLevels(fileCfg.DebugLevel); err != nil {
