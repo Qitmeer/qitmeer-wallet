@@ -2,19 +2,17 @@
 #appDataDir="" # Your DB storage path
 #logDir="" # log path
 #network="mainnet" #network mainnet,testnet,privnet default testnet
-network="testnet"
 #network="privnet"
 #Qitmeerd
-QServer="127.0.0.1:8131"
-QUser="admin"
-QPass="123456"
+#QServer=""
+#QUser=""
+#QPass=""
 QNoTLS=false
 QTLSSkipVerify=true
 #WalletPass="public" #Wallet encryption code default public
-WalletPass="123456" #Wallet encryption code default public
 
 #web model
 #listeners=["127.0.0.1:8130"]
-rpcUser="admin"
-rpcPass="123456"
-ui=true
+#rpcUser=""
+#rpcPass=""
+#ui=true
