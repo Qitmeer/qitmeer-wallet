@@ -14,6 +14,6 @@ func GetNetParams(name string) *params.Params {
 	case "privnet":
 		return &params.PrivNetParams
 	default:
-		return nil
+		return &params.TestNetParams
 	}
 }

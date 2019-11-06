@@ -341,7 +341,7 @@ func Open(db walletdb.DB, pubPass []byte, cbs *waddrmgr.OpenCallbacks,
 		unlockRequests: make(chan unlockRequest),
 		//lockRequests:        make(chan struct{}),
 		//holdUnlockRequests:  make(chan chan heldUnlock),
-		//lockState:           make(chan bool),
+		lockState:           make(chan bool),
 		//changePassphrase:    make(chan changePassphraseRequest),
 		//changePassphrases:   make(chan changePassphrasesRequest),
 		chainParams: params,
@@ -1280,8 +1280,8 @@ out:
 		//		continue
 		//	}
 
-		//case w.lockState <- w.Manager.IsLocked():
-		//	continue
+		case w.lockState <- w.Manager.IsLocked():
+			continue
 
 		case <-quit:
 			break out
