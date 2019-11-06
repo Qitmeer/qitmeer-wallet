@@ -75,6 +75,7 @@ func startConsole()  {
 			fmt.Println("openWallet err:", err.Error())
 			return
 		}
+		w.Start()
 	}else{
 		w,err=createWallet()
 		if err!=nil{

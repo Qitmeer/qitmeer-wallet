@@ -216,12 +216,12 @@ var getbalanceCmd=&cobra.Command{
 	},
 }
 var sendToAddressCmd=&cobra.Command{
-	Use:"sendtoaddress {address} {amount} ",
+	Use:"sendtoaddress {address} {amount} {pripassword} ",
 	Short:"send transaction ",
 	Example:`
-		sendtoaddress TmWMuY9q5dUutUTGikhqTVKrnDMG34dEgb5 10
+		sendtoaddress TmWMuY9q5dUutUTGikhqTVKrnDMG34dEgb5 10 pripassword
 		`,
-	Args: cobra.MinimumNArgs(2),
+	Args: cobra.MinimumNArgs(3),
 	Run: func(cmd *cobra.Command, args []string) {
 		err:=OpenWallet()
 		if err!=nil{
@@ -231,6 +231,11 @@ var sendToAddressCmd=&cobra.Command{
 		f32,err := strconv.ParseFloat(args[1],32)
 		if(err!=nil){
 			log.Error("sendtoaddress ","error",err.Error())
+			return
+		}
+		err=UnLock(args[2])
+		if err!=nil{
+			fmt.Println(err.Error())
 			return
 		}
 		sendToAddress(args[0],float64(f32))
