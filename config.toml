@@ -2,12 +2,12 @@
 #appDataDir="" # Your DB storage path
 #logDir="" # log path
 #network="mainnet" #network mainnet,testnet,privnet default testnet
-#network="privnet"
+network="testnet"
 #Qitmeerd
-#QServer=""
-#QUser=""
-#QPass=""
-QNoTLS=false
+#QServer=
+#QUser=
+#QPass=
+QNoTLS=true
 QTLSSkipVerify=true
 #WalletPass="public" #Wallet encryption code default public
 

@@ -40,7 +40,7 @@ const (
 	// data in the waddrmgr namespace.  Transactions are not yet encrypted.
 	InsecurePubPassphrase = "public"
 
-	minfee = uint64(3000)
+	minfee = uint64(30000000)
 
 	walletDbWatchingOnlyName = "wowallet.db"
 

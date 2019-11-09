@@ -321,6 +321,10 @@ func (c *Console) Interactive() {
 					syncheight()
 					break
 				case "unlock":
+					if arg1 =="" {
+						fmt.Println("unlock err : Please enter the pri password.")
+						break
+					}
 					unlock(arg1)
 					break
 				case "help":
