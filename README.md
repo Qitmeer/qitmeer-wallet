@@ -99,9 +99,9 @@ Use "qitmeer-wallet qx [command] --help" for more information about a command.
         network="testnet"
         #network="privnet"
         #Qitmeerd
-        QServer="47.88.220.44:8131"
-        QUser="admin"
-        QPass="123456"
+        QServer=""
+        QUser=""
+        QPass=""
         WalletPass="public" #Wallet encryption code default public
     
     ```
@@ -109,7 +109,7 @@ Use "qitmeer-wallet qx [command] --help" for more information about a command.
 2:  create a  wallet
 
     ```
-    ./qitmeer-wallet create -a /root
+    ./qitmeer-wallet qc create 
     
     ```
     
@@ -145,14 +145,14 @@ Use "qitmeer-wallet qx [command] --help" for more information about a command.
 
 3:  update db (update to the specified block or update all,syncheight can view the current DB synchronization height)
     
-    ./qitmeer-wallet  updateblock
-    ./qitmeer-wallet  updateblock 130 
+    ./qitmeer-wallet qc updateblock
+    ./qitmeer-wallet qc updateblock 130 
     
     
     
 4:  when creating a wallet, you can import seeds or import private keys using importprivkey.
 
-    `./qitmeer-wallet importprivkey 6eb6bbcd7ded317abc4ed5e373c2c8630dc4ad069470ad7ae72f5fb854423006` 
+    `./qitmeer-wallet qc importprivkey 6eb6bbcd7ded317abc4ed5e373c2c8630dc4ad069470ad7ae72f5fb854423006` 
     
     `#output`
     
@@ -161,10 +161,10 @@ Use "qitmeer-wallet qx [command] --help" for more information about a command.
     
 5:  must use updateback to see the balance change after the transfer transaction
 
-    `./qitmeer-wallet sendtoaddress TmbsdsjwzuGboFQ9GcKg6EUmrr3tokzozyF 0.01 youpassword`
+    `./qitmeer-wallet qc sendtoaddress TmbsdsjwzuGboFQ9GcKg6EUmrr3tokzozyF 0.01 youpassword`
     
     `#output`
     
     `0e441ecee44defe28711103eef0cc3d01c187c257738150869c032fbbf96d4c9`
 
-    `./qitmeer-wallet updateback`
+    `./qitmeer-wallet qc updateback`
