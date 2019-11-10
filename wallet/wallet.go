@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/briandowns/spinner"
+	"github.com/Qitmeer/qitmeer-wallet/util"
 	"os"
 	"strconv"
 	"sync"
@@ -40,14 +40,6 @@ const (
 	// data in the waddrmgr namespace.  Transactions are not yet encrypted.
 	InsecurePubPassphrase = "public"
 
-	minfee = uint64(30000000)
-
-	walletDbWatchingOnlyName = "wowallet.db"
-
-	// recoveryBatchSize is the default number of blocks that will be
-	// scanned successively by the recovery manager, in the event that the
-	// wallet is started in recovery mode.
-	recoveryBatchSize = 2000
 )
 
 var UploadRun = false
@@ -419,7 +411,6 @@ func (w *Wallet) GetAccountAndAddress(scope waddrmgr.KeyScope,
 			}
 			addroutputs := []AddrAndAddrTxOutput{}
 			for _, addr := range addrs {
-				//log.Info("addr:", addr)
 				addroutput, err := w.getAddrAndAddrTxOutputByAddr(addr.Encode(), requiredConfs)
 				if err != nil {
 					return err
@@ -475,7 +466,15 @@ func (w *Wallet) getAddrAndAddrTxOutputByAddr(addr string, requiredConfs int32) 
 		if txout.Spend == 1 {
 			spendAmount += txout.Amount
 			//totalAmount += txout.Amount
-		} else {
+		}else if txout.Spend == 2{
+			if !confirmed(int32(w.chainParams.CoinbaseMaturity), txout.Block.Height, syncBlock.Height) {
+				//totalAmount += txout.Amount
+				confirmAmount += txout.Amount
+			} else {
+				//totalAmount += txout.Amount
+				unspendAmount += txout.Amount
+			}
+		}else {
 			if !confirmed(requiredConfs, txout.Block.Height, syncBlock.Height) {
 				//totalAmount += txout.Amount
 				confirmAmount += txout.Amount
@@ -633,7 +632,7 @@ func (w *Wallet) insertTx(txins []types.TxOutPoint, txouts []wtxmgr.AddrTxOutput
 			if err != nil {
 				return err
 			}
-			if spendedOut.Spend == 0 {
+			if spendedOut.Spend != 1 {
 				txHash, err := hash.NewHashFromStr(txr.Txid)
 				if err != nil {
 					return err
@@ -707,8 +706,13 @@ func parseTx(tr corejson.TxRawResult,height int32) ([]types.TxOutPoint, []wtxmgr
 	if err != nil {
 		return nil, nil, err
 	}
+	spend:=int32(0)
 	for j := 0; j < len(tr.Vin); j++ {
 		vi := tr.Vin[j]
+		if vi.Coinbase!=""{
+			spend = int32(2)
+			continue
+		}
 		if vi.Txid == "" && vi.Vout == 0 {
 			continue
 		} else {
@@ -735,7 +739,7 @@ func parseTx(tr corejson.TxRawResult,height int32) ([]types.TxOutPoint, []wtxmgr
 				Index:   uint32(k),
 				Amount:  types.Amount(vo.Amount),
 				Block:   block,
-				Spend:   0,
+				Spend:   spend,
 			}
 			txouts = append(txouts, txout)
 		}
@@ -842,83 +846,26 @@ func (w *Wallet) Updateblock(toHeight int64) error {
 	if err != nil {
 		return err
 	}
-	//log.Info("getblockcount :", blockheight)
-	//localheight:=int32(1607)
-	//go func() {
-	//	for  {
-	//		order := <- orderchan
-	//		w.handleBlockSynced(order)
-	//	}
-	//}()
 	localheight :=int64((w.Manager.SyncedTo().Height + 1))
-
-	//if newest{
-	//	s:=spinn()
-	//	log.Trace("newest ","newest",newest)
-	//	s.Start()
-	//	for  {
-	//		err:=w.handleBlockSynced(localheight)
-	//		if err==nil{
-	//			localheight++
-	//			msg:=fmt.Sprintf("%s/%s",strconv.FormatInt(localheight,10),strconv.FormatInt(blockheight,10))
-	//			s.Suffix= msg
-	//		}else{
-	//			msg:=fmt.Sprintf("%s/%s",strconv.FormatInt(localheight-1,10),strconv.FormatInt(localheight,10))
-	//			s.Suffix= msg
-	//			time.Sleep(30 * time.Second)
-	//		}
-	//	}
-	//}else{
-		h := localheight;
-		//var s *spinner.Spinner
-		if h <blockheight{
-			log.Trace(fmt.Sprintf("localheight:%d,blockheight:%d",localheight,blockheight))
-			//s=spinn()
-			//s.Start()
-			for h <blockheight {
-				//orderchan <- h
-				err :=w.handleBlockSynced(h)
-				if err !=nil{
-					return err
-				}else{
-					h++
-				}
-				fmt.Fprintf(os.Stdout, "update blcok:%s/%s\r",strconv.FormatInt(h,10),strconv.FormatInt(blockheight,10))
-				//msg:=fmt.Sprintf("update blcok:%s/%s",strconv.FormatInt(h,10),strconv.FormatInt(blockheight,10))
-				//s.Suffix= msg
-				//log.Info("synced to height:%v\n", h)
+	h := localheight;
+	if h <blockheight{
+		log.Trace(fmt.Sprintf("localheight:%d,blockheight:%d",localheight,blockheight))
+		for h <blockheight {
+			//orderchan <- h
+			err :=w.handleBlockSynced(h)
+			if err !=nil{
+				return err
+			}else{
+				h++
 			}
-			fmt.Print("\nsucc\n")
-			//s.Stop()
-		}else{
-			fmt.Println("Block data is up to date")
+			fmt.Fprintf(os.Stdout, "update blcok:%s/%s\r",strconv.FormatInt(h,10),strconv.FormatInt(blockheight,10))
 		}
-	//}
-
-	//for {
-	//	if len(orderchan)==0 {
-	//		time.Sleep(15 * time.Second)
-	//		//w.handleBlockSynced(blockheight)
-	//		break;
-	//	}
-	//}
-	//err = w.UpdateMempool()
-	//if err != nil {
-	//	log.Info("updateMempool err:", err.Error())
-	//	return err
-	//}
+		fmt.Print("\nsucc\n")
+	}else{
+		fmt.Println("Block data is up to date")
+	}
 	return nil
 }
-
-func spinn() *spinner.Spinner {
-	s := spinner.New(spinner.CharSets[36], 100*time.Millisecond)  // Build our new spinner
-	s.Color("bgBlack", "bold", "fgRed")
-	s.FinalMSG = "\nComplete!\n"
-	s.HideCursor=true
-	s.Writer = os.Stderr
-	return  s
-}
-
 //func (w *Wallet) UpdateMempool() error {
 //	txIdstr, err := w.Httpclient.getMempool()
 //	if err != nil {
@@ -945,7 +892,7 @@ func spinn() *spinner.Spinner {
 //			log.Info("err:", err.Error())
 //			return err
 //		}
-//		txin, txout, err := parseTx(txJson)
+//		txin, txout, err := parseTx(txJson,0)
 //		if err != nil {
 //			log.Info("parseTx err:", err.Error())
 //			return err
@@ -1010,7 +957,7 @@ func (w *Wallet) AccountBalances(scope waddrmgr.KeyScope,
 		results[index].AccountName = aaa.AccountName
 		unspendAmount := types.Amount(0)
 		for _, addr := range aaa.AddrsOutput {
-			unspendAmount = addr.balance.UnspendAmount
+			unspendAmount =unspendAmount+ addr.balance.UnspendAmount
 		}
 		if err != nil {
 			return nil, err
@@ -1381,6 +1328,13 @@ func (w *Wallet) GetUtxo(addr string)([]wtxmgr.Utxo, error){
 				uo.Index=txout.Index
 				uo.Amount=txout.Amount
 				utxos=append(utxos,uo)
+			}else if txout.Spend == 2{
+				if txout.Block.Height - w.Manager.SyncedTo().Height >=int32(w.chainParams.CoinbaseMaturity){
+					uo.Txid=txout.Txid.String()
+					uo.Index=txout.Index
+					uo.Amount=txout.Amount
+					utxos=append(utxos,uo)
+				}
 			}
 		}
 		return utxos, nil
@@ -1395,6 +1349,7 @@ func (w *Wallet) SendOutputs(outputs []*types.TxOutput, account uint32,
 	// rules.
 	tx := types.NewTransaction()
 	payAmout := types.Amount(0)
+	feeAmout := int64(0)
 	for _, output := range outputs {
 		if err := txrules.CheckOutput(output, satPerKb); err != nil {
 			return nil, err
@@ -1415,7 +1370,7 @@ b:
 	for _, aaar := range aaars {
 		for _, output := range aaar.AddrsOutput {
 			//log.Info("output:", output)
-			if output.balance.UnspendAmount > payAmout {
+			if output.balance.UnspendAmount > (payAmout+types.Amount(feeAmout)) {
 				addr, err := address.DecodeAddress(output.Addr)
 				sendAddress = output.Addr
 				if err != nil {
@@ -1434,21 +1389,55 @@ b:
 					return nil, err
 				}
 				prk = hex.EncodeToString(prikey.SerializeSecret())
-				for _, output := range output.Txoutput {
-					if output.Spend != 1 {
-						if confirmed(minconf, output.Block.Height, synced.Height) {
-							if output.Amount >= payAmout {
-								pre := types.NewOutPoint(&output.Txid, output.Index)
+				var confirm int32
+				for _, output1 := range output.Txoutput {
+					confirm = minconf
+					log.Trace("SendOutputs","output.Addr",output.Addr)
+					log.Trace("SendOutputs","output.balance.UnspendAmount",output.balance.UnspendAmount)
+					log.Trace("SendOutputs","output1.Spend",output1.Spend)
+					log.Trace("SendOutputs","output1.SpendTo",output1.SpendTo)
+					if output1.Spend != 1 && output1.SpendTo==nil {
+						if output1.Spend ==2 {
+							confirm = int32(w.chainParams.CoinbaseMaturity)
+						}
+						if confirmed(confirm, output1.Block.Height, synced.Height) {
+							if output1.Amount >= payAmout && payAmout >types.Amount(0){
+								pre := types.NewOutPoint(&output1.Txid, output1.Index)
 								tx.AddTxIn(types.NewTxInput(pre, nil))
-								tx.AddTxOut(types.NewTxOutput(uint64(output.Amount-payAmout)-minfee, frompkscipt))
-								payAmout = types.Amount(0)
-								sendAddrTxOutput = append(sendAddrTxOutput, output)
-								break b
-							} else {
-								pre := types.NewOutPoint(&output.Txid, output.Index)
+								selfTxOut:=types.NewTxOutput(uint64(output1.Amount-payAmout), frompkscipt)
+								feeAmout=util.CalcMinRequiredTxRelayFee(int64(tx.SerializeSize()+selfTxOut.SerializeSize()),types.Amount(config.Cfg.MinTxFee))
+								if (output1.Amount - payAmout) >=types.Amount(feeAmout){
+									selfTxOut.Amount = uint64(output1.Amount-payAmout-types.Amount(feeAmout))
+									tx.AddTxOut(selfTxOut)
+									payAmout = types.Amount(0)
+									feeAmout = int64(0)
+									sendAddrTxOutput = append(sendAddrTxOutput, output1)
+									break b
+								}else{
+									selfTxOut.Amount = uint64(output1.Amount-payAmout)
+									tx.AddTxOut(selfTxOut)
+									payAmout = types.Amount(0)
+									sendAddrTxOutput = append(sendAddrTxOutput, output1)
+								}
+							} else if output1.Amount < payAmout && payAmout >types.Amount(0){
+								pre := types.NewOutPoint(&output1.Txid, output1.Index)
 								tx.AddTxIn(types.NewTxInput(pre, nil))
-								payAmout = payAmout - output.Amount
-								sendAddrTxOutput = append(sendAddrTxOutput, output)
+								payAmout = payAmout - output1.Amount
+								sendAddrTxOutput = append(sendAddrTxOutput, output1)
+							} else if output1.Amount>=types.Amount(feeAmout) && payAmout == types.Amount(0){
+								pre := types.NewOutPoint(&output1.Txid, output1.Index)
+								feeTxin:= types.NewTxInput(pre, nil)
+								feeTxOut:=types.NewTxOutput(uint64(output1.Amount-types.Amount(feeAmout)), frompkscipt)
+								feeAmout=util.CalcMinRequiredTxRelayFee(int64(tx.SerializeSize()+feeTxOut.SerializeSize()+feeTxin.SerializeSize()),types.Amount(config.Cfg.MinTxFee))
+								if output1.Amount>=types.Amount(feeAmout){
+									feeTxOut.Amount = uint64(output1.Amount-types.Amount(feeAmout))
+									tx.AddTxIn(feeTxin)
+									tx.AddTxOut(feeTxOut)
+									payAmout = types.Amount(0)
+									feeAmout = int64(0)
+									sendAddrTxOutput = append(sendAddrTxOutput, output1)
+									break b
+								}
 							}
 						}
 					}
@@ -1456,7 +1445,9 @@ b:
 			}
 		}
 	}
-	if payAmout != types.Amount(0) {
+	if payAmout != types.Amount(0)|| feeAmout!=0 {
+		log.Trace("payAmout","payAmout",payAmout)
+		log.Trace("feeAmout","feeAmout",feeAmout)
 		//log.Info("balance is not enough")
 		return nil, fmt.Errorf("balance is not enough")
 	}
