@@ -89,6 +89,7 @@ func ListAccounts(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
 	}
 	for _, result := range results {
 		accountBalances[result.AccountName] = result.AccountBalance.ToCoin()
+
 	}
 	// Return the map.  This will be marshaled into a JSON object.
 	return accountBalances, nil
@@ -122,7 +123,7 @@ func GetNewAddress(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
 // getAddressesByAccount handles a getaddressesbyaccount request by returning
 // all addresses for an account, or an error if the requested account does
 // not exist.
-func GetAddressesByAccount(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
+func GetAddressesByAccount(icmd interface{}, w *wallet.Wallet) ([]string, error) {
 	cmd := icmd.(*qitmeerjson.GetAddressesByAccountCmd)
 
 	account, err := w.AccountNumber(waddrmgr.KeyScopeBIP0044, cmd.Account)

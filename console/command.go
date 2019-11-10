@@ -47,6 +47,7 @@ func BindFlags(){
 	Command.PersistentFlags().StringArrayVar(&preCfg.Listeners, "listeners", fileCfg.Listeners, "rpc listens")
 	Command.PersistentFlags().StringVar(&preCfg.RPCUser, "rpcUser", fileCfg.RPCUser, "rpc user,default by random")
 	Command.PersistentFlags().StringVar(&preCfg.RPCPass, "rpcPass", fileCfg.RPCPass, "rpc pass,default by random")
+	Command.PersistentFlags().Int64Var(&preCfg.MinTxFee, "mintxfee", fileCfg.MinTxFee, "The minimum transaction fee in AtomMEER/kB default 20000 (aka. 0.0002 Qitmeer/kB)")
 }
 
 // LoadConfig config file and flags
@@ -116,6 +117,9 @@ func LoadConfig(cmd *cobra.Command, args []string)  {
 	if cmd.Flag("qcert").Changed {
 		fileCfg.QCert = preCfg.QCert
 	}
+	if cmd.Flag("mintxfee").Changed {
+		fileCfg.MinTxFee = preCfg.MinTxFee
+	}
 	if cmd.Flag("qtlsskipverify").Changed {
 		fileCfg.QTLSSkipVerify = preCfg.QTLSSkipVerify
 	}
@@ -128,6 +132,10 @@ func LoadConfig(cmd *cobra.Command, args []string)  {
 		return
 	}
 	InitLogRotator(filepath.Join(fileCfg.LogDir, "wallet.log"))
+
+	if fileCfg.MinTxFee < config.DefaultMinRelayTxFee{
+		fileCfg.MinTxFee = config.DefaultMinRelayTxFee
+	}
 
 	return
 
@@ -181,6 +189,20 @@ var createNewAccountCmd=&cobra.Command{
 		createNewAccount(args[0])
 	},
 }
+var getnewaddressCmd=&cobra.Command{
+	Use:"getnewaddress {account}",
+	Short:"create new address by account",
+	Example:"getnewaddress default",
+	Args: cobra.MinimumNArgs(1),
+	Run: func(cmd *cobra.Command, args []string) {
+		err:=OpenWallet()
+		if err!=nil{
+			fmt.Println(err.Error())
+			return
+		}
+		getNewAddress(args[0])
+	},
+}
 
 var getbalanceCmd=&cobra.Command{
 	Use:"getbalance {address} {string ,company : i(int64),f(float),default i }",
@@ -209,8 +231,10 @@ var getbalanceCmd=&cobra.Command{
 		}
 		if company == "i"{
 			fmt.Printf("%s\n",b.UnspendAmount.String())
+			//fmt.Printf("confirm:%s\n",b.ConfirmAmount.String())
 		}else{
 			fmt.Printf("%f\n",b.UnspendAmount.ToCoin())
+			//fmt.Printf("confirm:%f\n",b.UnspendAmount.ToCoin())
 		}
 
 	},
@@ -421,6 +445,7 @@ func init()  {
 
 	Command.AddCommand(createWalletCmd)
 	Command.AddCommand(createNewAccountCmd)
+	Command.AddCommand(getnewaddressCmd)
 	Command.AddCommand(getbalanceCmd)
 	Command.AddCommand(getlisttxbyaddrCmd)
 	Command.AddCommand(updateblockCmd)

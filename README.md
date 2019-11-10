@@ -89,20 +89,29 @@ Use "qitmeer-wallet qx [command] --help" for more information about a command.
 
 ## How to use qitmeer-wallet console command model
 
-1:  configure the config.toml file in the root directory
+1:  Rename sample-config.toml to config.toml and modify the configuration parameters
 
     ```
-        #configFile="" #Your config.toml profile directory
-        #appDataDir="" # Your DB storage path
-        #logDir="" # log path
-        #network="mainnet" #network mainnet,testnet,privnet default testnet
-        network="testnet"
-        #network="privnet"
-        #Qitmeerd
-        QServer=""
-        QUser=""
-        QPass=""
-        WalletPass="public" #Wallet encryption code default public
+       #configFile="" #Your config.toml profile directory
+       #appDataDir="" # Your DB storage path
+       #logDir="" # log path
+       #network="mainnet" #network mainnet,testnet,privnet default testnet
+       network="testnet"
+       #Qitmeerd
+       QServer="127.0.0.1:8131"
+       QUser="admin"
+       QPass="123456"
+       QNoTLS=true
+       QTLSSkipVerify=true
+       WalletPass="public" #Wallet encryption code default public
+       
+       MinTxFee=200000   # The minimum transaction fee in AtomMEER/kB default 200000 (aka. 0.002 Qitmeer/kB)
+       
+       #web model
+       #listeners=["127.0.0.1:8130"]
+       #rpcUser=""
+       #rpcPass=""
+       #ui=true
     
     ```
 
