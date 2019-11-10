@@ -22,6 +22,7 @@ const (
 	defaultLogLevel         = "info"
 	defaultLogDirname       = "logs"
 	defaultRPCMaxClients    = 10
+	DefaultMinRelayTxFee = int64(2e5)
 
 	WalletDbName = "wallet.db"
 )
@@ -58,6 +59,9 @@ type Config struct {
 	RPCMaxClients int64
 	DisableRPC    bool
 	DisableTLS    bool
+
+	// tx fee
+	MinTxFee int64
 
 	//walletAPI
 	APIs []string
@@ -127,6 +131,7 @@ func NewDefaultConfig() (cfg *Config) {
 		QProxyUser:     "",
 		QProxyPass:     "",
 		WalletPass:     "public",
+		MinTxFee:		DefaultMinRelayTxFee,
 		UI:true,
 	}
 	return

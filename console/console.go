@@ -4,6 +4,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	waddrmgr "github.com/Qitmeer/qitmeer-wallet/waddrmgs"
 	"github.com/Qitmeer/qitmeer/crypto/bip39"
 	"github.com/Qitmeer/qitmeer/crypto/ecc/secp256k1"
 
@@ -167,7 +168,9 @@ func  listAccountsBalance(min int)( interface{}, error){
 		fmt.Println("listAccountsBalance","err", err.Error())
 		return nil, err
 	}
-	fmt.Printf("%v\n",msg)
+	for k, v := range msg.(map[string]float64) {
+		fmt.Printf("%v:%v\n",k,v)
+	}
 	return msg, nil
 }
 
@@ -197,6 +200,10 @@ func getlisttxbyaddr(addr string)( interface{}, error){
 }
 
 func getNewAddress(account string) (interface{}, error) {
+	if account == waddrmgr.ImportedAddrAccountName{
+		fmt.Sprintf("Imported account cannot generate address")
+		return nil,fmt.Errorf("Imported account cannot generate address")
+	}
 	if account==""{
 		account = "default"
 	}
@@ -223,7 +230,9 @@ func getAddressesByAccount(account string) (interface{}, error) {
 		fmt.Println("getAddressesByAccount","err", err.Error())
 		return nil, err
 	}
-	fmt.Printf("%s\n",msg)
+	for _, addr := range msg {
+		fmt.Printf("%s\n",addr)
+	}
 	return msg, nil
 }
 func getAccountByAddress(address string) (interface{}, error) {

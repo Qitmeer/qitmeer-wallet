@@ -4,12 +4,14 @@
 #network="mainnet" #network mainnet,testnet,privnet default testnet
 network="testnet"
 #Qitmeerd
-#QServer=
-#QUser=
-#QPass=
-QNoTLS=true
+QServer="127.0.0.1:8131"
+QUser="admin"
+QPass="123456"
+QNoTLS=true #Whether to start TLS corresponding to qitmeer
 QTLSSkipVerify=true
-#WalletPass="public" #Wallet encryption code default public
+WalletPass="public" #Wallet encryption code default public
+
+MinTxFee=200000   # The minimum transaction fee in AtomMEER/kB default 200000 (aka. 0.002 Qitmeer/kB)
 
 #web model
 #listeners=["127.0.0.1:8130"]
