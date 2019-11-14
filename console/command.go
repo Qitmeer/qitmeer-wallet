@@ -205,11 +205,11 @@ var getnewaddressCmd=&cobra.Command{
 }
 
 var getbalanceCmd=&cobra.Command{
-	Use:"getbalance {address} {string ,company : i(int64),f(float),default i }",
+	Use:"getbalance {address} {string ,company : i(int64),f(float),default i } {bool ,detail : true,false,default false }",
 	Short:"getbalance",
 	Example:`
-		getbalance TmWMuY9q5dUutUTGikhqTVKrnDMG34dEgb5	i
-		getbalance TmWMuY9q5dUutUTGikhqTVKrnDMG34dEgb5	f
+		getbalance TmWMuY9q5dUutUTGikhqTVKrnDMG34dEgb5	i true
+		getbalance TmWMuY9q5dUutUTGikhqTVKrnDMG34dEgb5	f false
 		`,
 	Args: cobra.MinimumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
@@ -219,6 +219,7 @@ var getbalanceCmd=&cobra.Command{
 			return
 		}
 		company:="i"
+		detail:="false"
 		b,err:=getbalance(Default_minconf,args[0])
 		if err!=nil{
 			fmt.Println(err.Error())
@@ -228,12 +229,29 @@ var getbalanceCmd=&cobra.Command{
 			if args[1]!="i"{
 				company="f"
 			}
+			if len(args)>2{
+				detail=args[2]
+			}
 		}
 		if company == "i"{
-			fmt.Printf("%s\n",b.UnspendAmount.String())
+			if detail=="true" {
+				fmt.Printf("unspend:%s\n",b.UnspendAmount.String())
+				fmt.Printf("unconfirmed:%s\n",b.ConfirmAmount.String())
+				fmt.Printf("totalamount:%s\n",b.TotalAmount.String())
+				fmt.Printf("spendamount:%s\n",b.SpendAmount.String())
+			}else{
+				fmt.Printf("%s\n",b.UnspendAmount.String())
+			}
 			//fmt.Printf("confirm:%s\n",b.ConfirmAmount.String())
 		}else{
-			fmt.Printf("%f\n",b.UnspendAmount.ToCoin())
+			if detail=="true" {
+				fmt.Printf("unspend:%f\n",b.UnspendAmount.ToCoin())
+				fmt.Printf("unconfirmed:%f\n",b.ConfirmAmount.ToCoin())
+				fmt.Printf("totalamount:%f\n",b.TotalAmount.ToCoin())
+				fmt.Printf("spendamount:%f\n",b.SpendAmount.ToCoin())
+			}else{
+				fmt.Printf("%f\n",b.UnspendAmount.ToCoin())
+			}
 			//fmt.Printf("confirm:%f\n",b.UnspendAmount.ToCoin())
 		}
 
@@ -456,6 +474,9 @@ func init()  {
 	Command.AddCommand(listAccountsBalanceCmd)
 	Command.AddCommand(consoleCmd)
 	Command.AddCommand(webCmd)
+	listAccountsBalanceCmd.SetHelpFunc(func(command *cobra.Command, i []string) {
+		fmt.Printf("test")
+	})
 	//Command.AddCommand(QxCmd)
 
 }

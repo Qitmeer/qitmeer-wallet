@@ -185,7 +185,7 @@ func (w *Wallet) ImportPrivateKey(scope waddrmgr.KeyScope, wif *utils.WIF,
 
 	// Attempt to import private key into wallet.
 	var addr types.Address
-	var props *waddrmgr.AccountProperties
+	//var props *waddrmgr.AccountProperties
 	err = walletdb.Update(w.db, func(tx walletdb.ReadWriteTx) error {
 		addrmgrNs := tx.ReadWriteBucket(waddrmgrNamespaceKey)
 		maddr, err := manager.ImportPrivateKey(addrmgrNs, wif, bs)
@@ -193,7 +193,7 @@ func (w *Wallet) ImportPrivateKey(scope waddrmgr.KeyScope, wif *utils.WIF,
 			return err
 		}
 		addr = maddr.Address()
-		props, err = manager.AccountProperties(
+		_, err = manager.AccountProperties(
 			addrmgrNs, waddrmgr.ImportedAddrAccount,
 		)
 		if err != nil {
@@ -460,7 +460,7 @@ func (w *Wallet) getAddrAndAddrTxOutputByAddr(addr string, requiredConfs int32) 
 
 	var spendAmount types.Amount
 	var unspendAmount types.Amount
-	//var totalAmount types.Amount
+	var totalAmount types.Amount
 	var confirmAmount types.Amount
 	for _, txout := range txouts {
 		if txout.Spend == 1 {
@@ -468,18 +468,18 @@ func (w *Wallet) getAddrAndAddrTxOutputByAddr(addr string, requiredConfs int32) 
 			//totalAmount += txout.Amount
 		}else if txout.Spend == 2{
 			if !confirmed(int32(w.chainParams.CoinbaseMaturity), txout.Block.Height, syncBlock.Height) {
-				//totalAmount += txout.Amount
+				totalAmount += txout.Amount
 				confirmAmount += txout.Amount
 			} else {
-				//totalAmount += txout.Amount
+				totalAmount += txout.Amount
 				unspendAmount += txout.Amount
 			}
 		}else {
 			if !confirmed(requiredConfs, txout.Block.Height, syncBlock.Height) {
-				//totalAmount += txout.Amount
+				totalAmount += txout.Amount
 				confirmAmount += txout.Amount
 			} else {
-				//totalAmount += txout.Amount
+				totalAmount += txout.Amount
 				unspendAmount += txout.Amount
 			}
 		}
@@ -487,7 +487,7 @@ func (w *Wallet) getAddrAndAddrTxOutputByAddr(addr string, requiredConfs int32) 
 
 	b.UnspendAmount = unspendAmount
 	b.SpendAmount = spendAmount
-	//b.TotalAmount = totalAmount
+	b.TotalAmount = totalAmount
 	b.ConfirmAmount = confirmAmount
 	ato.Addr = addr
 	ato.balance = b
@@ -922,7 +922,7 @@ func (w *Wallet) NextAccount(scope waddrmgr.KeyScope, name string) (uint32, erro
 
 	var (
 		account uint32
-		props   *waddrmgr.AccountProperties
+		//props   *waddrmgr.AccountProperties
 	)
 	err = walletdb.Update(w.db, func(tx walletdb.ReadWriteTx) error {
 		addrmgrNs := tx.ReadWriteBucket(waddrmgrNamespaceKey)
@@ -931,7 +931,7 @@ func (w *Wallet) NextAccount(scope waddrmgr.KeyScope, name string) (uint32, erro
 		if err != nil {
 			return err
 		}
-		props, err = manager.AccountProperties(addrmgrNs, account)
+		_, err = manager.AccountProperties(addrmgrNs, account)
 		return err
 	})
 	if err != nil {
@@ -995,12 +995,12 @@ func (w *Wallet) NewAddress(
 
 	var (
 		addr  types.Address
-		props *waddrmgr.AccountProperties
+		//props *waddrmgr.AccountProperties
 	)
 	err := walletdb.Update(w.db, func(tx walletdb.ReadWriteTx) error {
 		addrmgrNs := tx.ReadWriteBucket(waddrmgrNamespaceKey)
 		var err error
-		addr, props, err = w.newAddress(addrmgrNs, account, scope)
+		addr, _, err = w.newAddress(addrmgrNs, account, scope)
 		return err
 	})
 	if err != nil {
