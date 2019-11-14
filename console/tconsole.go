@@ -202,7 +202,7 @@ func (c *Console) Interactive() {
 						}
 					}
 				}
-				var cmd ,arg1,arg2 string
+				var cmd ,arg1,arg2,arg3 string
 				is:=strings.Fields(input)
 				for i,str:= range is{
 					if i == 0{
@@ -211,6 +211,8 @@ func (c *Console) Interactive() {
 						arg1 =str
 					}else if i==2{
 						arg2 = str
+					}else if i==3{
+						arg3=str
 					}
 				}
 				if cmd == "exit" {
@@ -229,6 +231,7 @@ func (c *Console) Interactive() {
 						break
 					}
 					company:="i"
+					detail:="false"
 					b,err:=getbalance(Default_minconf,arg1)
 					if err!=nil{
 						fmt.Println(err.Error())
@@ -237,10 +240,27 @@ func (c *Console) Interactive() {
 					if arg2!="" &&  arg2 !="i"{
 						company="f"
 					}
+					if arg3!="" &&  arg3 !="false"{
+						detail="true"
+					}
 					if company == "i"{
-						fmt.Printf("%s\n",b.UnspendAmount.String())
+						if detail=="true" {
+							fmt.Printf("unspend:%s\n",b.UnspendAmount.String())
+							fmt.Printf("unconfirmed:%s\n",b.ConfirmAmount.String())
+							fmt.Printf("totalamount:%s\n",b.TotalAmount.String())
+							fmt.Printf("spendamount:%s\n",b.SpendAmount.String())
+						}else{
+							fmt.Printf("%s\n",b.UnspendAmount.String())
+						}
 					}else{
-						fmt.Printf("%f\n",b.UnspendAmount.ToCoin())
+						if detail=="true" {
+							fmt.Printf("unspend:%f\n",b.UnspendAmount.ToCoin())
+							fmt.Printf("unconfirmed:%f\n",b.ConfirmAmount.ToCoin())
+							fmt.Printf("totalamount:%f\n",b.TotalAmount.ToCoin())
+							fmt.Printf("spendamount:%f\n",b.SpendAmount.ToCoin())
+						}else{
+							fmt.Printf("%f\n",b.UnspendAmount.ToCoin())
+						}
 					}
 					break
 				//case "listAccountsBalance":
