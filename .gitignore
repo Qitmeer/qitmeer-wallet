@@ -1,4 +1,6 @@
 qitmeer-wallet
+qitmeer-wallet.exe
+qitmeer-wallet.exe~
 build
 
 config/*.toml
@@ -8,8 +10,9 @@ cmds/qitwallet/qitwallet
 go.sum
 
 #node
-front/node_modules/
-front/package-lock.json
+assets/statick/statick.go
+assets/src/node_modules/
+assets/src/package-lock.json
 
 # Editor directories and files
 .DS_Store
