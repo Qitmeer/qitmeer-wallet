@@ -1,0 +1,165 @@
+
+html,body{
+    padding: 0px;margin: 0px;
+    height: 100%;width: 100%;
+}
+
+body{
+    background-color: #dfdfdf;
+    background-image: linear-gradient(180deg,#dddbd1,#d2dbdc);
+
+    display: flex;
+    height: 100%;
+    width: 100%;
+    flex-direction: row;
+    justify-content: center;
+    align-items: stretch;
+  }
+  
+  body::after {
+    background-color: #3f85ed;
+    content: "";
+    height: 127px;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    z-index: -1;
+  }
+
+
+
+
+#app {
+  display: flex;
+  flex-direction: row;
+  align-items: stretch;
+  box-shadow: 0 1px 1px 0 rgba(0, 0, 0, 0.06), 0 2px 5px 0 rgba(0, 0, 0, 0.2);
+  border-radius: 3px;
+
+  width: 1000px;
+  margin: 20px 0px;
+  background-color: #fff;
+}
+
+#sidebar {
+  width: 210px;
+
+  background-color: #21252c;
+  color: #fff;
+  font-size: 14px;
+
+  border-radius: 3px 0px 0px 3px;
+
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: stretch;
+  flex: none;
+}
+
+
+
+#logo {
+  height: 60px;
+  border-bottom: 1px solid #404141;
+  /* e5e7e9; */
+}
+
+#logo h1{
+  padding: 0px;margin: 20px 0px 0px 0px;
+  font-size: 18px;
+  color:#FFF;
+  line-height: 20px;
+  text-align: center;
+}
+
+#logo a{
+  text-decoration: none;
+  color:#FFF;
+}
+
+#menu {
+  flex-grow: 1;
+}
+
+#menu a {
+  margin-left: 20px;
+  color: #fff;
+  font-size: 14px;
+  line-height: 50px;
+  text-decoration: none;
+  display: block;
+}
+
+#sidebar h2 {
+  font-size: 14px;
+  color: #c3c3c3;
+  line-height: 36px;
+  margin: 20px 20px 0px 10px;
+  border-bottom: 1px solid #404141;
+}
+
+#info p{
+  margin: 10px 20px;padding: 0px;
+}
+
+.version {
+  padding-top: 20px;
+}
+.version p {
+  margin: 10px 10px;padding: 0px;
+  color: #FFF;
+  font-size: 14px;
+  text-align:left;
+}
+
+#info p span,.version p span{
+    margin-right: 8px;
+}
+
+.mainwarp {
+  background-color: #f1f1f2;
+  display: flex;
+  flex-grow: 1;
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: stretch;
+}
+
+.bd {
+  display: flex;
+}
+
+@media screen and (max-width: 1000px) {
+  #app {
+    width: 100%;
+    height: 100%;
+    margin: 0px;
+  }
+}
+
+.cheader {
+  text-align: right;
+  font-size: 12px;
+  border-bottom: 1px solid #ccc;
+  background-color: #fff;
+  color: #333;
+  line-height: 60px;
+}
+.cheader h2 {
+  margin: 0px;
+  padding: 0px;
+  text-align: left;
+  font-size: 14px;
+  line-height: 60px;
+}
+
+.cmain .el-form {
+  background-color: #fff;
+  padding: 40px;
+}
+.cmain > div {
+  background-color: #fff;
+  padding: 20px 40px;
+}
