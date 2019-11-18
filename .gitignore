@@ -10,7 +10,8 @@ cmds/qitwallet/qitwallet
 go.sum
 
 #node
-assets/statick/statick.go
+assets/statik/statik.go
+assets/src/dist
 assets/src/node_modules/
 assets/src/package-lock.json
 
