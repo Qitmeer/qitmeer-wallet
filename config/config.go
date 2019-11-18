@@ -14,15 +14,16 @@ import (
 
 	"github.com/Qitmeer/qitmeer/params"
 
+	"github.com/Qitmeer/qitmeer-wallet/rpc/client"
 	"github.com/Qitmeer/qitmeer-wallet/utils"
 )
 
 const (
-	defaultConfigFilename   = "config.toml"
-	defaultLogLevel         = "info"
-	defaultLogDirname       = "logs"
-	defaultRPCMaxClients    = 10
-	DefaultMinRelayTxFee = int64(2e5)
+	defaultConfigFilename = "config.toml"
+	defaultLogLevel       = "info"
+	defaultLogDirname     = "logs"
+	defaultRPCMaxClients  = 10
+	DefaultMinRelayTxFee  = int64(2e5)
 
 	WalletDbName = "wallet.db"
 )
@@ -45,7 +46,7 @@ type Config struct {
 	AppDataDir string
 	DebugLevel string
 	LogDir     string
-	Create bool
+	Create     bool
 
 	Network string
 
@@ -81,11 +82,11 @@ type Config struct {
 	WalletPass string `short:"w" long:"wp" description:"Path to configuration file"`
 
 	// //qitmeerd RPC config
-	// QitmeerdSelect string // QitmeerdList[QitmeerdSelect]
-	// QitmeerdList   map[string]*client.Config
+	QitmeerdSelect string // QitmeerdList[QitmeerdSelect]
+	QitmeerdList   map[string]*client.Config
 }
 
-var Cfg =NewDefaultConfig()
+var Cfg = NewDefaultConfig()
 var ActiveNet = &params.MainNetParams
 var once sync.Once
 
@@ -96,6 +97,12 @@ func (cfg *Config) Check() error {
 	if activeNetParams == nil {
 		return fmt.Errorf("network not found: %s", cfg.Network)
 	}
+
+	return nil
+}
+
+// Save save cfg to file
+func (cfg *Config) Save() error {
 
 	return nil
 }
@@ -131,8 +138,8 @@ func NewDefaultConfig() (cfg *Config) {
 		QProxyUser:     "",
 		QProxyPass:     "",
 		WalletPass:     "public",
-		MinTxFee:		DefaultMinRelayTxFee,
-		UI:true,
+		MinTxFee:       DefaultMinRelayTxFee,
+		UI:             true,
 	}
 	return
 }
