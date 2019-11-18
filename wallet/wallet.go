@@ -674,6 +674,10 @@ func (w *Wallet) SyncTx(order int64) (clijson.BlockHttpResult,error) {
 	}
 	//log.Info("SyncTx order:",order)
 	if err := json.Unmarshal(blockByte, &block); err == nil {
+		if !block.Txsvalid {
+			log.Trace(fmt.Sprintf("block:%v err,txsvalid is false",block.Hash))
+			return block,nil
+		}
 		txins, txouts, trrs, err := parseBlockTxs(block)
 		if err != nil {
 			return block,err
@@ -754,7 +758,7 @@ func parseBlockTxs(block clijson.BlockHttpResult) ([]types.TxOutPoint, []wtxmgr.
 	var tx []corejson.TxRawResult
 	for _, tr := range block.Transactions {
 		tx = append(tx, tr)
-		tin, tout, err := parseTx(tr,block.Height)
+		tin, tout, err := parseTx(tr,block.Order)
 		if err != nil {
 			return nil, nil, nil, err
 		} else {
@@ -1098,7 +1102,7 @@ func confirms(txHeight, curHeight int32) int32 {
 	case txHeight == -1, txHeight > curHeight:
 		return 0
 	default:
-		return curHeight - txHeight + 1
+		return curHeight - txHeight
 	}
 }
 
@@ -1392,10 +1396,6 @@ b:
 				var confirm int32
 				for _, output1 := range output.Txoutput {
 					confirm = minconf
-					log.Trace("SendOutputs","output.Addr",output.Addr)
-					log.Trace("SendOutputs","output.balance.UnspendAmount",output.balance.UnspendAmount)
-					log.Trace("SendOutputs","output1.Spend",output1.Spend)
-					log.Trace("SendOutputs","output1.SpendTo",output1.SpendTo)
 					if output1.Spend != 1 && output1.SpendTo==nil {
 						if output1.Spend ==2 {
 							confirm = int32(w.chainParams.CoinbaseMaturity)
@@ -1447,7 +1447,7 @@ b:
 	}
 	if payAmout != types.Amount(0)|| feeAmout!=0 {
 		log.Trace("payAmout","payAmout",payAmout)
-		log.Trace("feeAmout","feeAmout",feeAmout)
+		log.Trace("feeAmout","feeAmout",types.Amount(feeAmout))
 		//log.Info("balance is not enough")
 		return nil, fmt.Errorf("balance is not enough")
 	}
@@ -1465,6 +1465,7 @@ b:
 	//	return nil, err
 	//}
 	//log.Info("txSign succ:", mtxHex)
+	log.Trace(fmt.Sprintf("signTx size:%v",len(signTx)))
 	msg, err := w.Httpclient.SendRawTransaction(signTx, false)
 	if err != nil {
 		return nil, err
@@ -1491,5 +1492,5 @@ b:
 		return nil, err
 	}
 
-	return &signTx, nil
+	return &msg, nil
 }

@@ -198,7 +198,8 @@ func (cfg *htpc) sendPostRequest(marshalledJSON []byte) ([]byte, error) {
 	}
 
 	if resp.Error != nil {
-		return nil, fmt.Errorf("sendPostRequest: resp.Error: %s,sendData: %s", respBytes, string(marshalledJSON))
+		return nil, fmt.Errorf("sendPostRequest: resp.Error: %s", respBytes)
+		//return nil, fmt.Errorf("sendPostRequest: resp.Error: %s,sendData: %s", respBytes, string(marshalledJSON))
 	}
 	return resp.Result, nil
 }
