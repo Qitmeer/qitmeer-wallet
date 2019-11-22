@@ -340,30 +340,31 @@ var listAccountsBalanceCmd=&cobra.Command{
 	},
 }
 var getlisttxbyaddrCmd=&cobra.Command{
-	Use:"getlisttxbyaddr {address} {page} {pagesize}",
+	Use:"getlisttxbyaddr {address} {String ,Transaction type : in ,out ,all ,default all } ",
 	Short:"get all transactions for address",
 	Example:`
-		getlisttxbyaddr Tmjc34zWMTAASHTwcNtPppPujFKVK5SeuaJ 1 100
+		getlisttxbyaddr Tmjc34zWMTAASHTwcNtPppPujFKVK5SeuaJ in
+		getlisttxbyaddr Tmjc34zWMTAASHTwcNtPppPujFKVK5SeuaJ out 
+		getlisttxbyaddr Tmjc34zWMTAASHTwcNtPppPujFKVK5SeuaJ all
 		`,
-	Args: cobra.MinimumNArgs(3),
+	Args: cobra.MinimumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		err:=OpenWallet()
 		if err!=nil{
 			fmt.Println(err.Error())
 			return
 		}
-		page,err :=  strconv.ParseInt(args[1],10,32)
-		if err != nil {
-			fmt.Printf("Wrong parameter type: %v\n",args[1])
-			return
+		stype :=int32(2)
+		if len(args)>1{
+			if args[1] == "in"{
+				stype = int32(0)
+			}else if args[1] == "out"{
+				stype = int32(1)
+			}else{
+				stype=int32(2)
+			}
 		}
-		pageSize,err :=  strconv.ParseInt(args[2],10,32)
-		if err != nil {
-			fmt.Printf("Wrong parameter type: %v\n",args[1])
-			return
-		}
-
-		getlisttxbyaddr(args[0],int32(page),int32(pageSize))
+		getlisttxbyaddr(args[0],int32(-1),int32(100),stype)
 	},
 }
 var updateblockCmd=&cobra.Command{
