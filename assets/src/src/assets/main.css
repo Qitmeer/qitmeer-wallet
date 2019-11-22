@@ -163,3 +163,18 @@ body{
   background-color: #fff;
   padding: 20px 40px;
 }
+
+.cmain .welcome{
+  font-size: 18px;
+  line-height: 40px;
+} 
+
+.cmain .welcome a{
+  color: #000;
+  text-decoration: none;
+}
+
+.cmain .welcome .rr {
+  text-align: right;
+  padding-right: 10px;
+}

@@ -2,6 +2,8 @@ package client
 
 // Config file
 type Config struct {
+	Name string
+
 	RPCUser       string
 	RPCPassword   string
 	RPCServer     string

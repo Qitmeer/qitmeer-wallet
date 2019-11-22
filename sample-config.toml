@@ -18,3 +18,18 @@ MinTxFee=200000   # The minimum transaction fee in AtomMEER/kB default 200000 (a
 #rpcUser=""
 #rpcPass=""
 #ui=true
+
+
+QitmeerdSelect = "local"
+
+[[Qitmeerds]]
+  Name = "local"
+  RPCUser = "qitmeer"
+  RPCPassword = "123456"
+  RPCServer = "127.0.0.1:18130"
+  RPCCert = ""
+  NoTLS = true
+  TLSSkipVerify = true
+  Proxy = ""
+  ProxyUser = ""
+  ProxyPass = ""

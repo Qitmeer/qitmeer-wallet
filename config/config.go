@@ -8,21 +8,25 @@ import (
 	"bytes"
 	"crypto/rand"
 	"fmt"
+	"io/ioutil"
 	"math/big"
 	"path/filepath"
 	"sync"
 
+	"github.com/BurntSushi/toml"
+
 	"github.com/Qitmeer/qitmeer/params"
 
+	"github.com/Qitmeer/qitmeer-wallet/rpc/client"
 	"github.com/Qitmeer/qitmeer-wallet/utils"
 )
 
 const (
-	defaultConfigFilename   = "config.toml"
-	defaultLogLevel         = "info"
-	defaultLogDirname       = "logs"
-	defaultRPCMaxClients    = 10
-	DefaultMinRelayTxFee = int64(2e5)
+	defaultConfigFilename = "config.toml"
+	defaultLogLevel       = "info"
+	defaultLogDirname     = "logs"
+	defaultRPCMaxClients  = 10
+	DefaultMinRelayTxFee  = int64(2e5)
 
 	WalletDbName = "wallet.db"
 )
@@ -45,7 +49,7 @@ type Config struct {
 	AppDataDir string
 	DebugLevel string
 	LogDir     string
-	Create bool
+	Create     bool
 
 	Network string
 
@@ -67,7 +71,6 @@ type Config struct {
 	APIs []string
 
 	//Qitmeerd
-	isLocal        bool
 	QServer        string
 	QUser          string
 	QPass          string
@@ -80,12 +83,12 @@ type Config struct {
 
 	WalletPass string `short:"w" long:"wp" description:"Path to configuration file"`
 
-	// //qitmeerd RPC config
-	// QitmeerdSelect string // QitmeerdList[QitmeerdSelect]
-	// QitmeerdList   map[string]*client.Config
+	//qitmeerd RPC
+	QitmeerdSelect string
+	Qitmeerds      []*client.Config
 }
 
-var Cfg =NewDefaultConfig()
+var Cfg = NewDefaultConfig()
 var ActiveNet = &params.MainNetParams
 var once sync.Once
 
@@ -98,6 +101,22 @@ func (cfg *Config) Check() error {
 	}
 
 	return nil
+}
+
+// Save save cfg to file
+func (cfg *Config) Save(savePath string) error {
+	if savePath == "" {
+		savePath = cfg.ConfigFile
+	}
+	fmt.Println("savePath", savePath)
+
+	buf := new(bytes.Buffer)
+	if err := toml.NewEncoder(buf).Encode(cfg); err != nil {
+		return err
+	}
+
+	return ioutil.WriteFile(savePath, buf.Bytes(), 0644)
+
 }
 
 // NewDefaultConfig make config by default value
@@ -118,9 +137,8 @@ func NewDefaultConfig() (cfg *Config) {
 		DisableRPC:    false,
 		DisableTLS:    false,
 
-		APIs: []string{"account", "wallet"},
+		APIs: []string{"account", "wallet", "qitmeerd"},
 
-		isLocal:        true,
 		QServer:        "127.0.0.1:18130",
 		QUser:          "",
 		QPass:          "",
@@ -131,8 +149,8 @@ func NewDefaultConfig() (cfg *Config) {
 		QProxyUser:     "",
 		QProxyPass:     "",
 		WalletPass:     "public",
-		MinTxFee:		DefaultMinRelayTxFee,
-		UI:true,
+		MinTxFee:       DefaultMinRelayTxFee,
+		UI:             true,
 	}
 	return
 }
