@@ -140,9 +140,6 @@ func LoadConfig(cmd *cobra.Command, args []string) {
 }
 
 func parseAndSetDebugLevels(debugLevel string) error {
-
-	fmt.Println("debugLevel", debugLevel)
-
 	// When the specified string doesn't have any delimters, treat it as
 	// the log level for all subsystems.
 	if !strings.Contains(debugLevel, ",") && !strings.Contains(debugLevel, "=") {

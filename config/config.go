@@ -8,9 +8,12 @@ import (
 	"bytes"
 	"crypto/rand"
 	"fmt"
+	"io/ioutil"
 	"math/big"
 	"path/filepath"
 	"sync"
+
+	"github.com/BurntSushi/toml"
 
 	"github.com/Qitmeer/qitmeer/params"
 
@@ -68,7 +71,6 @@ type Config struct {
 	APIs []string
 
 	//Qitmeerd
-	isLocal        bool
 	QServer        string
 	QUser          string
 	QPass          string
@@ -81,9 +83,9 @@ type Config struct {
 
 	WalletPass string `short:"w" long:"wp" description:"Path to configuration file"`
 
-	// //qitmeerd RPC config
-	QitmeerdSelect string // QitmeerdList[QitmeerdSelect]
-	QitmeerdList   map[string]*client.Config
+	//qitmeerd RPC
+	QitmeerdSelect string
+	Qitmeerds      []*client.Config
 }
 
 var Cfg = NewDefaultConfig()
@@ -102,9 +104,19 @@ func (cfg *Config) Check() error {
 }
 
 // Save save cfg to file
-func (cfg *Config) Save() error {
+func (cfg *Config) Save(savePath string) error {
+	if savePath == "" {
+		savePath = cfg.ConfigFile
+	}
+	fmt.Println("savePath", savePath)
 
-	return nil
+	buf := new(bytes.Buffer)
+	if err := toml.NewEncoder(buf).Encode(cfg); err != nil {
+		return err
+	}
+
+	return ioutil.WriteFile(savePath, buf.Bytes(), 0644)
+
 }
 
 // NewDefaultConfig make config by default value
@@ -125,9 +137,8 @@ func NewDefaultConfig() (cfg *Config) {
 		DisableRPC:    false,
 		DisableTLS:    false,
 
-		APIs: []string{"account", "wallet"},
+		APIs: []string{"account", "wallet", "qitmeerd"},
 
-		isLocal:        true,
 		QServer:        "127.0.0.1:18130",
 		QUser:          "",
 		QPass:          "",

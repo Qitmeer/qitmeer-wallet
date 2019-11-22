@@ -67,7 +67,11 @@ func (api *API) Create(seed string, walletPass string) error {
 		return &crateError{Code: -1, Msg: fmt.Sprintf("seed hex err: %s ", err)}
 	}
 
-	return api.createWallet(seedBuf, walletPass)
+	err = api.createWallet(seedBuf, walletPass)
+	if err != nil {
+		return err
+	}
+	return api.Open(walletPass)
 }
 
 //Recove wallet by mnemonic
@@ -76,30 +80,36 @@ func (api *API) Recove(mnemonic string, walletPass string) error {
 	if err != nil {
 		return &crateError{Code: -1, Msg: fmt.Sprintf("seed hex err: %s ", err)}
 	}
-	return api.createWallet(seedBuf, walletPass)
+	err = api.createWallet(seedBuf, walletPass)
+	if err != nil {
+		return err
+	}
+
+	return api.Open(walletPass)
 }
 
-func (api *API) Unlockwallet(walletPriPass string) error {
-	if api.wSvr.Wt.Locked() {
-		err := api.wSvr.Wt.Unlock([]byte(walletPriPass), time.After(60*time.Minute))
-		if err != nil {
-			log.Error("Failed to unlock new wallet during old wallet key import", "err", err)
-			return err
-		}
-	} else {
-		return nil
+//Unlock wallet
+func (api *API) Unlock(walletPriPass string, second int64) error {
+	//if api.wSvr.Wt.Locked() {
+	err := api.wSvr.Wt.Unlock([]byte(walletPriPass), time.After(time.Duration(second)*time.Second))
+	if err != nil {
+		log.Error("Failed to unlock new wallet during old wallet key import", "err", err)
+		return err
 	}
+	// } else {
+	// 	return nil
+	// }
 	return nil
 }
 
 //Open wallet
-func (api *API) Open() error {
-	log.Trace(fmt.Sprintf("Open wallet password:%s", config.Cfg.WalletPass))
+func (api *API) Open(pass string) error {
+	//log.Trace(fmt.Sprintf("Open wallet password:%s", config.Cfg.WalletPass))
 	if api.wSvr.Wt != nil {
 		log.Trace("api open wallet already open ")
 		return nil
 	}
-	walletPubPassBuf := []byte(config.Cfg.WalletPass)
+	walletPubPassBuf := []byte(pass) // []byte(config.Cfg.WalletPass)
 	wt, err := api.wSvr.WtLoader.OpenExistingWallet(walletPubPassBuf, false)
 	if err != nil {
 		return fmt.Errorf("open wallet err: %s", err)
@@ -186,39 +196,6 @@ func (api *API) createWallet(seed []byte, walletPass string) error {
 	//todo,not close,reopen slow
 	wt.Database().Close()
 
-	return nil
-}
-
-//
-// qitmeerd mgr
-//
-
-// ListQitmeerd all qitmeerd conf
-func (api *API) ListQitmeerd() error {
-
-	return nil
-}
-
-// AddQitmeerd add qitmeerd conf
-func (api *API) AddQitmeerd(name string,
-	RPCUser string, RPCPassword string, RPCServer string,
-	RPCCert string, NoTLS bool, TLSSkipVerify bool,
-	Proxy string, ProxyUser string, ProxyPass string) error {
-
-	return nil
-}
-
-// DelQtimeerd del qitmeerd conf
-// local Qitmeerd only update
-func (api *API) DelQtimeerd(name string) error {
-	return nil
-}
-
-// UpdateQitmeerd update qitmeerd conf
-func (api *API) UpdateQitmeerd(name string,
-	RPCUser string, RPCPassword string, RPCServer string,
-	RPCCert string, NoTLS bool, TLSSkipVerify bool,
-	Proxy string, ProxyUser string, ProxyPass string) error {
 	return nil
 }
 

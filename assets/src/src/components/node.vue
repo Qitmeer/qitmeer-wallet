@@ -7,19 +7,22 @@
         </el-col>
         <el-col :span="12"></el-col>
         <el-col :span="6">
-          <el-button type="primary" icon="el-icon-plus" @click="newNode" size="small">新建节点</el-button>
+          <el-button type="primary" icon="el-icon-plus" @click="newNode" size="small">添加节点</el-button>
         </el-col>
       </el-row>
     </el-header>
     <el-main class="cmain">
-      <el-table :data="tableData" highlight-current-row @current-change="handleCurrentChange">
-        <el-table-column type="index" width="50"></el-table-column>
-        <el-table-column prop="name" label="名称" width="120"></el-table-column>
-        <el-table-column prop="addr" label="地址"></el-table-column>
-        <el-table-column prop="user" label="user" width="120"></el-table-column>
-        <el-table-column prop="pwd" label="pwd" width="120"></el-table-column>
-        <el-table-column>
-          <el-link type="danger" icon="el-icon-delete" width="80">删除</el-link>
+      <el-table :data="tableData" style="width: 100%">
+        <el-table-column type="index" width="40"></el-table-column>
+        <el-table-column prop="Name" label="名称" width="80"></el-table-column>
+        <el-table-column prop="RPCServer" label="地址" width="200"></el-table-column>
+        <el-table-column prop="RPCUser" label="user" width="120"></el-table-column>
+        <el-table-column prop="RPCPassword" label="pwd" width="120"></el-table-column>
+        <el-table-column label="操作" width="100">
+          <template slot-scope="scope">
+            <el-button type="text" @click="delNode(scope.row)">删除</el-button>
+            <el-button type="text" @click="editNode(scope.row)">编辑</el-button>
+          </template>
         </el-table-column>
       </el-table>
     </el-main>
@@ -31,30 +34,52 @@
 <script>
 export default {
   data() {
-    const item = [
-      {
-        name: "本地",
-        addr: "127.0.0.1:1236",
-        user: "admin",
-        pwd: "123456"
-      },
-      {
-        name: "daodao",
-        addr: "12.4.23.4:1236",
-        user: "admin",
-        pwd: "123456"
-      }
-    ];
     return {
-      tableData: item
+      tableData: []
     };
+  },
+  mounted() {
+    let _this = this;
+    _this.$emit("getQitmeerdList", () => {
+      _this.tableData = _this.$store.state.QitmeerdList;
+    });
   },
   methods: {
     newNode() {
       this.$router.push({ path: "/node/new" });
     },
-    handleCurrentChange(val) {
-      this.currentRow = val;
+    editNode(node) {
+      this.$router.push({
+        path: `/node/edit/${node.Name}`
+      });
+    },
+    delNode(node) {
+      let _this = this;
+
+      this.$axios({
+        method: "post",
+        data: JSON.stringify({
+          id: new Date().getTime(),
+          method: "qitmeerd_del",
+          params: [node.Name]
+        })
+      }).then(response => {
+        if (typeof response.data.error != "undefined") {
+          _this.$emit("Del error", response.data.error, () => {});
+          return;
+        }
+        this.$alert("成功", {
+          showClose: false,
+          closeOnClickModal: false,
+          closeOnPressEscape: false,
+          confirmButtonText: "确定",
+          callback: (action, instance) => {
+            _this.$emit("getQitmeerdList", () => {
+              _this.tableData = _this.$store.state.QitmeerdList;
+            });
+          }
+        });
+      });
     }
   }
 };

@@ -6,11 +6,15 @@ import (
 	"crypto/x509"
 	"encoding/json"
 	"fmt"
-	"github.com/Qitmeer/qitmeer-wallet/config"
 	"io/ioutil"
 	"net"
 	"net/http"
 	"strings"
+
+	qJson "github.com/Qitmeer/qitmeer/core/json"
+
+	"github.com/Qitmeer/qitmeer-wallet/config"
+	"github.com/Qitmeer/qitmeer-wallet/rpc/client"
 
 	"github.com/samuel/go-socks/socks"
 )
@@ -40,6 +44,27 @@ func NewHtpc() (*htpc, error) {
 		Proxy:         config.Cfg.QProxy,
 		ProxyUser:     config.Cfg.QProxyUser,
 		ProxyPass:     config.Cfg.QProxyPass,
+	}
+	c, err := newHTTPClient(h)
+	if err != nil {
+		return nil, err
+	}
+	h.httpclient = c
+	return h, nil
+}
+
+// NewHtpcByCfg new htpc by cfg
+func NewHtpcByCfg(cfg *client.Config) (*htpc, error) {
+	h := &htpc{
+		RPCUser:       cfg.RPCUser,
+		RPCPassword:   cfg.RPCPassword,
+		RPCServer:     cfg.RPCServer,
+		RPCCert:       cfg.RPCCert,
+		NoTLS:         cfg.NoTLS,
+		TLSSkipVerify: cfg.TLSSkipVerify,
+		Proxy:         cfg.Proxy,
+		ProxyUser:     cfg.ProxyUser,
+		ProxyPass:     cfg.ProxyPass,
 	}
 	c, err := newHTTPClient(h)
 	if err != nil {
@@ -123,12 +148,27 @@ func (cfg *htpc) getBlock(hash string, isDetail bool) (string, error) {
 	return cfg.getResString("getBlock", params)
 }
 func (cfg *htpc) getBlockByOrder(i int64) ([]byte, error) {
-	params := []interface{}{i,true}
+	params := []interface{}{i, true}
 	return cfg.getResByte("getBlockByOrder", params)
 }
 func (cfg *htpc) SendRawTransaction(tx string, allowHighFees bool) (string, error) {
 	params := []interface{}{tx, allowHighFees}
 	return cfg.getResString("sendRawTransaction", params)
+}
+
+func (cfg *htpc) GetNodeInfo() (*qJson.InfoNodeResult, error) {
+	params := []interface{}{}
+	buf, err := cfg.getResByte("getNodeInfo", params)
+	if err != nil {
+		return nil, err
+	}
+	nodeInfo := &qJson.InfoNodeResult{}
+	err = json.Unmarshal(buf, nodeInfo)
+	if err != nil {
+		return nil, err
+	}
+
+	return nodeInfo, nil
 }
 
 // sendPostRequest sends the marshalled JSON-RPC command using HTTP-POST mode
@@ -308,8 +348,8 @@ func (cfg *htpc) getResByte(method string, args []interface{}) (rs []byte, err e
 
 	resResult, err := cfg.sendPostRequest(reqData)
 	if err != nil {
-		return nil,err
+		return nil, err
 	}
-	rs =resResult
+	rs = resResult
 	return rs, err
 }

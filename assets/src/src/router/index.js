@@ -4,7 +4,7 @@ import Router from 'vue-router';
 import index from '@/components/index';
 
 import walletcreate from '@/components/walletcreate';
-import walletrecove from '@/components/walletrecove';
+import walletrecover from '@/components/walletrecover';
 import account from '@/components/account';
 import accountnew from '@/components/accountnew';
 import address from '@/components/address';
@@ -30,9 +30,9 @@ export default new Router({
             component: walletcreate
         },
         {
-            path: '/wallet/recove',
-            name: 'walletrecove',
-            component: walletrecove
+            path: '/wallet/recover',
+            name: 'walletrecover',
+            component: walletrecover
         },
         {
             path: '/account',
@@ -74,5 +74,10 @@ export default new Router({
             name: 'nodenew',
             component: nodenew
         },
+        {
+            path: '/node/edit/:name',
+            name: 'nodeedit',
+            component: nodenew
+        }
     ]
 })

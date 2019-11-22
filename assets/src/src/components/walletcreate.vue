@@ -80,7 +80,7 @@ export default {
     };
   },
   mounted() {
-    this.$emit("checkWalletStats");
+    // this.$emit("checkWalletStats");
     this.newSeed();
   },
   methods: {
@@ -140,7 +140,7 @@ export default {
             duration: 500,
             onClose: function() {
               _this.$emit("setLoading", false, "");
-              _this.$emit("checkWalletStats");
+              _this.$emit("getWalletStats");
             }
           });
         });

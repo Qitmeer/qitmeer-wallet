@@ -75,9 +75,9 @@ export default {
     };
   },
   mounted() {
-    this.$emit("checkWalletStats", lockStat => {
-      this.$router.push("/");
-    });
+    // this.$emit("checkWalletStats", lockStat => {
+    //   this.$router.push("/");
+    // });
   },
   methods: {
     submitForm(formName) {
@@ -115,7 +115,7 @@ export default {
             duration: 500,
             onClose: function() {
               _this.$emit("setLoading", false, "");
-              _this.$emit("checkWalletStats", action => {
+              _this.$emit("getWalletStats", action => {
                 _this.$router.push("/");
               });
             }

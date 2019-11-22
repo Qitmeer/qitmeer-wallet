@@ -49,21 +49,9 @@ export default {
 
     _this.$emit("checkWalletStats", openStats => {
       if (openStats == "lock") {
-        _this.$emit("walletPasswordDlg", "wallet_unlock", unlock => {
-          if (!unlock) {
-            _this.$router.push("/account");
-          }
-        });
-      } else if (openStats == "unlock") {
-        //
-      } else {
-        this.$alert("解锁钱包错误", {
-          showClose: false,
-          closeOnClickModal: false,
-          closeOnPressEscape: false,
-          confirmButtonText: "确定",
-          callback: (action, instance) => {
-            this.$router.push({ path: "/account" });
+        _this.$emit("walletPasswordDlg", isUnlock => {
+          if (!isUnlock) {
+            _this.$router.push("/account/create");
           }
         });
       }
