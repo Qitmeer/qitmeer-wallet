@@ -340,10 +340,12 @@ var listAccountsBalanceCmd=&cobra.Command{
 	},
 }
 var getlisttxbyaddrCmd=&cobra.Command{
-	Use:"getlisttxbyaddr {address}",
+	Use:"getlisttxbyaddr {address} {String ,Transaction type : in ,out ,all ,default all } ",
 	Short:"get all transactions for address",
 	Example:`
-		getlisttxbyaddr Tmjc34zWMTAASHTwcNtPppPujFKVK5SeuaJ
+		getlisttxbyaddr Tmjc34zWMTAASHTwcNtPppPujFKVK5SeuaJ in
+		getlisttxbyaddr Tmjc34zWMTAASHTwcNtPppPujFKVK5SeuaJ out 
+		getlisttxbyaddr Tmjc34zWMTAASHTwcNtPppPujFKVK5SeuaJ all
 		`,
 	Args: cobra.MinimumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
@@ -352,7 +354,17 @@ var getlisttxbyaddrCmd=&cobra.Command{
 			fmt.Println(err.Error())
 			return
 		}
-		getlisttxbyaddr(args[0])
+		stype :=int32(2)
+		if len(args)>1{
+			if args[1] == "in"{
+				stype = int32(0)
+			}else if args[1] == "out"{
+				stype = int32(1)
+			}else{
+				stype=int32(2)
+			}
+		}
+		getlisttxbyaddr(args[0],int32(-1),int32(100),stype)
 	},
 }
 var updateblockCmd=&cobra.Command{

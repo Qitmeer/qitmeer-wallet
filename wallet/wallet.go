@@ -496,7 +496,7 @@ func (w *Wallet) getAddrAndAddrTxOutputByAddr(addr string, requiredConfs int32) 
 }
 
 /**
-stype 0 Turn in 1 Turn out
+stype 0 Turn in 1 Turn out 2 all no page
 */
 func (w *Wallet) GetListTxByAddr(addr string, stype int32, page int32, pageSize int32) (*clijson.PageTxRawResult, error) {
 	at, err := w.getAddrAndAddrTxOutputByAddr(addr, 1)
@@ -518,35 +518,75 @@ func (w *Wallet) GetListTxByAddr(addr string, stype int32, page int32, pageSize 
 	var dataLen int32
 	if stype == 0 {
 		dataLen = int32(len(at.Txoutput))
-		if startIndex > dataLen {
-			return nil, fmt.Errorf("No data")
-		} else {
-			if (startIndex + pageSize) > dataLen {
-				endIndex = dataLen
-			} else {
-				endIndex = (startIndex + pageSize)
+		if page < 0{
+			for _, txput := range at.Txoutput {
+				txhss = append(txhss, txput.Txid)
 			}
-			for s := startIndex; s < endIndex; s++ {
-				txhss = append(txhss, at.Txoutput[s].Txid)
+			dataLen = int32(len(txhss))
+			page=1
+			pageSize=1000000000
+		}else{
+			if startIndex > dataLen {
+				return nil, fmt.Errorf("No data")
+			} else {
+				if (startIndex + pageSize) > dataLen {
+					endIndex = dataLen
+				} else {
+					endIndex = (startIndex + pageSize)
+				}
+				for s := startIndex; s < endIndex; s++ {
+					txhss = append(txhss, at.Txoutput[s].Txid)
+				}
 			}
 		}
-	} else {
+	} else if stype == 1  {
 		for _, txput := range at.Txoutput {
 			if txput.Spend == 1 && txput.SpendTo != nil {
 				txhssin = append(txhssin, txput.SpendTo.TxHash)
 			}
 		}
 		dataLen = int32(len(txhssin))
-		if startIndex > dataLen {
-			return nil, fmt.Errorf("No data")
-		} else {
-			if (startIndex + pageSize) > dataLen {
-				endIndex = dataLen
+		if page <0 {
+			txhss = append(txhss, txhssin...)
+			page=1
+			pageSize=1000000000
+		}else{
+			if startIndex > dataLen {
+				return nil, fmt.Errorf("No data")
 			} else {
-				endIndex = (startIndex + pageSize)
+				if (startIndex + pageSize) > dataLen {
+					endIndex = dataLen
+				} else {
+					endIndex = (startIndex + pageSize)
+				}
+				for s := startIndex; s < endIndex; s++ {
+					txhss = append(txhss, txhssin[s])
+				}
 			}
-			for s := startIndex; s < endIndex; s++ {
-				txhss = append(txhss, txhssin[s])
+		}
+	}else{
+		for _, txput := range at.Txoutput {
+			txhss = append(txhss, txput.Txid)
+			if txput.Spend == 1 && txput.SpendTo != nil {
+				txhss = append(txhss, txput.SpendTo.TxHash)
+			}
+		}
+		dataLen = int32(len(txhss))
+		if page <0 {
+			page=1
+			pageSize=1000000000
+		}else{
+			if startIndex > dataLen {
+				return nil, fmt.Errorf("No data")
+			} else {
+				if (startIndex + pageSize) > dataLen {
+					endIndex = dataLen
+				} else {
+					endIndex = (startIndex + pageSize)
+				}
+				for s := startIndex; s < endIndex; s++ {
+					txhss = append(txhss, txhssin[s])
+				}
 			}
 		}
 	}

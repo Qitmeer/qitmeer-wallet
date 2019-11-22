@@ -271,7 +271,19 @@ func (c *Console) Interactive() {
 						fmt.Println("getlisttxbyaddr err :Please enter your address.")
 						break
 					}
-					getlisttxbyaddr(arg1)
+					if arg2 == ""{
+						fmt.Println("getlisttxbyaddr err :Please enter your page.")
+						break
+					}
+					stype :=int32(2)
+					if arg2== "in"{
+						stype = int32(0)
+					}else if arg2 == "out"{
+						stype = int32(1)
+					}else{
+						stype=int32(2)
+					}
+					getlisttxbyaddr(arg1,int32(-1),int32(100),stype)
 					break
 				case "getNewAddress":
 					if arg1 == ""{

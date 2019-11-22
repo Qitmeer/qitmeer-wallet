@@ -101,7 +101,7 @@ func printHelp() {
 	fmt.Println("\t<createNewAccount> : Create a new account. Parameter: [account]")
 	fmt.Println("\t<getbalance> : Query the specified address balance. Parameter: [address]")
 	//fmt.Println("\t<listAccountsBalance> : Obtain all account balances. Parameter: []")
-	fmt.Println("\t<getlisttxbyaddr> : Gets all transaction records at the specified address. Parameter: [address]")
+	fmt.Println("\t<getlisttxbyaddr> : Gets all transaction records at the specified address. Parameter: [address] [stype:in,out,all]")
 	fmt.Println("\t<getNewAddress> : Create a new address under the account. Parameter: [account]")
 	fmt.Println("\t<getAddressesByAccount> : Check all addresses under the account. Parameter: [account]")
 	fmt.Println("\t<getAccountByAddress> : Inquire about the account number of the address. Parameter: [address]")
@@ -174,12 +174,12 @@ func  listAccountsBalance(min int)( interface{}, error){
 	return msg, nil
 }
 
-func getlisttxbyaddr(addr string)( interface{}, error){
+func getlisttxbyaddr(addr string,page int32,pageSize int32,stype int32)( interface{}, error){
 	cmd:=&qitmeerjson.GetListTxByAddrCmd{
 		Address:addr,
-		Stype:int32(0),
-		Page:int32(1),
-		PageSize:int32(100),
+		Stype:stype,
+		Page:page,
+		PageSize:pageSize,
 	}
 	result, err := walletrpc.Getlisttxbyaddr(cmd, w)
 	if err != nil {
@@ -187,13 +187,14 @@ func getlisttxbyaddr(addr string)( interface{}, error){
 		return nil, err
 	}else{
 		a:=result.(*qjson.PageTxRawResult)
+		fmt.Printf("total:%v\n",a.Total)
 		for _, t := range a.Transactions {
 			b,err:=json.Marshal(t)
 			if err!=nil{
 				fmt.Println("getlisttxbyaddr err:",err.Error())
 				return nil, err
 			}
-			fmt.Printf("%s\n",string(b))
+			fmt.Printf("%s\n",string(b),)
 		}
 	}
 	return result, nil
