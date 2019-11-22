@@ -10,7 +10,7 @@
     </el-header>
 
     <el-main class="cmain">
-      <el-form :model="ruleForm" ref="ruleForm" :rules="rules" label-width="100px">
+      <el-form :model="ruleForm" ref="ruleForm" :rules="rules" label-width="150px">
         <el-form-item label="助记词" prop="mnemonic">
           <el-input
             type="textarea"
@@ -18,14 +18,20 @@
             v-model="ruleForm.mnemonic"
           ></el-input>
         </el-form-item>
-        <el-form-item label="请输入密码" prop="password1">
-          <el-input placeholder="请输入密码" v-model="ruleForm.password1" show-password></el-input>
+        <el-form-item label="登录密码" prop="password1">
+          <el-input placeholder="登录密码" v-model="ruleForm.password1" show-password></el-input>
         </el-form-item>
-        <el-form-item label="再次输入密码" prop="password2">
-          <el-input placeholder="再次输入密码" v-model="ruleForm.password2" show-password></el-input>
+        <el-form-item label="再次输入登录密码" prop="password2">
+          <el-input placeholder="登录密码" v-model="ruleForm.password2" show-password></el-input>
+        </el-form-item>
+        <el-form-item label="交易密码" prop="password21">
+          <el-input placeholder="交易密码" v-model="ruleForm.password21" show-password></el-input>
+        </el-form-item>
+        <el-form-item label="再次输入交易密码" prop="password22">
+          <el-input placeholder="交易密码" v-model="ruleForm.password22" show-password></el-input>
         </el-form-item>
         <el-form-item>
-          <el-button type="primary" @click="submitForm('ruleForm')">恢复</el-button>
+          <el-button type="primary" @click="submitForm">恢复</el-button>
         </el-form-item>
         <div>
           <p>注意：</p>
@@ -42,45 +48,53 @@
 <script>
 export default {
   data() {
-    let validatePass = (rule, value, callback) => {
-      if (value === "") {
-        callback(new Error("请输入密码"));
-      } else {
-        if (this.ruleForm.password2 !== "") {
-          this.$refs.ruleForm.validateField("password2");
+    var validatePass = p2 => {
+      return (rule, value, callback) => {
+        if (value === "") {
+          callback(new Error("请输入密码"));
+        } else {
+          if (this.ruleForm[p2] !== "") {
+            this.$refs.ruleForm.validateField(p2);
+          }
+          callback();
         }
-        callback();
-      }
+      };
     };
-    let validatePass2 = (rule, value, callback) => {
-      if (value === "") {
-        callback(new Error("请再次输入密码"));
-      } else if (value !== this.ruleForm.password1) {
-        callback(new Error("两次输入密码不一致!"));
-      } else {
-        callback();
-      }
+    var validatePass2 = p1 => {
+      return (rule, value, callback) => {
+        if (value === "") {
+          callback(new Error("请再次输入密码"));
+        } else if (value !== this.ruleForm[p1]) {
+          callback(new Error("两次输入密码不一致!"));
+        } else {
+          callback();
+        }
+      };
     };
 
     return {
       ruleForm: {
         mnemonic: "",
         password1: "",
-        password2: ""
+        password2: "",
+        password21: "",
+        password22: ""
       },
       rules: {
-        password1: [{ validator: validatePass, trigger: "blur" }],
-        password2: [{ validator: validatePass2, trigger: "blur" }]
+        password1: [{ validator: validatePass("password2"), trigger: "blur" }],
+        password2: [{ validator: validatePass2("password1"), trigger: "blur" }],
+        password21: [
+          { validator: validatePass("password22"), trigger: "blur" }
+        ],
+        password22: [
+          { validator: validatePass2("password21"), trigger: "blur" }
+        ]
       }
     };
   },
-  mounted() {
-    // this.$emit("checkWalletStats", lockStat => {
-    //   this.$router.push("/");
-    // });
-  },
+  mounted() {},
   methods: {
-    submitForm(formName) {
+    submitForm() {
       let _this = this;
       this.$refs.ruleForm.validate(valid => {
         if (!valid) {
@@ -93,15 +107,19 @@ export default {
           method: "post",
           data: JSON.stringify({
             id: new Date().getTime(),
-            method: "wallet_recove",
-            params: [this.ruleForm.mnemonic, this.ruleForm.password1]
+            method: "wallet_recover",
+            params: [
+              this.ruleForm.mnemonic,
+              this.ruleForm.password1,
+              this.ruleForm.password21
+            ]
           })
         }).then(response => {
           if (typeof response.data.error != "undefined") {
             this.$message({
               message: "错误，请稍后重试: " + response.data.error.message,
               type: "warning",
-              duration: 500,
+              duration: 1000,
               onClose: function() {
                 _this.$emit("setLoading", false);
                 _this.$router.go(0);
@@ -112,7 +130,7 @@ export default {
           this.$message({
             message: "恢复成功成功!",
             type: "success",
-            duration: 500,
+            duration: 1000,
             onClose: function() {
               _this.$emit("setLoading", false, "");
               _this.$emit("getWalletStats", action => {

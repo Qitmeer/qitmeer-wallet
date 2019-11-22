@@ -7,15 +7,17 @@
         </el-col>
         <el-col :span="12"></el-col>
         <el-col :span="6">
-          <el-button type="primary" icon="el-icon-plus" @click="newAccount" size="small">导入私钥</el-button>
+          <el-button type="primary" icon="el-icon-plus" @click="importKey" size="small">导入私钥</el-button>
         </el-col>
       </el-row>
     </el-header>
     <el-main class="cmain">
       <el-table :data="tableData">
-        <el-table-column prop="addr" label="地址"></el-table-column>
+        <el-table-column prop="addr" label="地址" width="400px"></el-table-column>
         <el-table-column label>
-          <el-link type="primary" icon="el-icon-download">导出key</el-link>&nbsp;&nbsp;
+          <template slot-scope="scope">
+            <el-button @click="dumpKey(scope.row.addr)" type="text" icon="el-icon-download">导出私钥</el-button>
+          </template>
         </el-table-column>
       </el-table>
     </el-main>
@@ -37,8 +39,8 @@ export default {
     this.getAddressList();
   },
   methods: {
-    newAccount() {
-      this.$router.push({ path: "/account/new" });
+    importKey() {
+      this.$router.push({ path: "/backup/import" });
     },
     getAddressList() {
       let _this = this;
@@ -64,6 +66,60 @@ export default {
 
           _this.tableData = tmpTable;
         });
+    },
+    checkWalletStats(callback) {
+      let _this = this;
+      _this.$emit("getWalletStats", stats => {
+        if (stats != "unlock") {
+          _this.$emit("walletPasswordDlg", "wallet_unlock", result => {
+            if (!result) {
+              // _this.$router.push("/");
+              return;
+            }
+            callback();
+          });
+          return;
+        }
+        callback();
+      });
+    },
+    dumpKey(addr) {
+      let _this = this;
+
+      const h = this.$createElement;
+
+      let dumpKeyDo = () => {
+        _this
+          .$axios({
+            method: "post",
+            data: JSON.stringify({
+              id: new Date().getTime(),
+              method: "account_dumpPrivKey",
+              params: [addr]
+            })
+          })
+          .then(response => {
+            if (typeof response.data.error != "undefined") {
+              _this.$emit("alertResError", response.data.error, () => {});
+              return;
+            }
+            let msg = h("div", [
+              h("p", null, "地址: " + addr),
+              h(
+                "p",
+                { style: "word-wrap:break-word" },
+                "私钥: " + response.data.result
+              )
+            ]);
+            this.$alert(msg, "私钥", {
+              showClose: false,
+              confirmButtonText: "确定",
+              callback: () => {}
+            });
+          });
+      };
+
+      _this.checkWalletStats(dumpKeyDo);
     }
   }
 };

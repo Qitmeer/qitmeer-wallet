@@ -57,23 +57,31 @@ export default {
     return {};
   },
   mounted() {
-    let _this = this;
-    _this.$emit("getWalletStats", stat => {
-      if (stat == "nil") {
-        _this.$emit("dlgMakeWallet");
-      } else if (stat == "closed") {
-        _this.openWallet();
-      }
-    });
+    this.checkWalletStats();
   },
   methods: {
     openWallet() {
       let _this = this;
-
       _this.$emit("walletPasswordDlg", "wallet_open", result => {
         if (!result) {
           _this.openWallet();
+          return;
         }
+        _this.checkWalletStats();
+      });
+    },
+    checkWalletStats() {
+      let _this = this;
+      _this.$emit("getWalletStats", stat => {
+        if (stat == "nil") {
+          _this.$emit("createWalletDlg");
+          return;
+        }
+        if (stat == "closed") {
+          _this.openWallet();
+          return;
+        }
+        _this.$emit("walletOk");
       });
     }
   }

@@ -59,7 +59,7 @@
             </el-dropdown-menu>
           </el-dropdown>
         </h2>
-
+        <p>网络: {{qitmeerdStatus.Network}}</p>
         <p>
           <span>MainOrder: {{qitmeerdStatus.MainOrder}}</span>
         </p>
@@ -89,15 +89,15 @@
     <router-view
       class="mainwarp"
       @setLoading="setLoading"
-      @dlgMakeWallet="dlgMakeWallet"
+      @createWalletDlg="createWalletDlg"
       @getWalletStats="getWalletStats"
       @walletPasswordDlg="walletPasswordDlg"
+      @walletOk="walletOk"
       @alertResError="alertResError"
       @updateAccounts="updateAccounts"
       @getQitmeerdList="getQitmeerdList"
     ></router-view>
     <el-dialog
-      title="密码验证"
       :visible.sync="walletPassword.dlgVisible"
       :close-on-click-modal="false"
       :close-on-press-escape="false"
@@ -131,6 +131,7 @@ export default {
       qitmeerdList: qitmeerdList,
       qitmeerdStatusAlert: null,
       qitmeerdStatus: {
+        Network: "",
         CurrentName: "Local",
         MainOrder: "",
         MainHeight: "",
@@ -150,18 +151,17 @@ export default {
         callback: () => {}
       },
       walletPassword: {
-        title: "请输入登陆密码",
+        title: "请输入登录密码",
         method: "wallet_open",
         dlgVisible: false,
         password: "",
         loading: false,
+        unlockTimeout: 5 * 60, //wallet_unlock default 5 minutes
         callback: () => {}
       }
     };
   },
-  mounted() {
-    let _this = this;
-  },
+  mounted() {},
   methods: {
     setLoading(b, txt) {
       this.loading = b;
@@ -170,7 +170,6 @@ export default {
     walletOk() {
       this.getQitmeerdStatus();
       this.getQitmeerdList(() => {});
-
       setInterval(this.getQitmeerdStatus, 1000 * 30);
     },
     getWalletStats(callback) {
@@ -265,7 +264,7 @@ export default {
         this.$router.push("/");
       });
     },
-    dlgMakeWallet() {
+    createWalletDlg() {
       let _this = this;
       _this.$confirm("", "创建新钱包", {
         showClose: false,
@@ -286,7 +285,10 @@ export default {
       let _this = this;
       if (method == "wallet_unlock") {
         _this.walletPassword.title = "请输入交易密码";
+      } else {
+        _this.walletPassword.title = "请输入登录密码";
       }
+      _this.walletPassword.password = "";
       _this.walletPassword.method = method;
       _this.walletPassword.callback = callback;
       _this.walletPassword.dlgVisible = true;
@@ -300,13 +302,18 @@ export default {
       }
       _this.loading = true;
 
+      let params = [_this.walletPassword.password];
+      if (_this.walletPassword.method == "wallet_unlock") {
+        params.push(_this.walletPassword.unlockTimeout);
+      }
+
       _this
         .$axios({
           method: "post",
           data: JSON.stringify({
             id: new Date().getTime(),
             method: _this.walletPassword.method, //"wallet_open","wallet_unlock"
-            params: [_this.walletPassword.password]
+            params: params
           })
         })
         .then(response => {
@@ -316,6 +323,7 @@ export default {
               _this.walletPassword.callback(false);
             });
           } else {
+            _this.walletPassword.dlgVisible = false;
             _this.walletPassword.callback(true);
           }
         })

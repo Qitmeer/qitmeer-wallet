@@ -11,6 +11,7 @@ import address from '@/components/address';
 import txsend from '@/components/txsend';
 import txlist from '@/components/txlist';
 import backup from "@/components/backup";
+import backupImport from "@/components/importkey";
 
 import node from "@/components/node";
 import nodenew from "@/components/nodenew";
@@ -63,6 +64,11 @@ export default new Router({
             path: '/backup',
             name: 'backup',
             component: backup
+        },
+        {
+            path: '/backup/import',
+            name: 'import',
+            component: backupImport
         },
         {
             path: '/node',

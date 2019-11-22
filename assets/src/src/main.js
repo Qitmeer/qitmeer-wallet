@@ -33,6 +33,7 @@ router.beforeEach((to, from, next) => {
       to.path == "/wallet/create" ||
       to.path == "/wallet/recover"
     )) {
+      next({ path: '/' })
       return
     }
   } else if (store.state.Wallet == "closed") {
@@ -45,6 +46,7 @@ router.beforeEach((to, from, next) => {
       to.path == "/wallet/create" ||
       to.path == "/wallet/recover"
     ) {
+      next({ path: '/', })
       return;
     }
   }

@@ -46,24 +46,11 @@ export default {
   },
   mounted() {
     let _this = this;
-
-    _this.$emit("checkWalletStats", openStats => {
-      if (openStats == "lock") {
-        _this.$emit("walletPasswordDlg", "wallet_unlock", unlock => {
-          if (!unlock) {
+    _this.$emit("getWalletStats", stats => {
+      if (stats != "unlock") {
+        _this.$emit("walletPasswordDlg", "wallet_unlock", result => {
+          if (!result) {
             _this.$router.push("/account");
-          }
-        });
-      } else if (openStats == "unlock") {
-        //
-      } else {
-        this.$alert("解锁钱包错误", {
-          showClose: false,
-          closeOnClickModal: false,
-          closeOnPressEscape: false,
-          confirmButtonText: "确定",
-          callback: (action, instance) => {
-            this.$router.push({ path: "/account" });
           }
         });
       }
@@ -82,7 +69,7 @@ export default {
           data: JSON.stringify({
             id: new Date().getTime(),
             method: "account_create",
-            params: [this.ruleForm.account]
+            params: [this.ruleForm.name]
           })
         }).then(response => {
           if (typeof response.data.error != "undefined") {

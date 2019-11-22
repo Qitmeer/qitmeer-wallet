@@ -146,6 +146,7 @@ func (api *API) Status() (*Status, error) {
 
 //Status qitmeerd status
 type Status struct {
+	Network      string
 	CurrentName  string //current qitmeerd name
 	err          string //
 	MainOrder    uint32

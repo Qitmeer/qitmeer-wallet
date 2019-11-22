@@ -7,6 +7,8 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/Qitmeer/qitmeer-wallet/rpc/client"
+
 	qJson "github.com/Qitmeer/qitmeer/core/json"
 	"github.com/julienschmidt/httprouter"
 
@@ -35,6 +37,21 @@ type WalletServer struct {
 
 //NewWalletServer make a wallet api server
 func NewWalletServer(cfg *config.Config) (wSvr *WalletServer, err error) {
+
+	var qitmeerdSelect *client.Config
+	if cfg.QitmeerdSelect != "" {
+		for _, item := range cfg.Qitmeerds {
+			if item.Name == cfg.QitmeerdSelect {
+				qitmeerdSelect = item
+			}
+		}
+	}
+	if len(cfg.Qitmeerds) < 1 {
+		return nil, fmt.Errorf("config qitmeerds nothing %s", "")
+	}
+	if qitmeerdSelect == nil {
+		cfg.QitmeerdSelect = cfg.Qitmeerds[0].Name
+	}
 
 	activeNetParams := utils.GetNetParams(cfg.Network)
 	dbDir := filepath.Join(cfg.AppDataDir, cfg.Network)

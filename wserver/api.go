@@ -6,15 +6,14 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/Qitmeer/qitmeer/crypto/bip32"
-	"github.com/Qitmeer/qitmeer/crypto/bip39"
-	"github.com/Qitmeer/qitmeer/crypto/ecc/secp256k1"
-	"github.com/Qitmeer/qitmeer/crypto/seed"
-
 	"github.com/Qitmeer/qitmeer-wallet/config"
 	"github.com/Qitmeer/qitmeer-wallet/utils"
 	waddrmgr "github.com/Qitmeer/qitmeer-wallet/waddrmgs"
 	"github.com/Qitmeer/qitmeer-wallet/wallet"
+	"github.com/Qitmeer/qitmeer/crypto/bip32"
+	"github.com/Qitmeer/qitmeer/crypto/bip39"
+	"github.com/Qitmeer/qitmeer/crypto/ecc/secp256k1"
+	"github.com/Qitmeer/qitmeer/crypto/seed"
 	"github.com/Qitmeer/qitmeer/log"
 )
 
@@ -61,31 +60,31 @@ func (api *API) Status() (status *ResStatus, err error) {
 }
 
 //Create wallet by seed
-func (api *API) Create(seed string, walletPass string) error {
+func (api *API) Create(seed string, walletPass string, unlockPass string) error {
 	seedBuf, err := hex.DecodeString(seed)
 	if err != nil {
 		return &crateError{Code: -1, Msg: fmt.Sprintf("seed hex err: %s ", err)}
 	}
 
-	err = api.createWallet(seedBuf, walletPass)
+	err = api.createWallet(seedBuf, walletPass, unlockPass)
 	if err != nil {
 		return err
 	}
-	return api.Open(walletPass)
+	return nil //api.Open(walletPass)
 }
 
-//Recove wallet by mnemonic
-func (api *API) Recove(mnemonic string, walletPass string) error {
+//Recover wallet by mnemonic
+func (api *API) Recover(mnemonic string, walletPass string, unlockPass string) error {
 	seedBuf, err := bip39.NewSeedWithErrorChecking(mnemonic, "")
 	if err != nil {
 		return &crateError{Code: -1, Msg: fmt.Sprintf("seed hex err: %s ", err)}
 	}
-	err = api.createWallet(seedBuf, walletPass)
+	err = api.createWallet(seedBuf, walletPass, unlockPass)
 	if err != nil {
 		return err
 	}
 
-	return api.Open(walletPass)
+	return nil //api.Open(walletPass)
 }
 
 //Unlock wallet
@@ -141,7 +140,7 @@ func (api *API) Open(pass string) error {
 }
 
 // createWallet by seed and walletPass
-func (api *API) createWallet(seed []byte, walletPass string) error {
+func (api *API) createWallet(seed []byte, walletPass string, unlockPass string) error {
 	log.Trace("createWallet", "network", api.cfg.Network)
 	log.Trace("createWallet", "seed", seed)
 
@@ -160,7 +159,8 @@ func (api *API) createWallet(seed []byte, walletPass string) error {
 		return &crateError{Code: -100, Msg: "wallet exist"}
 	}
 
-	wt, err := loader.CreateNewWallet([]byte(wallet.InsecurePubPassphrase), []byte(walletPass), seed, time.Now())
+	//wt, err := loader.CreateNewWallet([]byte(wallet.InsecurePubPassphrase), []byte(walletPass), seed, time.Now())
+	wt, err := loader.CreateNewWallet([]byte(walletPass), []byte(unlockPass), seed, time.Now())
 	if err != nil {
 		log.Error("createWallet loader CreateNewWallet ", "err", err)
 		return &crateError{Code: -1, Msg: fmt.Sprintf("createWallet loader CreateNewWallet err: %s ", err)}
@@ -184,7 +184,10 @@ func (api *API) createWallet(seed []byte, walletPass string) error {
 		log.Error("createWallet Key is not intended for", "err", err)
 		return &crateError{Code: -1, Msg: fmt.Sprintf("createWallet Key is not intended for: %s", err)}
 	}
-	wt.UnLockManager([]byte(walletPass))
+	err = wt.UnLockManager([]byte(unlockPass))
+	if err != nil {
+		log.Error("createWallet UnLockManager error", "err", err)
+	}
 
 	_, err = wt.ImportPrivateKey(waddrmgr.KeyScopeBIP0044, wif, nil, false)
 	if err != nil {

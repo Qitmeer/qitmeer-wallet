@@ -20,7 +20,7 @@ type Qitmeerd struct {
 func NewQitmeerd(wt *wallet.Wallet, name string) *Qitmeerd {
 	d := &Qitmeerd{
 		Wt:     wt,
-		Status: &Status{CurrentName: name},
+		Status: &Status{Network: wt.ChainParams().Name, CurrentName: name},
 	}
 	d.Start()
 	return d

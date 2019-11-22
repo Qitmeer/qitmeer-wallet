@@ -33,7 +33,21 @@ type htpc struct {
 	httpclient *http.Client
 }
 
+// NewHtpc make qitmeerd http client
 func NewHtpc() (*htpc, error) {
+
+	if config.Cfg.QitmeerdSelect != "" {
+		var qitmeerd *client.Config
+		for _, item := range config.Cfg.Qitmeerds {
+			if item.Name == config.Cfg.QitmeerdSelect {
+				qitmeerd = item
+			}
+		}
+		if qitmeerd != nil {
+			return NewHtpcByCfg(qitmeerd)
+		}
+	}
+
 	h := &htpc{
 		RPCUser:       config.Cfg.QUser,
 		RPCPassword:   config.Cfg.QPass,
