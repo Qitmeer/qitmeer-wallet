@@ -340,19 +340,30 @@ var listAccountsBalanceCmd=&cobra.Command{
 	},
 }
 var getlisttxbyaddrCmd=&cobra.Command{
-	Use:"getlisttxbyaddr {address}",
+	Use:"getlisttxbyaddr {address} {page} {pagesize}",
 	Short:"get all transactions for address",
 	Example:`
-		getlisttxbyaddr Tmjc34zWMTAASHTwcNtPppPujFKVK5SeuaJ
+		getlisttxbyaddr Tmjc34zWMTAASHTwcNtPppPujFKVK5SeuaJ 1 100
 		`,
-	Args: cobra.MinimumNArgs(1),
+	Args: cobra.MinimumNArgs(3),
 	Run: func(cmd *cobra.Command, args []string) {
 		err:=OpenWallet()
 		if err!=nil{
 			fmt.Println(err.Error())
 			return
 		}
-		getlisttxbyaddr(args[0])
+		page,err :=  strconv.ParseInt(args[1],10,32)
+		if err != nil {
+			fmt.Printf("Wrong parameter type: %v\n",args[1])
+			return
+		}
+		pageSize,err :=  strconv.ParseInt(args[2],10,32)
+		if err != nil {
+			fmt.Printf("Wrong parameter type: %v\n",args[1])
+			return
+		}
+
+		getlisttxbyaddr(args[0],int32(page),int32(pageSize))
 	},
 }
 var updateblockCmd=&cobra.Command{

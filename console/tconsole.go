@@ -271,7 +271,25 @@ func (c *Console) Interactive() {
 						fmt.Println("getlisttxbyaddr err :Please enter your address.")
 						break
 					}
-					getlisttxbyaddr(arg1)
+					if arg2 == ""{
+						fmt.Println("getlisttxbyaddr err :Please enter your page.")
+						break
+					}
+					if arg3 == ""{
+						fmt.Println("getlisttxbyaddr err :Please enter your pagesize.")
+						break
+					}
+					page,err :=  strconv.ParseInt(arg2,10,32)
+					if err != nil {
+						fmt.Printf("Wrong parameter type: %v\n",arg2)
+						return
+					}
+					pageSize,err :=  strconv.ParseInt(arg3,10,32)
+					if err != nil {
+						fmt.Printf("Wrong parameter type: %v\n",arg2)
+						return
+					}
+					getlisttxbyaddr(arg1,int32(page),int32(pageSize))
 					break
 				case "getNewAddress":
 					if arg1 == ""{

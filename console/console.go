@@ -174,12 +174,18 @@ func  listAccountsBalance(min int)( interface{}, error){
 	return msg, nil
 }
 
-func getlisttxbyaddr(addr string)( interface{}, error){
+func getlisttxbyaddr(addr string,page int32,pageSize int32)( interface{}, error){
+	if page < 1{
+		page =1
+	}
+	if pageSize <1 {
+		pageSize=100
+	}
 	cmd:=&qitmeerjson.GetListTxByAddrCmd{
 		Address:addr,
 		Stype:int32(0),
-		Page:int32(1),
-		PageSize:int32(100),
+		Page:page,
+		PageSize:pageSize,
 	}
 	result, err := walletrpc.Getlisttxbyaddr(cmd, w)
 	if err != nil {
@@ -187,6 +193,7 @@ func getlisttxbyaddr(addr string)( interface{}, error){
 		return nil, err
 	}else{
 		a:=result.(*qjson.PageTxRawResult)
+		fmt.Printf("total:%v,page:%v,pagesize:%v,current:%v\n",a.Total,a.Page,a.PageSize, len(a.Transactions))
 		for _, t := range a.Transactions {
 			b,err:=json.Marshal(t)
 			if err!=nil{
