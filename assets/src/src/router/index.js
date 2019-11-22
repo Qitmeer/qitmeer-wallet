@@ -4,13 +4,14 @@ import Router from 'vue-router';
 import index from '@/components/index';
 
 import walletcreate from '@/components/walletcreate';
-import walletrecove from '@/components/walletrecove';
+import walletrecover from '@/components/walletrecover';
 import account from '@/components/account';
 import accountnew from '@/components/accountnew';
 import address from '@/components/address';
 import txsend from '@/components/txsend';
 import txlist from '@/components/txlist';
 import backup from "@/components/backup";
+import backupImport from "@/components/importkey";
 
 import node from "@/components/node";
 import nodenew from "@/components/nodenew";
@@ -30,9 +31,9 @@ export default new Router({
             component: walletcreate
         },
         {
-            path: '/wallet/recove',
-            name: 'walletrecove',
-            component: walletrecove
+            path: '/wallet/recover',
+            name: 'walletrecover',
+            component: walletrecover
         },
         {
             path: '/account',
@@ -65,6 +66,11 @@ export default new Router({
             component: backup
         },
         {
+            path: '/backup/import',
+            name: 'import',
+            component: backupImport
+        },
+        {
             path: '/node',
             name: 'node',
             component: node
@@ -74,5 +80,10 @@ export default new Router({
             name: 'nodenew',
             component: nodenew
         },
+        {
+            path: '/node/edit/:name',
+            name: 'nodeedit',
+            component: nodenew
+        }
     ]
 })

@@ -12,13 +12,12 @@ import (
 	"sync"
 	"time"
 
-
-	"github.com/Qitmeer/qitmeer/log"
-	chaincfg "github.com/Qitmeer/qitmeer/params"
 	"github.com/Qitmeer/qitmeer-wallet/config"
 	waddrmgr "github.com/Qitmeer/qitmeer-wallet/waddrmgs"
 	"github.com/Qitmeer/qitmeer-wallet/walletdb"
 	_ "github.com/Qitmeer/qitmeer-wallet/walletdb/bdb"
+	"github.com/Qitmeer/qitmeer/log"
+	chaincfg "github.com/Qitmeer/qitmeer/params"
 )
 
 const (
@@ -191,7 +190,7 @@ func (l *Loader) OpenExistingWallet(pubPassphrase []byte, canConsolePrompt bool)
 
 	db, err := walletdb.Open("bdb", dbPath)
 	if err != nil {
-		log.Trace("Failed to open database","err", err)
+		log.Trace("Failed to open database", "err", err)
 		return nil, err
 	}
 	log.Trace("OpenExistingWallet", "open db", "succ")
@@ -208,8 +207,10 @@ func (l *Loader) OpenExistingWallet(pubPassphrase []byte, canConsolePrompt bool)
 			ObtainPrivatePass: noConsole,
 		}
 	}
+	log.Trace("OpenExistingWallet", "ooooopen", "1")
 	w, err := Open(db, pubPassphrase, cbs, l.chainParams, l.recoveryWindow, l.Cfg)
 	if err != nil {
+		log.Trace("OpenExistingWallet", "open error", err)
 		// If opening the wallet fails (e.g. because of wrong
 		// passphrase), we must close the backing database to
 		// allow future calls to walletdb.Open().

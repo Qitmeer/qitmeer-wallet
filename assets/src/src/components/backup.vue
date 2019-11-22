@@ -3,21 +3,21 @@
     <el-header class="cheader">
       <el-row type="flex">
         <el-col :span="6">
-          <h2>备份恢复</h2>
+          <h2>导入/导出</h2>
         </el-col>
         <el-col :span="12"></el-col>
         <el-col :span="6">
-          <el-button type="primary" icon="el-icon-plus" @click="newAccount" size="small">导入账号</el-button>
+          <el-button type="primary" icon="el-icon-plus" @click="importKey" size="small">导入私钥</el-button>
         </el-col>
       </el-row>
     </el-header>
     <el-main class="cmain">
       <el-table :data="tableData">
-        <el-table-column prop="alias" label="别名" width="120"></el-table-column>
-        <el-table-column prop="key" label="key(encrypt)" width="380"></el-table-column>
-        <el-table-column>
-          <el-link type="primary" icon="el-icon-download">导出备份</el-link>&nbsp;&nbsp;
-          <el-link type="danger" icon="el-icon-delete">删除</el-link>
+        <el-table-column prop="addr" label="地址" width="400px"></el-table-column>
+        <el-table-column label>
+          <template slot-scope="scope">
+            <el-button @click="dumpKey(scope.row.addr)" type="text" icon="el-icon-download">导出私钥</el-button>
+          </template>
         </el-table-column>
       </el-table>
     </el-main>
@@ -29,25 +29,97 @@
 <script>
 export default {
   data() {
-    const item = [
-      {
-        alias: "default",
-        key: " tNNLc7iAQ5zzPeaHnz/UkqJrRezBSlpIzTMacSXRNhk=",
-        balance: 1231.12
-      },
-      {
-        alias: "daodao",
-        key: " 6evV6E7IOubFqBPF47N4TKoJcL4hUJYZlakYVgEi3Bo=",
-        balance: 123123123.12
-      }
-    ];
+    const item = [];
     return {
-      tableData: item
+      tableData: item,
+      currentAccount: "imported"
     };
   },
+  mounted() {
+    this.getAddressList();
+  },
   methods: {
-    newAccount() {
-      this.$router.push({ path: "/account/new" });
+    importKey() {
+      this.$router.push({ path: "/backup/import" });
+    },
+    getAddressList() {
+      let _this = this;
+      _this
+        .$axios({
+          method: "post",
+          data: JSON.stringify({
+            id: new Date().getTime(),
+            method: "account_listAddresses",
+            params: [_this.currentAccount]
+          })
+        })
+        .then(response => {
+          if (typeof response.data.error != "undefined") {
+            _this.$emit("alertResError", response.data.error, () => {});
+            return;
+          }
+
+          let tmpTable = [];
+          for (let i = 0; i < response.data.result.length; i++) {
+            tmpTable.push({ addr: response.data.result[i] });
+          }
+
+          _this.tableData = tmpTable;
+        });
+    },
+    checkWalletStats(callback) {
+      let _this = this;
+      _this.$emit("getWalletStats", stats => {
+        if (stats != "unlock") {
+          _this.$emit("walletPasswordDlg", "wallet_unlock", result => {
+            if (!result) {
+              // _this.$router.push("/");
+              return;
+            }
+            callback();
+          });
+          return;
+        }
+        callback();
+      });
+    },
+    dumpKey(addr) {
+      let _this = this;
+
+      const h = this.$createElement;
+
+      let dumpKeyDo = () => {
+        _this
+          .$axios({
+            method: "post",
+            data: JSON.stringify({
+              id: new Date().getTime(),
+              method: "account_dumpPrivKey",
+              params: [addr]
+            })
+          })
+          .then(response => {
+            if (typeof response.data.error != "undefined") {
+              _this.$emit("alertResError", response.data.error, () => {});
+              return;
+            }
+            let msg = h("div", [
+              h("p", null, "地址: " + addr),
+              h(
+                "p",
+                { style: "word-wrap:break-word" },
+                "私钥: " + response.data.result
+              )
+            ]);
+            this.$alert(msg, "私钥", {
+              showClose: false,
+              confirmButtonText: "确定",
+              callback: () => {}
+            });
+          });
+      };
+
+      _this.checkWalletStats(dumpKeyDo);
     }
   }
 };
