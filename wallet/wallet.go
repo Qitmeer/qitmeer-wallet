@@ -890,19 +890,18 @@ func (w *Wallet) Updateblock(toHeight int64) error {
 	if err != nil {
 		return err
 	}
-	localheight :=int64((w.Manager.SyncedTo().Height + 1))
-	h := localheight;
+	h := int64((w.Manager.SyncedTo().Height ));
 	if h <blockheight{
-		log.Trace(fmt.Sprintf("localheight:%d,blockheight:%d",localheight,blockheight))
+		log.Trace(fmt.Sprintf("localheight:%d,blockheight:%d",h,blockheight))
 		for h <blockheight {
 			//orderchan <- h
 			err :=w.handleBlockSynced(h)
 			if err !=nil{
 				return err
 			}else{
+				fmt.Fprintf(os.Stdout, "update blcok:%s/%s\r",strconv.FormatInt(h,10),strconv.FormatInt(blockheight-1,10))
 				h++
 			}
-			fmt.Fprintf(os.Stdout, "update blcok:%s/%s\r",strconv.FormatInt(h,10),strconv.FormatInt(blockheight,10))
 		}
 		fmt.Print("\nsucc\n")
 	}else{
