@@ -19,3 +19,18 @@ Confirmations=10   # Number of block confirmations
 #rpcUser=""
 #rpcPass=""
 #ui=true
+
+
+QitmeerdSelect = "local"
+
+[[Qitmeerds]]
+  Name = "local"
+  RPCUser = "qitmeer"
+  RPCPassword = "123456"
+  RPCServer = "127.0.0.1:18130"
+  RPCCert = ""
+  NoTLS = true
+  TLSSkipVerify = true
+  Proxy = ""
+  ProxyUser = ""
+  ProxyPass = ""

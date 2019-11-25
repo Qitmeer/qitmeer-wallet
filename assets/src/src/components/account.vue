@@ -29,7 +29,7 @@ export default {
       accountsTable: [
         {
           account: "defalut",
-          balance: 1
+          balance: 0
         }
       ]
     };

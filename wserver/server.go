@@ -7,10 +7,14 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/Qitmeer/qitmeer-wallet/rpc/client"
+
+	qJson "github.com/Qitmeer/qitmeer/core/json"
 	"github.com/julienschmidt/httprouter"
 
 	"github.com/Qitmeer/qitmeer-wallet/assets"
 	"github.com/Qitmeer/qitmeer-wallet/config"
+	"github.com/Qitmeer/qitmeer-wallet/qitmeerd"
 	"github.com/Qitmeer/qitmeer-wallet/rpc/server"
 	"github.com/Qitmeer/qitmeer-wallet/utils"
 	"github.com/Qitmeer/qitmeer-wallet/wallet"
@@ -27,10 +31,27 @@ type WalletServer struct {
 	RPCSvr *server.RpcServer
 
 	exitCh chan bool
+
+	QitmeerdStatus *qJson.InfoNodeResult
 }
 
 //NewWalletServer make a wallet api server
 func NewWalletServer(cfg *config.Config) (wSvr *WalletServer, err error) {
+
+	var qitmeerdSelect *client.Config
+	if cfg.QitmeerdSelect != "" {
+		for _, item := range cfg.Qitmeerds {
+			if item.Name == cfg.QitmeerdSelect {
+				qitmeerdSelect = item
+			}
+		}
+	}
+	if len(cfg.Qitmeerds) < 1 {
+		return nil, fmt.Errorf("config qitmeerds nothing %s", "")
+	}
+	if qitmeerdSelect == nil {
+		cfg.QitmeerdSelect = cfg.Qitmeerds[0].Name
+	}
 
 	activeNetParams := utils.GetNetParams(cfg.Network)
 	dbDir := filepath.Join(cfg.AppDataDir, cfg.Network)
@@ -88,7 +109,7 @@ func NewWalletServer(cfg *config.Config) (wSvr *WalletServer, err error) {
 func (wsvr *WalletServer) run() {
 	defer func() {
 		if rev := recover(); rev != nil {
-			log.Trace("WalletServer.run","WalletServer run recover ", rev)
+			log.Trace("WalletServer.run", "WalletServer run recover ", rev)
 			go wsvr.run()
 		}
 	}()
@@ -107,11 +128,10 @@ func (wsvr *WalletServer) run() {
 	if wsvr.cfg.UI {
 		staticF, err := assets.GetStatic()
 		if err != nil {
-			log.Error("server run ","err ", err)
+			log.Error("server run ", "err ", err)
 			return
 		}
 		myStaticF := assets.NewMyStatic(staticF)
-
 
 		myStaticF.AddFilter("/config.js", func() []byte {
 
@@ -139,7 +159,12 @@ func (wsvr *WalletServer) run() {
 		//ajx post options
 		router.OPTIONS("/api", func(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 			//log.Trace("api OPTIONS")
-			w.Header().Set("Access-Control-Allow-Origin", "http://127.0.0.1:8080")
+			if r.Header.Get("Origin") == "http://127.0.0.1:8080" {
+				w.Header().Set("Access-Control-Allow-Origin", "http://127.0.0.1:8080")
+			} else {
+				w.Header().Set("Access-Control-Allow-Origin", "http://localhost:8080")
+			}
+			//w.Header().Set("Access-Control-Allow-Origin", "http://127.0.0.1:8080")
 			w.Header().Set("Access-Control-Allow-Credentials", "true")
 			w.Header().Set("Access-Control-Allow-Methods", "GET,HEAD,OPTIONS,POST,PUT")
 			w.Header().Set("Access-Control-Allow-Headers", "Access-Control-Allow-Headers, Origin, Accept, X-Requested-With, Content-Type, Access-Control-Request-Method, Access-Control-Request-Headers, Authorization")
@@ -151,21 +176,27 @@ func (wsvr *WalletServer) run() {
 
 	for _, addr := range wsvr.cfg.Listeners {
 		go func() {
-			log.Trace("WalletServer listening on","addr", addr)
+			log.Trace("WalletServer listening on", "addr", addr)
 			err := http.ListenAndServe(addr, router)
 			if err != nil {
-				log.Error("server listen"," err", err)
+				log.Error("server listen", " err", err)
 				wsvr.exitCh <- true
 				return
 			}
 		}()
 	}
+
+	// ``go wsvr.GetQitmeerdStatus()``
 }
 
 // HandleAPI RPC Method
 func (wsvr *WalletServer) HandleAPI(ResW http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+	if r.Header.Get("Origin") == "http://127.0.0.1:8080" {
+		ResW.Header().Set("Access-Control-Allow-Origin", "http://127.0.0.1:8080")
+	} else {
+		ResW.Header().Set("Access-Control-Allow-Origin", "http://localhost:8080")
+	}
 
-	ResW.Header().Set("Access-Control-Allow-Origin", "http://127.0.0.1:8080")
 	ResW.Header().Set("Access-Control-Allow-Credentials", "true")
 	ResW.Header().Set("Access-Control-Allow-Methods", "GET,HEAD,OPTIONS,POST,PUT")
 	ResW.Header().Set("Access-Control-Allow-Headers", "Access-Control-Allow-Headers, Origin, Accept, X-Requested-With, Content-Type, Access-Control-Request-Method, Access-Control-Request-Headers, Authorization")
@@ -191,13 +222,16 @@ func (wsvr *WalletServer) Start() error {
 
 // StartAPI if wallet open ok start api
 func (wsvr *WalletServer) StartAPI() {
-	log.Trace("StartAPI","api", wsvr.cfg.APIs)
+	log.Trace("StartAPI", "api", wsvr.cfg.APIs)
 	for _, api := range wsvr.cfg.APIs {
 		switch api {
 		case "account":
 			wsvr.RPCSvr.RegisterService("account", wallet.NewAPI(wsvr.cfg, wsvr.Wt))
 		case "tx":
 			//wSvr.RPCSvr.RegisterService("tx", &services.TxAPI{})
+		case "qitmeerd":
+			qitmeerD := qitmeerd.NewQitmeerd(wsvr.Wt, wsvr.cfg.QitmeerdSelect)
+			wsvr.RPCSvr.RegisterService("qitmeerd", qitmeerd.NewAPI(wsvr.cfg, qitmeerD))
 		}
 	}
 }

@@ -3,6 +3,7 @@ package wallet
 import (
 	"encoding/hex"
 	"fmt"
+
 	"github.com/Qitmeer/qitmeer-wallet/wtxmgr"
 
 	"github.com/Qitmeer/qitmeer/core/address"
@@ -34,7 +35,7 @@ func NewAPI(cfg *config.Config, wt *Wallet) *API {
 }
 
 // List all accounts[{account,balance}]
-func (api API) List() (map[string]float64, error) {
+func (api *API) List() (map[string]float64, error) {
 	accountBalances := map[string]float64{}
 	results, err := api.wt.AccountBalances(waddrmgr.KeyScopeBIP0044, int32(16))
 	if err != nil {
@@ -48,8 +49,8 @@ func (api API) List() (map[string]float64, error) {
 	return accountBalances, nil
 }
 
-// Getutxo addr unspend utxo
-func (api API) GetUtxo(addr string) ([]wtxmgr.Utxo, error) {
+// GetUtxo addr unspend utxo
+func (api *API) GetUtxo(addr string) ([]wtxmgr.Utxo, error) {
 	results, err := api.wt.GetUtxo(addr)
 	if err != nil {
 		return nil, err
@@ -58,7 +59,7 @@ func (api API) GetUtxo(addr string) ([]wtxmgr.Utxo, error) {
 }
 
 // Create a account
-func (api API) Create(name string) error {
+func (api *API) Create(name string) error {
 	// The wildcard * is reserved by the rpc server with the special meaning
 	// of "all accounts", so disallow naming accounts to this string.
 	if name == "*" {
@@ -85,7 +86,7 @@ func (api API) Create(name string) error {
 // the gap limit.
 //func getNewAddress(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
 //	cmd := icmd.(*qitmeerjson.GetNewAddressCmd)
-func (api API) CreateAddress(accountName string) (string, error) {
+func (api *API) CreateAddress(accountName string) (string, error) {
 	if accountName == "" {
 		accountName = "default"
 	}
