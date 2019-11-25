@@ -4,6 +4,7 @@ import (
 	"encoding/hex"
 	"fmt"
 
+	clijson "github.com/Qitmeer/qitmeer-wallet/json"
 	"github.com/Qitmeer/qitmeer-wallet/wtxmgr"
 
 	"github.com/Qitmeer/qitmeer/core/address"
@@ -32,6 +33,21 @@ func NewAPI(cfg *config.Config, wt *Wallet) *API {
 		cfg: cfg,
 		wt:  wt,
 	}
+}
+
+//SyncStats block update stats
+type SyncStats struct {
+	Height int32
+}
+
+// SyncStats block update stats
+func (api *API) SyncStats() (*SyncStats, error) {
+
+	stats := &SyncStats{}
+
+	stats.Height = api.wt.SyncHeight //api.wt.Manager.SyncedTo().Height
+
+	return stats, nil
 }
 
 // List all accounts[{account,balance}]
@@ -315,6 +331,11 @@ func (api API) GetBalance(addrStr string, minConf int32) (*Balance, error) {
 		return nil, err
 	}
 	return m, nil
+}
+
+//GetTxListByAddr get addr tx list
+func (api API) GetTxListByAddr(addr string, stype int32, page int32, pageSize int32) (*clijson.PageTxRawResult, error) {
+	return api.wt.GetListTxByAddr(addr, stype, page, pageSize)
 }
 
 //sendPairs creates and sends payment transactions.

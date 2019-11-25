@@ -5,24 +5,36 @@
         <el-col :span="4">
           <h2>交易记录</h2>
         </el-col>
-        <el-col :span="8">
+        <el-col :span="20">
           <el-row>
-            <el-col :span="8">
-              <span style="color:#303133;font-weight:600;">当前账户：</span>
+            <el-col :span="2">
+              <span style="color:#303133;font-weight:600;">账户：</span>
             </el-col>
-            <el-col :span="14">
-              <el-select v-model="current" placeholder="账号" size="small">
+            <el-col :span="4">
+              <el-select v-model="currentAccount" placeholder="账号" size="small">
                 <el-option
                   v-for="item in accounts"
-                  :key="item.index"
+                  :key="item.account"
                   :label="item.account"
-                  :value="item.index"
+                  :value="item.account"
+                ></el-option>
+              </el-select>
+            </el-col>
+            <el-col :span="2">
+              <span style="color:#303133;font-weight:600;">地址：</span>
+            </el-col>
+            <el-col :span="10">
+              <el-select v-model="currentAddress" style="with:500px" placeholder="地址">
+                <el-option
+                  v-for="item in addresses"
+                  :key="item.addr"
+                  :label="item.addr"
+                  :value="item.addr"
                 ></el-option>
               </el-select>
             </el-col>
           </el-row>
         </el-col>
-        <el-col :span="4"></el-col>
       </el-row>
     </el-header>
 
@@ -55,7 +67,9 @@ export default {
     return {
       txList: [],
       accounts: [],
-      current: ""
+      addresses: ["*"],
+      currentAccount: "",
+      currentAddress: "*"
     };
   },
   mounted() {
@@ -64,22 +78,54 @@ export default {
       return;
     }
     this.accounts = this.$store.state.Accounts;
-    this.current = this.$store.state.Accounts[0].account;
-
-    this.getTxList();
+    this.currentAccount = this.$store.state.Accounts[0].account;
   },
   methods: {
-    getTxList() {
-      return [];
+    getTxList(addr) {
+      if (addr == "*") {
+        //todo all account addresses
+        return;
+      }
 
+      let _this = this;
+
+      _this.$emit("setLoading", true, "");
+
+      _this
+        .$axios({
+          method: "post",
+          data: JSON.stringify({
+            id: new Date().getTime(),
+            method: "account_getTxListByAddr",
+            params: [addr, 1, 1, 100]
+          })
+        })
+        .then(response => {
+          _this.$emit("setLoading", false, "");
+          if (typeof response.data.error != "undefined") {
+            _this.$emit("alertResError", response.data.error, () => {});
+            return;
+          }
+
+          let tmpTable = [];
+          for (let i = 0; i < response.data.result.length; i++) {
+            tmpTable.push({ addr: response.data.result[i] });
+          }
+          _this.txList = tmpTable;
+        })
+        .catch(() => {
+          _this.$emit("setLoading", false, "");
+        });
+    },
+    getAddressList(account) {
       let _this = this;
       _this
         .$axios({
           method: "post",
           data: JSON.stringify({
             id: new Date().getTime(),
-            method: "account_listTxs",
-            params: [_this.current]
+            method: "account_listAddresses",
+            params: [account]
           })
         })
         .then(response => {
@@ -92,9 +138,17 @@ export default {
           for (let i = 0; i < response.data.result.length; i++) {
             tmpTable.push({ addr: response.data.result[i] });
           }
-
-          _this.txList = tmpTable;
+          _this.addresses = tmpTable;
+          _this.currentAddress = _this.addresses[0].addr;
         });
+    }
+  },
+  watch: {
+    currentAccount() {
+      this.getAddressList(this.currentAccount);
+    },
+    currentAddress() {
+      this.getTxList(this.currentAddress);
     }
   }
 };
