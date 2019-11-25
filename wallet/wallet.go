@@ -349,7 +349,7 @@ func Open(db walletdb.DB, pubPass []byte, cbs *waddrmgr.OpenCallbacks,
 	return w, nil
 }
 
-func (w *Wallet) GetTx(txid string) (string, error) {
+func (w *Wallet) GetTx(txid string) (corejson.TxRawResult, error) {
 
 	trx := corejson.TxRawResult{}
 	err := walletdb.View(w.db, func(tx walletdb.ReadTx) error {
@@ -371,13 +371,13 @@ func (w *Wallet) GetTx(txid string) (string, error) {
 		return nil
 	})
 	if err != nil {
-		return "", err
+		return trx, err
 	}
-	b, err := json.Marshal(trx)
-	if err != nil {
-		return "", err
-	}
-	return string(b), nil
+	//b, err := json.Marshal(trx)
+	//if err != nil {
+	//	return trx, err
+	//}
+	return trx, nil
 }
 
 func (w *Wallet) GetAccountAndAddress(scope waddrmgr.KeyScope,
@@ -859,17 +859,19 @@ func (w *Wallet) handleBlockSynced(order int64) error {
 	if err != nil {
 		return fmt.Errorf("blockhash string to hash  err:", err.Error())
 	}
-	stamp := &waddrmgr.BlockStamp{Hash: *hs, Height: br.Order}
-	err = walletdb.Update(w.db, func(tx walletdb.ReadWriteTx) error {
-		ns := tx.ReadWriteBucket(waddrmgrNamespaceKey)
-		err := w.Manager.SetSyncedTo(ns, stamp)
+	if br.Confirmations > config.Cfg.Confirmations{
+		stamp := &waddrmgr.BlockStamp{Hash: *hs, Height: br.Order}
+		err = walletdb.Update(w.db, func(tx walletdb.ReadWriteTx) error {
+			ns := tx.ReadWriteBucket(waddrmgrNamespaceKey)
+			err := w.Manager.SetSyncedTo(ns, stamp)
+			if err != nil {
+				return err
+			}
+			return nil
+		})
 		if err != nil {
 			return err
 		}
-		return nil
-	})
-	if err != nil {
-		return err
 	}
 	return nil
 }

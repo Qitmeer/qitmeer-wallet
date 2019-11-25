@@ -60,6 +60,8 @@ type Config struct {
 	DisableRPC    bool
 	DisableTLS    bool
 
+	Confirmations int64
+
 	// tx fee
 	MinTxFee int64
 
@@ -132,6 +134,7 @@ func NewDefaultConfig() (cfg *Config) {
 		QProxyPass:     "",
 		WalletPass:     "public",
 		MinTxFee:		DefaultMinRelayTxFee,
+		Confirmations:		10,
 		UI:true,
 	}
 	return

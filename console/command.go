@@ -43,6 +43,7 @@ func BindFlags(){
 	Command.PersistentFlags().StringVar(&preCfg.QCert, "qcert", fileCfg.QCert, "Certificate path")
 	Command.PersistentFlags().BoolVar(&preCfg.QTLSSkipVerify, "qtlsskipverify", fileCfg.QTLSSkipVerify, "tls skipverify")
 
+	Command.PersistentFlags().Int64Var(&preCfg.Confirmations, "confirmations", 10, "Number of block confirmations ")
 	Command.PersistentFlags().BoolVar(&preCfg.UI, "ui", true, "Start Wallet with RPC and webUI interface")
 	Command.PersistentFlags().StringArrayVar(&preCfg.Listeners, "listeners", fileCfg.Listeners, "rpc listens")
 	Command.PersistentFlags().StringVar(&preCfg.RPCUser, "rpcUser", fileCfg.RPCUser, "rpc user,default by random")
@@ -119,6 +120,9 @@ func LoadConfig(cmd *cobra.Command, args []string)  {
 	}
 	if cmd.Flag("mintxfee").Changed {
 		fileCfg.MinTxFee = preCfg.MinTxFee
+	}
+	if cmd.Flag("confirmations").Changed {
+		fileCfg.Confirmations = preCfg.Confirmations
 	}
 	if cmd.Flag("qtlsskipverify").Changed {
 		fileCfg.QTLSSkipVerify = preCfg.QTLSSkipVerify
@@ -281,6 +285,22 @@ var sendToAddressCmd=&cobra.Command{
 			return
 		}
 		sendToAddress(args[0],float64(f32))
+	},
+}
+var getTxByTxIdCmd=&cobra.Command{
+	Use:"gettx {txid}",
+	Short:"Access to transaction information ",
+	Example:`
+		gettx 81278a6ba67d4ea2fc49fb469f2a45f6adb2306b82146747b9d5f3bd655e5030
+		`,
+	Args: cobra.MinimumNArgs(1),
+	Run: func(cmd *cobra.Command, args []string) {
+		err:=OpenWallet()
+		if err!=nil{
+			fmt.Println(err.Error())
+			return
+		}
+		getTx(args[0])
 	},
 }
 var getAddressesByAccountCmd=&cobra.Command{
@@ -485,10 +505,8 @@ func init()  {
 	Command.AddCommand(getAddressesByAccountCmd)
 	Command.AddCommand(listAccountsBalanceCmd)
 	Command.AddCommand(consoleCmd)
+	Command.AddCommand(getTxByTxIdCmd)
 	Command.AddCommand(webCmd)
-	listAccountsBalanceCmd.SetHelpFunc(func(command *cobra.Command, i []string) {
-		fmt.Printf("test")
-	})
-	//Command.AddCommand(QxCmd)
+	Command.AddCommand(QxCmd)
 
 }
