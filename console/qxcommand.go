@@ -7,9 +7,9 @@ import (
 )
 
 var QxCmd=&cobra.Command{
-	Use:               "qx",
-	Short:				"qx util",
-	Long:              `qitmeer wallet qx util`,
+	Use:  "qx",
+	Short:"qx util",
+	Long: `qitmeer wallet qx util`,
 }
 
 var generatemnemonicCmd=&cobra.Command{

@@ -248,6 +248,21 @@ func getAccountByAddress(address string) (interface{}, error) {
 	fmt.Printf("%s\n",msg)
 	return msg, nil
 }
+func getTx(txid string) (interface{}, error) {
+	msg, err := walletrpc.GetTx(txid, w)
+	if err != nil {
+		fmt.Println("getTx","err", err.Error())
+		return nil, err
+	}
+	b, err := json.Marshal(msg)
+	if err != nil {
+		fmt.Println("getTx","err", err.Error())
+		return nil, err
+	}
+	fmt.Printf("%s\n",b)
+	return msg, nil
+}
+
 func importPrivKey(privKey string) (interface{}, error) {
 	v := false
 	cmd := &qitmeerjson.ImportPrivKeyCmd{

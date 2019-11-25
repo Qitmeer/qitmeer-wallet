@@ -316,6 +316,13 @@ func Updateblock(icmd interface{},w *wallet.Wallet) error {
 	}
 	return nil
 }
+func GetTx(txid string,w *wallet.Wallet) (interface{} ,error) {
+	tx,err:=w.GetTx(txid)
+	if(err!=nil){
+		return "",err
+	}
+	return tx,nil
+}
 func Getbalance(icmd interface{},w *wallet.Wallet) (interface{}, error) {
 	cmd := icmd.(*qitmeerjson.GetBalanceByAddressCmd)
 	m,err:=w.GetBalance(cmd.Address,int32(cmd.MinConf))
