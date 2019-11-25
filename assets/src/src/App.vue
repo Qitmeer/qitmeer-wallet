@@ -79,6 +79,7 @@
         <p>
           <span>Cuckatoo: {{qitmeerdStatus.CuckatooDiff}}</span>
         </p>
+        <p>{{syncInfo}}</p>
       </div>
       <div class="version">
         <p>
@@ -139,6 +140,10 @@ export default {
         CuckarooDiff: "",
         CuckatooDiff: ""
       },
+      syncInfo: "",
+      syncStats: {
+        Height: 0
+      },
       loading: false,
       loadingText: "",
       walletcrate: true,
@@ -168,9 +173,12 @@ export default {
       this.loadingText = txt;
     },
     walletOk() {
+      this.getAccountList();
+
       this.getQitmeerdStatus();
       this.getQitmeerdList(() => {});
       setInterval(this.getQitmeerdStatus, 1000 * 30);
+      setInterval(this.updateSyncStatus, 1000);
     },
     getWalletStats(callback) {
       let _this = this;
@@ -349,6 +357,28 @@ export default {
         }
       );
     },
+    getAccountList() {
+      let _this = this;
+      this.$axios({
+        method: "post",
+        data: JSON.stringify({
+          id: new Date().getTime(),
+          method: "account_list",
+          params: null
+        })
+      }).then(response => {
+        if (typeof response.data.error != "undefined") {
+          _this.$emit("alertResError", response.data.error, () => {
+            _this.$router.push("/");
+          });
+          return;
+        }
+
+        _this.$store.state.Accounts = _this.listAccount2table(
+          response.data.result
+        );
+      });
+    },
     listAccount2table(listAccounts) {
       let tmpTable = [];
       for (let k in listAccounts) {
@@ -465,6 +495,41 @@ export default {
 
           _this.qitmeerdStatus = response.data.result;
         });
+    },
+    updateSyncStatus() {
+      let _this = this;
+      if (_this.syncStats.Height < _this.qitmeerdStatus.MainOrder) {
+        _this
+          .$axios({
+            method: "post",
+            data: JSON.stringify({
+              id: new Date().getTime(),
+              method: "account_syncStats",
+              params: null
+            })
+          })
+          .then(response => {
+            if (typeof response.data.error != "undefined") {
+              _this.qitmeerdStatusAlert = _this.$message({
+                message: "获取节点信息异常! msg:" + response.data.error.message,
+                type: "warning",
+                duration: 0,
+                onClose: function() {}
+              });
+              return;
+            }
+
+            _this.syncStats = response.data.result;
+          });
+
+        _this.syncInfo =
+          "交易数据同步: " +
+          _this.syncStats.Height +
+          "/" +
+          _this.qitmeerdStatus.MainOrder;
+      } else {
+        _this.syncInfo = "";
+      }
     }
   },
   watch: {
