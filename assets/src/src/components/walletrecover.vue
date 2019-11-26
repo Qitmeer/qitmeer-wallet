@@ -107,7 +107,7 @@ export default {
           method: "post",
           data: JSON.stringify({
             id: new Date().getTime(),
-            method: "wallet_recover",
+            method: "ui_recoverWallet",
             params: [
               this.ruleForm.mnemonic,
               this.ruleForm.password1,

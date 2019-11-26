@@ -14,7 +14,8 @@
     <el-main class="cmain">
       <el-table :data="accountsTable" :key="Math.random()">
         <el-table-column prop="account" label="名称" width="120"></el-table-column>
-        <el-table-column prop="balance" label="余额"></el-table-column>
+        <el-table-column prop="UnspendAmount" label="余额(可花费)"></el-table-column>
+        <el-table-column prop="ConfirmAmount" label="余额(待确认)"></el-table-column>
       </el-table>
     </el-main>
   </el-container>
@@ -40,7 +41,8 @@ export default {
       for (let k in listAccounts) {
         tmpTable.push({
           account: k,
-          balance: listAccounts[k]
+          UnspendAmount: listAccounts[k].UnspendAmount / 100000000,
+          ConfirmAmount: listAccounts[k].ConfirmAmount / 100000000
         });
       }
       return tmpTable;
@@ -55,7 +57,7 @@ export default {
       method: "post",
       data: JSON.stringify({
         id: new Date().getTime(),
-        method: "account_list",
+        method: "wallet_getAccountsAndBalance",
         params: null
       })
     }).then(response => {

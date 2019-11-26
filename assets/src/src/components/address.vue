@@ -70,7 +70,7 @@ export default {
         method: "post",
         data: JSON.stringify({
           id: new Date().getTime(),
-          method: "account_createAddress",
+          method: "wallet_createAddress",
           params: [_this.current]
         })
       }).then(response => {
@@ -90,7 +90,7 @@ export default {
           method: "post",
           data: JSON.stringify({
             id: new Date().getTime(),
-            method: "account_listAddresses",
+            method: "wallet_getAddressesByAccount",
             params: [_this.current]
           })
         })

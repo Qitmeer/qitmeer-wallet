@@ -71,7 +71,7 @@ export default {
           method: "post",
           data: JSON.stringify({
             id: new Date().getTime(),
-            method: "account_importWifPrivKey",
+            method: "wallet_importWifPrivKey",
             params: ["imported", this.ruleForm.key, true]
           })
         }).then(response => {

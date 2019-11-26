@@ -31,8 +31,8 @@ func NewAPI(cfg *config.Config, wSvr *WalletServer) *API {
 	}
 }
 
-// Status wallet info
-func (api *API) Status() (status *ResStatus, err error) {
+// WalletStatus wallet info
+func (api *API) WalletStatus() (status *ResStatus, err error) {
 	status = &ResStatus{}
 
 	wtExist, err := api.wSvr.WtLoader.WalletExists()
@@ -59,8 +59,8 @@ func (api *API) Status() (status *ResStatus, err error) {
 	return
 }
 
-//Create wallet by seed
-func (api *API) Create(seed string, walletPass string, unlockPass string) error {
+//CreateWallet wallet by seed
+func (api *API) CreateWallet(seed string, walletPass string, unlockPass string) error {
 	seedBuf, err := hex.DecodeString(seed)
 	if err != nil {
 		return &crateError{Code: -1, Msg: fmt.Sprintf("seed hex err: %s ", err)}
@@ -73,8 +73,8 @@ func (api *API) Create(seed string, walletPass string, unlockPass string) error 
 	return nil //api.Open(walletPass)
 }
 
-//Recover wallet by mnemonic
-func (api *API) Recover(mnemonic string, walletPass string, unlockPass string) error {
+//RecoverWallet wallet by mnemonic
+func (api *API) RecoverWallet(mnemonic string, walletPass string, unlockPass string) error {
 	seedBuf, err := bip39.NewSeedWithErrorChecking(mnemonic, "")
 	if err != nil {
 		return &crateError{Code: -1, Msg: fmt.Sprintf("seed hex err: %s ", err)}
@@ -87,56 +87,9 @@ func (api *API) Recover(mnemonic string, walletPass string, unlockPass string) e
 	return nil //api.Open(walletPass)
 }
 
-//Unlock wallet
-func (api *API) Unlock(walletPriPass string, second int64) error {
-	//if api.wSvr.Wt.Locked() {
-	err := api.wSvr.Wt.Unlock([]byte(walletPriPass), time.After(time.Duration(second)*time.Second))
-	if err != nil {
-		log.Error("Failed to unlock new wallet during old wallet key import", "err", err)
-		return err
-	}
-	// } else {
-	// 	return nil
-	// }
-	return nil
-}
-
-//Open wallet
-func (api *API) Open(pass string) error {
-	//log.Trace(fmt.Sprintf("Open wallet password:%s", config.Cfg.WalletPass))
-	if api.wSvr.Wt != nil {
-		log.Trace("api open wallet already open ")
-		return nil
-	}
-	walletPubPassBuf := []byte(pass) // []byte(config.Cfg.WalletPass)
-	wt, err := api.wSvr.WtLoader.OpenExistingWallet(walletPubPassBuf, false)
-	if err != nil {
-		return fmt.Errorf("open wallet err: %s", err)
-	}
-	log.Trace("api open ok")
-	api.wSvr.Wt = wt
-
-	api.wSvr.WtLoader.RunAfterLoad(func(w *wallet.Wallet) {
-
-		w.Start()
-
-		//log.Trace("api open RunAfterLoad")
-		//
-		//lockChan := make(chan time.Time, 1)
-		//defer func() {
-		//	lockChan <- time.Time{}
-		//}()
-		//err := w.Unlock([]byte(walletPriPass), lockChan)
-		//if err != nil {
-		//	log.Error("Failed to unlock new wallet during old wallet key import","err", err)
-		//	return
-		//}
-		//log.Trace("api open RunAfterLoad end")
-	})
-
-	api.wSvr.StartAPI()
-	log.Trace("api open wallet start")
-	return nil
+//OpenWallet load wallet and open
+func (api *API) OpenWallet(pass string) error {
+	return api.wSvr.OpenWallet(pass)
 }
 
 // createWallet by seed and walletPass

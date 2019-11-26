@@ -62,7 +62,7 @@ export default {
   methods: {
     openWallet() {
       let _this = this;
-      _this.$emit("walletPasswordDlg", "wallet_open", result => {
+      _this.$emit("walletPasswordDlg", "ui_openWallet", result => {
         if (!result) {
           _this.openWallet();
           return;

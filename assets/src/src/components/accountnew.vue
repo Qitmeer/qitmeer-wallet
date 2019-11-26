@@ -68,7 +68,7 @@ export default {
           method: "post",
           data: JSON.stringify({
             id: new Date().getTime(),
-            method: "account_create",
+            method: "wallet_create",
             params: [this.ruleForm.name]
           })
         }).then(response => {
