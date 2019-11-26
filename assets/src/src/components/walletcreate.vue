@@ -111,7 +111,7 @@ export default {
         method: "post",
         data: JSON.stringify({
           id: new Date().getTime(),
-          method: "wallet_makeSeed",
+          method: "ui_makeSeed",
           params: null
         })
       }).then(response => {
@@ -140,7 +140,7 @@ export default {
           method: "post",
           data: JSON.stringify({
             id: new Date().getTime(),
-            method: "wallet_create",
+            method: "ui_createWallet",
             params: [
               this.ruleForm.seed,
               this.ruleForm.password1,

@@ -157,7 +157,7 @@ export default {
       },
       walletPassword: {
         title: "请输入登录密码",
-        method: "wallet_open",
+        method: "ui_openWallet",
         dlgVisible: false,
         password: "",
         loading: false,
@@ -189,7 +189,7 @@ export default {
           method: "post",
           data: JSON.stringify({
             id: new Date().getTime(),
-            method: "wallet_status",
+            method: "ui_walletStatus",
             params: null
           })
         })
@@ -251,7 +251,7 @@ export default {
         method: "post",
         data: JSON.stringify({
           id: new Date().getTime(),
-          method: "wallet_open",
+          method: "ui_openWallet",
           params: [this.openForm.walletPass]
         })
       }).then(response => {
@@ -320,7 +320,7 @@ export default {
           method: "post",
           data: JSON.stringify({
             id: new Date().getTime(),
-            method: _this.walletPassword.method, //"wallet_open","wallet_unlock"
+            method: _this.walletPassword.method, //"ui_open","ui_unlock"
             params: params
           })
         })
@@ -363,7 +363,7 @@ export default {
         method: "post",
         data: JSON.stringify({
           id: new Date().getTime(),
-          method: "account_list",
+          method: "wallet_list",
           params: null
         })
       }).then(response => {
@@ -396,7 +396,7 @@ export default {
         method: "post",
         data: JSON.stringify({
           id: new Date().getTime(),
-          method: "account_list",
+          method: "wallet_list",
           params: null
         })
       }).then(response => {
@@ -504,7 +504,7 @@ export default {
             method: "post",
             data: JSON.stringify({
               id: new Date().getTime(),
-              method: "account_syncStats",
+              method: "wallet_syncStats",
               params: null
             })
           })

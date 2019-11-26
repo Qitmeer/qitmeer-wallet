@@ -1391,7 +1391,7 @@ func (w *Wallet) GetUtxo(addr string) ([]wtxmgr.Utxo, error) {
 
 // SendOutputs creates and sends payment transactions. It returns the
 // transaction upon success.
-func (w *Wallet) SendOutputs(outputs []*types.TxOutput, account uint32,
+func (w *Wallet) SendOutputs(outputs []*types.TxOutput, account int64, //uint32,
 	minconf int32, satPerKb types.Amount) (*string, error) {
 
 	// Ensure the outputs to be created adhere to the network's consensus
@@ -1417,6 +1417,11 @@ func (w *Wallet) SendOutputs(outputs []*types.TxOutput, account uint32,
 	var prk string
 b:
 	for _, aaar := range aaars {
+
+		if int64(aaar.AccountNumber) != account && account != -1 {
+			continue
+		}
+
 		for _, output := range aaar.AddrsOutput {
 			//log.Info("output:", output)
 			if output.balance.UnspendAmount > (payAmout + types.Amount(feeAmout)) {
@@ -1510,7 +1515,7 @@ b:
 	//	return nil, err
 	//}
 	//log.Info("txSign succ:", mtxHex)
-	log.Trace(fmt.Sprintf("signTx size:%v", len(signTx)))
+	log.Trace(fmt.Sprintf("signTx size:%v", len(signTx)), "signTx", signTx)
 	msg, err := w.Httpclient.SendRawTransaction(signTx, false)
 	if err != nil {
 		return nil, err

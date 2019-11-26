@@ -49,7 +49,7 @@ export default {
           method: "post",
           data: JSON.stringify({
             id: new Date().getTime(),
-            method: "account_listAddresses",
+            method: "wallet_getAddressesByAccount",
             params: [_this.currentAccount]
           })
         })
@@ -94,7 +94,7 @@ export default {
             method: "post",
             data: JSON.stringify({
               id: new Date().getTime(),
-              method: "account_dumpPrivKey",
+              method: "wallet_dumpPrivKey",
               params: [addr]
             })
           })

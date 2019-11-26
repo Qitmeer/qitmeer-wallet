@@ -23,8 +23,8 @@
             <el-col :span="2">
               <span style="color:#303133;font-weight:600;">地址：</span>
             </el-col>
-            <el-col :span="10">
-              <el-select v-model="currentAddress" style="with:500px" placeholder="地址">
+            <el-col :span="14">
+              <el-select v-model="currentAddress" style="width:100%">
                 <el-option
                   v-for="item in addresses"
                   :key="item.addr"
@@ -40,9 +40,8 @@
 
     <el-main class="cmain">
       <el-table :data="txList">
-        <el-table-column prop="date" label="时间" width="160"></el-table-column>
-        <el-table-column prop="type" label="-" width="40"></el-table-column>
-        <el-table-column prop="to" label="to" width="240"></el-table-column>
+        <el-table-column prop="txHash" label="txHash" width="470"></el-table-column>
+        <el-table-column prop="type" label="in/out" width="60"></el-table-column>
         <el-table-column prop="amount" label="金额"></el-table-column>
       </el-table>
     </el-main>
@@ -81,6 +80,42 @@ export default {
     this.currentAccount = this.$store.state.Accounts[0].account;
   },
   methods: {
+    txlist2table(txlist) {
+      let _this = this;
+      let tmpTable = [];
+      for (let i = 0; i < txlist.length; i++) {
+        let inOut = "in";
+
+        let amount = 0;
+
+        let findAddr = false;
+        for (let j = 0; j < txlist[i].vout.length; j++) {
+          if (txlist[i].vout[j].scriptPubKey.addresses) {
+            let addrs = txlist[i].vout[j].scriptPubKey.addresses;
+            for (let k = 0; k < addrs.length; k++) {
+              if (addrs[k] == this.currentAddress) {
+                amount = amount + txlist[i].vout[j].amount;
+                findAddr = true;
+                break;
+              }
+            }
+            if (findAddr) {
+              break;
+            }
+          }
+        }
+        console.log(findAddr);
+
+        tmpTable.push({
+          date: "",
+          type: inOut,
+          txHash: txlist[i].txhash,
+          amount: amount
+        });
+      }
+      console.log(tmpTable);
+      _this.txList = tmpTable;
+    },
     getTxList(addr) {
       if (addr == "*") {
         //todo all account addresses
@@ -96,8 +131,8 @@ export default {
           method: "post",
           data: JSON.stringify({
             id: new Date().getTime(),
-            method: "account_getTxListByAddr",
-            params: [addr, 1, 1, 100]
+            method: "wallet_getTxListByAddr",
+            params: [addr, 2, -1, 100]
           })
         })
         .then(response => {
@@ -107,11 +142,13 @@ export default {
             return;
           }
 
-          let tmpTable = [];
-          for (let i = 0; i < response.data.result.length; i++) {
-            tmpTable.push({ addr: response.data.result[i] });
-          }
-          _this.txList = tmpTable;
+          // let tmpTable = [];
+          // for (let i = 0; i < response.data.result.length; i++) {
+          //   tmpTable.push({ addr: response.data.result[i] });
+          // }
+          // _this.txList = tmpTable;
+
+          _this.txlist2table(response.data.result.transactions);
         })
         .catch(() => {
           _this.$emit("setLoading", false, "");
@@ -124,7 +161,7 @@ export default {
           method: "post",
           data: JSON.stringify({
             id: new Date().getTime(),
-            method: "account_listAddresses",
+            method: "wallet_getAddressesByAccount",
             params: [account]
           })
         })
@@ -148,6 +185,7 @@ export default {
       this.getAddressList(this.currentAccount);
     },
     currentAddress() {
+      this.txList = [];
       this.getTxList(this.currentAddress);
     }
   }

@@ -3,31 +3,31 @@ package wallet
 import (
 	"encoding/hex"
 	"fmt"
-
-	clijson "github.com/Qitmeer/qitmeer-wallet/json"
-	"github.com/Qitmeer/qitmeer-wallet/wtxmgr"
+	"time"
 
 	"github.com/Qitmeer/qitmeer/core/address"
 	"github.com/Qitmeer/qitmeer/core/types"
 	"github.com/Qitmeer/qitmeer/crypto/ecc/secp256k1"
 	"github.com/Qitmeer/qitmeer/engine/txscript"
+	"github.com/Qitmeer/qitmeer/log"
 	"github.com/Qitmeer/qitmeer/params"
 
 	"github.com/Qitmeer/qitmeer-wallet/config"
+	clijson "github.com/Qitmeer/qitmeer-wallet/json"
 	"github.com/Qitmeer/qitmeer-wallet/json/qitmeerjson"
 	"github.com/Qitmeer/qitmeer-wallet/utils"
 	waddrmgr "github.com/Qitmeer/qitmeer-wallet/waddrmgs"
 	"github.com/Qitmeer/qitmeer-wallet/wallet/txrules"
+	"github.com/Qitmeer/qitmeer-wallet/wtxmgr"
 )
 
-// API wallet
+// API for wallet
 type API struct {
 	cfg *config.Config
-
-	wt *Wallet
+	wt  *Wallet
 }
 
-// NewAPI api make
+// NewAPI make api
 func NewAPI(cfg *config.Config, wt *Wallet) *API {
 	return &API{
 		cfg: cfg,
@@ -50,19 +50,73 @@ func (api *API) SyncStats() (*SyncStats, error) {
 	return stats, nil
 }
 
-// List all accounts[{account,balance}]
-func (api *API) List() (map[string]float64, error) {
-	accountBalances := map[string]float64{}
-	results, err := api.wt.AccountBalances(waddrmgr.KeyScopeBIP0044, int32(16))
+//Unlock wallet
+func (api *API) Unlock(walletPriPass string, second int64) error {
+	//if api.wSvr.Wt.Locked() {
+	err := api.wt.Unlock([]byte(walletPriPass), time.After(time.Duration(second)*time.Second))
+	if err != nil {
+		log.Error("Failed to unlock new wallet during old wallet key import", "err", err)
+		return err
+	}
+	// } else {
+	// 	return nil
+	// }
+	return nil
+}
+
+//Lock wallet
+func (api *API) Lock() error {
+	api.wt.Lock()
+	return nil
+}
+
+// GetAccountsAndBalance List all accounts[{account,balance}]
+func (api *API) GetAccountsAndBalance() (map[string]*Balance, error) {
+	accountsBalances := make(map[string]*Balance)
+	aaas, err := api.wt.GetAccountAndAddress(waddrmgr.KeyScopeBIP0044, int32(16))
 	if err != nil {
 		return nil, err
 	}
 
-	for _, result := range results {
-		accountBalances[result.AccountName] = result.AccountBalance.ToCoin()
+	for _, aaa := range aaas {
+
+		if _, ok := accountsBalances[aaa.AccountName]; !ok {
+			accountsBalances[aaa.AccountName] = &Balance{}
+		}
+
+		accountBalance := accountsBalances[aaa.AccountName]
+
+		for _, addr := range aaa.AddrsOutput {
+			accountBalance.ConfirmAmount = accountBalance.ConfirmAmount + addr.balance.ConfirmAmount
+			accountBalance.SpendAmount = accountBalance.SpendAmount + addr.balance.SpendAmount
+			accountBalance.TotalAmount = accountBalance.TotalAmount + addr.balance.TotalAmount
+			accountBalance.UnspendAmount = accountBalance.UnspendAmount + addr.balance.UnspendAmount
+		}
+
 	}
-	// Return the map.  This will be marshaled into a JSON object.
-	return accountBalances, nil
+	return accountsBalances, nil
+}
+
+// GetBalanceByAccount get account balance
+func (api *API) GetBalanceByAccount(name string) (*Balance, error) {
+	aaas, err := api.wt.GetAccountAndAddress(waddrmgr.KeyScopeBIP0044, int32(16))
+	if err != nil {
+		return nil, err
+	}
+
+	accountBalance := &Balance{}
+
+	for _, aaa := range aaas {
+		if aaa.AccountName == name {
+			for _, addr := range aaa.AddrsOutput {
+				accountBalance.ConfirmAmount = accountBalance.ConfirmAmount + addr.balance.ConfirmAmount
+				accountBalance.SpendAmount = accountBalance.SpendAmount + addr.balance.SpendAmount
+				accountBalance.TotalAmount = accountBalance.TotalAmount + addr.balance.TotalAmount
+				accountBalance.UnspendAmount = accountBalance.UnspendAmount + addr.balance.UnspendAmount
+			}
+		}
+	}
+	return accountBalance, nil
 }
 
 // GetUtxo addr unspend utxo
@@ -74,8 +128,8 @@ func (api *API) GetUtxo(addr string) ([]wtxmgr.Utxo, error) {
 	return results, nil
 }
 
-// Create a account
-func (api *API) Create(name string) error {
+// CreateAccount create acccount
+func (api *API) CreateAccount(name string) error {
 	// The wildcard * is reserved by the rpc server with the special meaning
 	// of "all accounts", so disallow naming accounts to this string.
 	if name == "*" {
@@ -94,14 +148,6 @@ func (api *API) Create(name string) error {
 }
 
 // CreateAddress by accountName
-//
-// getNewAddress handles a getnewaddress request by returning a new
-// address for an account.  If the account does not exist an appropiate
-// error is returned.
-// TODO: Follow BIP 0044 and warn if number of unused addresses exceeds
-// the gap limit.
-//func getNewAddress(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
-//	cmd := icmd.(*qitmeerjson.GetNewAddressCmd)
 func (api *API) CreateAddress(accountName string) (string, error) {
 	if accountName == "" {
 		accountName = "default"
@@ -118,14 +164,8 @@ func (api *API) CreateAddress(accountName string) (string, error) {
 	return addr.Encode(), nil
 }
 
-// ListAddresses by accountName
-//
-// getAddressesByAccount handles a getaddressesbyaccount request by returning
-// all addresses for an account, or an error if the requested account does
-// not exist.
-// func getAddressesByAccount(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
-// 	cmd := icmd.(*qitmeerjson.GetAddressesByAccountCmd)
-func (api API) ListAddresses(accountName string) ([]string, error) {
+// GetAddressesByAccount by account
+func (api *API) GetAddressesByAccount(accountName string) ([]string, error) {
 	account, err := api.wt.AccountNumber(waddrmgr.KeyScopeBIP0044, accountName)
 	if err != nil {
 		return nil, err
@@ -143,22 +183,8 @@ func (api API) ListAddresses(accountName string) ([]string, error) {
 	return addrStrs, nil
 }
 
-// func getAccountAndAddress(w *wallet.Wallet,
-// 	minconf int32) (interface{}, error) {
-// 	a, err := w.GetAccountAndAddress(waddrmgr.KeyScopeBIP0044, minconf)
-// 	if err != nil {
-// 		return nil, err
-// 	}
-// 	return a, nil
-// }
-
 // GetAccountByAddress get account name
-//
-// getAccount handles a getaccount request by returning the account name
-// associated with a single address.
-// func getAccountByAddress(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
-// 	cmd := icmd.(*qitmeerjson.GetAccountCmd)
-func (api API) GetAccountByAddress(addrStr string) (string, error) {
+func (api *API) GetAccountByAddress(addrStr string) (string, error) {
 	addr, err := address.DecodeAddress(addrStr)
 	if err != nil {
 		return "", err
@@ -181,9 +207,7 @@ func (api API) GetAccountByAddress(addrStr string) (string, error) {
 // dumpPrivKey handles a dumpprivkey request with the private key
 // for a single address, or an appropiate error if the wallet
 // is locked.
-// func dumpPrivKey(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
-// 	cmd := icmd.(*qitmeerjson.DumpPrivKeyCmd)
-func (api API) DumpPrivKey(addrStr string) (string, error) {
+func (api *API) DumpPrivKey(addrStr string) (string, error) {
 	addr, err := address.DecodeAddress(addrStr)
 	if err != nil {
 		return "", err
@@ -198,13 +222,11 @@ func (api API) DumpPrivKey(addrStr string) (string, error) {
 	return key, err
 }
 
-// ImportPrivKey import a WIF-encoded private key and adding it to an account
+// ImportWifPrivKey import a WIF-encoded private key and adding it to an account
 //
 // importPrivKey handles an importprivkey request by parsing
 // a WIF-encoded private key and adding it to an account.
-// func importWifPrivKey(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
-// 	cmd := icmd.(*qitmeerjson.ImportPrivKeyCmd)
-func (api API) ImportWifPrivKey(accountName string, privKey string, rescan bool) error {
+func (api *API) ImportWifPrivKey(accountName string, privKey string, rescan bool) error {
 	// Ensure that private keys are only imported to the correct account.
 	//
 	// todo
@@ -239,11 +261,11 @@ func (api API) ImportWifPrivKey(accountName string, privKey string, rescan bool)
 	return err
 }
 
-// ImportPrivKey
+// ImportPrivKey import priv key
 //
 // func importPrivKey(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
 // 	cmd := icmd.(*qitmeerjson.ImportPrivKeyCmd)
-func (api API) ImportPrivKey(accountName string, privKey string, rescan bool) error {
+func (api *API) ImportPrivKey(accountName string, privKey string, rescan bool) error {
 	// Ensure that private keys are only imported to the correct account.
 	//
 	// Yes, Label is the account name.
@@ -283,14 +305,14 @@ func (api API) ImportPrivKey(accountName string, privKey string, rescan bool) er
 	return err
 }
 
-//sendToAddress handles a sendtoaddress RPC request by creating a new
+//SendToAddress handles a sendtoaddress RPC request by creating a new
 //transaction spending unspent transaction outputs for a wallet to another
 //payment address.  Leftover inputs not sent to the payment address or a fee
 //for the miner are sent back to a new address in the wallet.  Upon success,
 //the TxID for the created transaction is returned.
 // func sendToAddress(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
 // 	cmd := icmd.(*qitmeerjson.SendToAddressCmd)
-func (api API) SendToAddress(addressStr string, amount float64, comment string, commentTo string) (string, error) {
+func (api *API) SendToAddress(addressStr string, amount float64, comment string, commentTo string) (string, error) {
 
 	// Transaction comments are not yet supported.  Error instead of
 	// pretending to save them.
@@ -318,14 +340,49 @@ func (api API) SendToAddress(addressStr string, amount float64, comment string, 
 	}
 
 	// sendtoaddress always spends from the default account, this matches bitcoind
-	return sendPairs(api.wt, pairs, waddrmgr.DefaultAccountNum, 1, txrules.DefaultRelayFeePerKb)
+	//return sendPairs(api.wt, pairs, waddrmgr.DefaultAccountNum, 1, txrules.DefaultRelayFeePerKb)
+	return sendPairs(api.wt, pairs, -1, 1, txrules.DefaultRelayFeePerKb)
 }
 
-//GetBalance by address
-//
-// func getbalance(icmd interface{}, w *Wallet) (interface{}, error) {
-// 	cmd := icmd.(*qitmeerjson.GetBalanceByAddressCmd)
-func (api API) GetBalance(addrStr string, minConf int32) (*Balance, error) {
+// SendToAddressByAccount by account
+func (api *API) SendToAddressByAccount(accountName string, addressStr string, amount float64, comment string, commentTo string) (string, error) {
+
+	accountNum, err := api.wt.AccountNumber(waddrmgr.KeyScopeBIP0044, accountName)
+	if err != nil {
+		return "", err
+	}
+
+	// Transaction comments are not yet supported.  Error instead of
+	// pretending to save them.
+	//if !isNilOrEmpty(cmd.Comment) || !isNilOrEmpty(cmd.CommentTo) {
+	if comment != "" || commentTo != "" {
+		return "", &qitmeerjson.RPCError{
+			Code:    qitmeerjson.ErrRPCUnimplemented,
+			Message: "Transaction comments are not yet supported",
+		}
+	}
+
+	amt, err := types.NewAmount(amount)
+	if err != nil {
+		return "", err
+	}
+
+	// Check that signed integer parameters are positive.
+	if amt < 0 {
+		return "", qitmeerjson.ErrNeedPositiveAmount
+	}
+
+	// Mock up map of address and amount pairs.
+	pairs := map[string]types.Amount{
+		addressStr: amt,
+	}
+
+	// sendtoaddress always spends from the default account, this matches bitcoind
+	return sendPairs(api.wt, pairs, int64(accountNum), 1, txrules.DefaultRelayFeePerKb)
+}
+
+//GetBalanceByAddr get balance by address
+func (api *API) GetBalanceByAddr(addrStr string, minConf int32) (*Balance, error) {
 	m, err := api.wt.GetBalance(addrStr, minConf)
 	if err != nil {
 		return nil, err
@@ -334,15 +391,16 @@ func (api API) GetBalance(addrStr string, minConf int32) (*Balance, error) {
 }
 
 //GetTxListByAddr get addr tx list
-func (api API) GetTxListByAddr(addr string, stype int32, page int32, pageSize int32) (*clijson.PageTxRawResult, error) {
-	return api.wt.GetListTxByAddr(addr, stype, page, pageSize)
+func (api *API) GetTxListByAddr(addr string, stype int32, page int32, pageSize int32) (clijson.PageTxRawResult, error) {
+	rs, err := api.wt.GetListTxByAddr(addr, stype, page, pageSize)
+	return *rs, err
 }
 
 //sendPairs creates and sends payment transactions.
 //It returns the transaction hash in string format upon success
 //All errors are returned in btcjson.RPCError format
 func sendPairs(w *Wallet, amounts map[string]types.Amount,
-	account uint32, minconf int32, feeSatPerKb types.Amount) (string, error) {
+	account int64 /*uint32*/, minconf int32, feeSatPerKb types.Amount) (string, error) {
 
 	outputs, err := makeOutputs(amounts, w.ChainParams())
 	if err != nil {

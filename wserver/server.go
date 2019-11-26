@@ -1,3 +1,13 @@
+// Copyright (c) 2013-2014 The qitmeer developers
+// Use of this source code is governed by an ISC
+// license that can be found in the LICENSE file.
+
+//
+// qitmeer-wallet RPC or UI model
+//
+// 1. RPC, walllet should be create firest by command and start wallet with wallet pass
+// 2. UI, UI should open wallet self.
+
 package wserver
 
 import (
@@ -7,18 +17,18 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/Qitmeer/qitmeer-wallet/rpc/client"
+	"github.com/julienschmidt/httprouter"
 
 	qJson "github.com/Qitmeer/qitmeer/core/json"
-	"github.com/julienschmidt/httprouter"
+	"github.com/Qitmeer/qitmeer/log"
 
 	"github.com/Qitmeer/qitmeer-wallet/assets"
 	"github.com/Qitmeer/qitmeer-wallet/config"
 	"github.com/Qitmeer/qitmeer-wallet/qitmeerd"
+	"github.com/Qitmeer/qitmeer-wallet/rpc/client"
 	"github.com/Qitmeer/qitmeer-wallet/rpc/server"
 	"github.com/Qitmeer/qitmeer-wallet/utils"
 	"github.com/Qitmeer/qitmeer-wallet/wallet"
-	"github.com/Qitmeer/qitmeer/log"
 )
 
 //WalletServer wallet api server
@@ -38,6 +48,7 @@ type WalletServer struct {
 //NewWalletServer make a wallet api server
 func NewWalletServer(cfg *config.Config) (wSvr *WalletServer, err error) {
 
+	// qitmeed
 	var qitmeerdSelect *client.Config
 	if cfg.QitmeerdSelect != "" {
 		for _, item := range cfg.Qitmeerds {
@@ -47,7 +58,7 @@ func NewWalletServer(cfg *config.Config) (wSvr *WalletServer, err error) {
 		}
 	}
 	if len(cfg.Qitmeerds) < 1 {
-		return nil, fmt.Errorf("config qitmeerds nothing %s", "")
+		return nil, fmt.Errorf("config qitmeerds not found %s", "")
 	}
 	if qitmeerdSelect == nil {
 		cfg.QitmeerdSelect = cfg.Qitmeerds[0].Name
@@ -88,35 +99,31 @@ func NewWalletServer(cfg *config.Config) (wSvr *WalletServer, err error) {
 		return nil, fmt.Errorf("NewWallet: %s", err)
 	}
 
-	// for _, api := range cfg.APIs {
-	// 	switch api {
-	// 	case "account":
-	// 		wSvr.RPCSvr.RegisterService("account", &services.AccountAPI{})
-	// 	case "tx":
-	// 		//wSvr.RPCSvr.RegisterService("tx", &services.TxAPI{})
-	// 	}
-	// }
+	if wSvr.cfg.UI {
+		//ui rpc
+		wSvr.RPCSvr.RegisterService("ui", NewAPI(cfg, wSvr))
+	} else {
+		err = wSvr.OpenWallet(cfg.WalletPass)
+		if err != nil {
+			return nil, err
+		}
+	}
 
-	wSvr.RPCSvr.RegisterService("wallet", NewAPI(cfg, wSvr))
-
-	// if !wtExist && cfg.UI {
-	// 	wSvr.RPCSvr.RegisterService("crate", wallet.NewCreateAPI(cfg, wSvr.wt))
-	// }
 	return
 }
 
 //
-func (wsvr *WalletServer) run() {
+func (wSvr *WalletServer) run() {
 	defer func() {
 		if rev := recover(); rev != nil {
 			log.Trace("WalletServer.run", "WalletServer run recover ", rev)
-			go wsvr.run()
+			go wSvr.run()
 		}
 	}()
 	go func() {
 		for {
 			select {
-			case <-wsvr.exitCh:
+			case <-wSvr.exitCh:
 				os.Exit(1)
 			}
 		}
@@ -125,7 +132,7 @@ func (wsvr *WalletServer) run() {
 
 	router := httprouter.New()
 
-	if wsvr.cfg.UI {
+	if wSvr.cfg.UI {
 		staticF, err := assets.GetStatic()
 		if err != nil {
 			log.Error("server run ", "err ", err)
@@ -144,9 +151,9 @@ func (wsvr *WalletServer) run() {
 				RPCPass: "{{rpc_pass}}"
 			};
 			`
-			tmpl = strings.Replace(tmpl, "{{api_url}}", "http://"+wsvr.cfg.Listeners[0]+"/api", -1)
-			tmpl = strings.Replace(tmpl, "{{rpc_user}}", wsvr.cfg.RPCUser, -1)
-			tmpl = strings.Replace(tmpl, "{{rpc_pass}}", wsvr.cfg.RPCPass, -1)
+			tmpl = strings.Replace(tmpl, "{{api_url}}", "http://"+wSvr.cfg.Listeners[0]+"/api", -1)
+			tmpl = strings.Replace(tmpl, "{{rpc_user}}", wSvr.cfg.RPCUser, -1)
+			tmpl = strings.Replace(tmpl, "{{rpc_pass}}", wSvr.cfg.RPCPass, -1)
 
 			return []byte(tmpl)
 		})
@@ -172,25 +179,25 @@ func (wsvr *WalletServer) run() {
 		})
 	}
 
-	router.POST("/api", wsvr.HandleAPI)
+	router.POST("/api", wSvr.HandleAPI)
 
-	for _, addr := range wsvr.cfg.Listeners {
+	for _, addr := range wSvr.cfg.Listeners {
 		go func() {
 			log.Trace("WalletServer listening on", "addr", addr)
 			err := http.ListenAndServe(addr, router)
 			if err != nil {
 				log.Error("server listen", " err", err)
-				wsvr.exitCh <- true
+				wSvr.exitCh <- true
 				return
 			}
 		}()
 	}
 
-	// ``go wsvr.GetQitmeerdStatus()``
+	// ``go wSvr.GetQitmeerdStatus()``
 }
 
 // HandleAPI RPC Method
-func (wsvr *WalletServer) HandleAPI(ResW http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+func (wSvr *WalletServer) HandleAPI(ResW http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	if r.Header.Get("Origin") == "http://127.0.0.1:8080" {
 		ResW.Header().Set("Access-Control-Allow-Origin", "http://127.0.0.1:8080")
 	} else {
@@ -201,37 +208,55 @@ func (wsvr *WalletServer) HandleAPI(ResW http.ResponseWriter, r *http.Request, p
 	ResW.Header().Set("Access-Control-Allow-Methods", "GET,HEAD,OPTIONS,POST,PUT")
 	ResW.Header().Set("Access-Control-Allow-Headers", "Access-Control-Allow-Headers, Origin, Accept, X-Requested-With, Content-Type, Access-Control-Request-Method, Access-Control-Request-Headers, Authorization")
 
-	wsvr.RPCSvr.HandleFunc(ResW, r)
+	wSvr.RPCSvr.HandleFunc(ResW, r)
 }
 
-// Start routine
-func (wsvr *WalletServer) Start() error {
+// Start server
+func (wSvr *WalletServer) Start() error {
 	log.Trace("WalletServer start")
 
-	wsvr.RPCSvr.Start()
+	wSvr.RPCSvr.Start()
 
-	go wsvr.run()
+	go wSvr.run()
 
 	//open home in web browser
-	if wsvr.cfg.UI {
-		utils.OpenBrowser("http://" + wsvr.cfg.Listeners[0])
+	if wSvr.cfg.UI {
+		utils.OpenBrowser("http://" + wSvr.cfg.Listeners[0])
 	}
 
 	return nil
 }
 
-// StartAPI if wallet open ok start api
-func (wsvr *WalletServer) StartAPI() {
-	log.Trace("StartAPI", "api", wsvr.cfg.APIs)
-	for _, api := range wsvr.cfg.APIs {
-		switch api {
-		case "account":
-			wsvr.RPCSvr.RegisterService("account", wallet.NewAPI(wsvr.cfg, wsvr.Wt))
-		case "tx":
-			//wSvr.RPCSvr.RegisterService("tx", &services.TxAPI{})
-		case "qitmeerd":
-			qitmeerD := qitmeerd.NewQitmeerd(wsvr.Wt, wsvr.cfg.QitmeerdSelect)
-			wsvr.RPCSvr.RegisterService("qitmeerd", qitmeerd.NewAPI(wsvr.cfg, qitmeerD))
-		}
+// RegAPI if wallet open
+func (wSvr *WalletServer) RegAPI() {
+	//wallet rpc
+	wSvr.RPCSvr.RegisterService("wallet", wallet.NewAPI(wSvr.cfg, wSvr.Wt))
+
+	//qitmeerd rpc
+	qitmeerD := qitmeerd.NewQitmeerd(wSvr.Wt, wSvr.cfg.QitmeerdSelect)
+	wSvr.RPCSvr.RegisterService("qitmeerd", qitmeerd.NewAPI(wSvr.cfg, qitmeerD))
+}
+
+// OpenWallet load wallet and start rpc
+func (wSvr *WalletServer) OpenWallet(pass string) error {
+	if wSvr.Wt != nil {
+		log.Trace("OpenWallet: wallet already open")
+		return nil
 	}
+	walletPubPassBuf := []byte(pass)
+	wt, err := wSvr.WtLoader.OpenExistingWallet(walletPubPassBuf, false)
+	if err != nil {
+		return fmt.Errorf("OpenWallet OpenExistingWallet err: %s", err)
+	}
+	wSvr.Wt = wt
+	log.Trace("OpenWallet ok")
+
+	wSvr.WtLoader.RunAfterLoad(func(w *wallet.Wallet) {
+		w.Start()
+	})
+
+	wSvr.RegAPI()
+	log.Trace("OpenWallet ok and reg api")
+
+	return nil
 }
