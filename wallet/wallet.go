@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -1520,6 +1521,7 @@ b:
 	if err != nil {
 		return nil, err
 	} else {
+		msg=strings.ReplaceAll(msg,"\"","")
 		log.Info("SendRawTransaction txSign response msg", "msg", msg)
 	}
 
