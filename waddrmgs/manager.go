@@ -47,6 +47,10 @@ const (
 	// DefaultAccountNum is the number of the default account.
 	DefaultAccountNum = 0
 
+	// Account combination payment mark
+	AccountMergePayNum=-1
+
+
 	// defaultAccountName is the initial name of the default account.  Note
 	// that the default account may be renamed and is not a reserved name,
 	// so the default account might not be named "default" and non-default

@@ -341,7 +341,7 @@ func (api *API) SendToAddress(addressStr string, amount float64, comment string,
 
 	// sendtoaddress always spends from the default account, this matches bitcoind
 	//return sendPairs(api.wt, pairs, waddrmgr.DefaultAccountNum, 1, txrules.DefaultRelayFeePerKb)
-	return sendPairs(api.wt, pairs, -1, 1, txrules.DefaultRelayFeePerKb)
+	return sendPairs(api.wt, pairs, waddrmgr.AccountMergePayNum, 1, txrules.DefaultRelayFeePerKb)
 }
 
 // SendToAddressByAccount by account

@@ -311,7 +311,7 @@ func SendToAddress(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
 	}
 
 	// sendtoaddress always spends from the default account, this matches bitcoind
-	return sendPairs(w, pairs, int64(-1), 1, txrules.DefaultRelayFeePerKb)
+	return sendPairs(w, pairs, int64(waddrmgr.AccountMergePayNum), 1, txrules.DefaultRelayFeePerKb)
 }
 
 func Updateblock(icmd interface{}, w *wallet.Wallet) error {

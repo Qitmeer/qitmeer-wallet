@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -1418,7 +1419,7 @@ func (w *Wallet) SendOutputs(outputs []*types.TxOutput, account int64, //uint32,
 b:
 	for _, aaar := range aaars {
 
-		if int64(aaar.AccountNumber) != account && account != -1 {
+		if int64(aaar.AccountNumber) != account && account != waddrmgr.AccountMergePayNum{
 			continue
 		}
 
@@ -1520,6 +1521,7 @@ b:
 	if err != nil {
 		return nil, err
 	} else {
+		msg=strings.ReplaceAll(msg,"\"","")
 		log.Info("SendRawTransaction txSign response msg", "msg", msg)
 	}
 
