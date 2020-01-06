@@ -11,6 +11,7 @@ import (
 	"github.com/Qitmeer/qitmeer/engine/txscript"
 	"github.com/Qitmeer/qitmeer/log"
 	"github.com/Qitmeer/qitmeer/params"
+	"github.com/Qitmeer/qitmeer/qx"
 
 	"github.com/Qitmeer/qitmeer-wallet/config"
 	clijson "github.com/Qitmeer/qitmeer-wallet/json"
@@ -394,6 +395,17 @@ func (api *API) GetBalanceByAddr(addrStr string, minConf int32) (*Balance, error
 func (api *API) GetTxListByAddr(addr string, stype int32, page int32, pageSize int32) (clijson.PageTxRawResult, error) {
 	rs, err := api.wt.GetListTxByAddr(addr, stype, page, pageSize)
 	return *rs, err
+}
+
+//TxSign TxSign by privkeyStr
+func (api *API) TxSign(privkeyStr string, rawTxStr string) (string, error) {
+
+	wf, err := utils.DecodeWIF(privkeyStr, utils.GetNetParams(api.cfg.Network))
+	if err != nil {
+		return "", err
+	}
+
+	return qx.TxSign(hex.EncodeToString(wf.PrivKey.Serialize()), rawTxStr, api.cfg.Network)
 }
 
 //sendPairs creates and sends payment transactions.

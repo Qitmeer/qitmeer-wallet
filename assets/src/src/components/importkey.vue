@@ -81,7 +81,7 @@ export default {
             });
             return;
           }
-          this.$alert("导入私钥成功", {
+          this.$alert("导入私钥成功", {
             showClose: false,
             closeOnClickModal: false,
             closeOnPressEscape: false,

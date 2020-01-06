@@ -78,7 +78,7 @@ export default {
             });
             return;
           }
-          this.$alert("创建账号成功", {
+          this.$alert("创建账号成功", {
             showClose: false,
             closeOnClickModal: false,
             closeOnPressEscape: false,

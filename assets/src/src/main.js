@@ -26,7 +26,7 @@ Vue.prototype.$axios = axios.create({
 
 //
 router.beforeEach((to, from, next) => {
-  console.log("router", to.path, store.state.Wallet)
+  //console.log("router", to.path, store.state.Wallet)
   if (store.state.Wallet == "unknown" || store.state.Wallet == "nil") {
     if (!(
       to.path == "/" ||
