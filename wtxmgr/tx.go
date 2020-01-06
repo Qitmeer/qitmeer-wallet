@@ -47,7 +47,7 @@ type AddrTxOutput struct {
 	Index  uint32
 	Amount types.Amount
 	Block Block
-	Spend int32 // index 0  unspend 1 spend 2 coinbase
+	Spend int32 // index 0  unspend 1 spend 2 unconfirm
 	SpendTo *SpendTo
 }
 type Utxo struct {

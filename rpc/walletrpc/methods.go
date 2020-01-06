@@ -10,8 +10,6 @@ import (
 	"github.com/Qitmeer/qitmeer/core/address"
 	"github.com/Qitmeer/qitmeer/crypto/ecc/secp256k1"
 	"github.com/Qitmeer/qitmeer/log"
-	"github.com/Qitmeer/qitmeer/params"
-
 	//"github.com/Qitmeer/qitmeer-wallet/wallet/txrules"
 
 	//"bytes"
@@ -23,8 +21,6 @@ import (
 	"github.com/Qitmeer/qitmeer-wallet/json/qitmeerjson"
 	waddrmgr "github.com/Qitmeer/qitmeer-wallet/waddrmgs"
 	"github.com/Qitmeer/qitmeer/core/types"
-	"github.com/Qitmeer/qitmeer/engine/txscript"
-
 	//"sync"
 	//"time"
 
@@ -311,7 +307,7 @@ func SendToAddress(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
 	}
 
 	// sendtoaddress always spends from the default account, this matches bitcoind
-	return sendPairs(w, pairs, int64(waddrmgr.AccountMergePayNum), 1, txrules.DefaultRelayFeePerKb)
+	return w.SendPairs(pairs, int64(waddrmgr.AccountMergePayNum), 1, txrules.DefaultRelayFeePerKb)
 }
 
 func Updateblock(icmd interface{}, w *wallet.Wallet) error {
@@ -353,58 +349,6 @@ func Getlisttxbyaddr(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
 	return m, nil
 }
 
-//sendPairs creates and sends payment transactions.
-//It returns the transaction hash in string format upon success
-//All errors are returned in btcjson.RPCError format
-func sendPairs(w *wallet.Wallet, amounts map[string]types.Amount,
-	account int64 /*uint32*/, minconf int32, feeSatPerKb types.Amount) (string, error) {
-
-	outputs, err := makeOutputs(amounts, w.ChainParams())
-	if err != nil {
-		return "", err
-	}
-	tx, err := w.SendOutputs(outputs, account, minconf, feeSatPerKb)
-	if err != nil {
-		if err == txrules.ErrAmountNegative {
-			return "", qitmeerjson.ErrNeedPositiveAmount
-		}
-		if waddrmgr.IsError(err, waddrmgr.ErrLocked) {
-			return "", &qitmeerjson.ErrWalletUnlockNeeded
-		}
-		switch err.(type) {
-		case qitmeerjson.RPCError:
-			return "", err
-		}
-
-		return "", &qitmeerjson.RPCError{
-			Code:    qitmeerjson.ErrRPCInternal.Code,
-			Message: err.Error(),
-		}
-	}
-	return *tx, nil
-}
-
-// makeOutputs creates a slice of transaction outputs from a pair of address
-// strings to amounts.  This is used to create the outputs to include in newly
-// created transactions from a JSON object describing the output destinations
-// and amounts.
-func makeOutputs(pairs map[string]types.Amount, chainParams *params.Params) ([]*types.TxOutput, error) {
-	outputs := make([]*types.TxOutput, 0, len(pairs))
-	for addrStr, amt := range pairs {
-		addr, err := address.DecodeAddress(addrStr)
-		if err != nil {
-			return nil, fmt.Errorf("cannot decode address: %s", err)
-		}
-
-		pkScript, err := txscript.PayToAddrScript(addr)
-		if err != nil {
-			return nil, fmt.Errorf("cannot create txout script: %s", err)
-		}
-
-		outputs = append(outputs, types.NewTxOutput(uint64(amt), pkScript))
-	}
-	return outputs, nil
-}
 
 func isNilOrEmpty(s *string) bool {
 	return s == nil || *s == ""

@@ -9,6 +9,7 @@ import (
 	"io/ioutil"
 	"net"
 	"net/http"
+	"strconv"
 	"strings"
 
 	qJson "github.com/Qitmeer/qitmeer/core/json"
@@ -138,6 +139,23 @@ func newHTTPClient(cfg *htpc) (*http.Client, error) {
 		},
 	}
 	return &client, nil
+}
+
+func (cfg *htpc) CheckSyncUpdate(localheight int64) (bool, error) {
+	params := []interface{}{}
+	str,err:=cfg.getResString("getBlockCount", params)
+	if err!=nil{
+		return false,err
+	}
+	blockheight, err := strconv.ParseInt(str, 10, 32)
+	if err != nil {
+		return false,err
+	}
+	if (blockheight-localheight) <100{
+		return true, nil
+	}else{
+		return false,fmt.Errorf("db Update incomplete")
+	}
 }
 
 func (cfg *htpc) getblockCount() (string, error) {

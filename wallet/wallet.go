@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/Qitmeer/qitmeer-wallet/json/qitmeerjson"
 	"os"
 	"strconv"
 	"strings"
@@ -435,8 +436,6 @@ func (w *Wallet) getAddrAndAddrTxOutputByAddr(addr string, requiredConfs int32) 
 
 	ato := AddrAndAddrTxOutput{}
 	b := Balance{}
-	syncBlock := w.Manager.SyncedTo()
-
 	var txouts []wtxmgr.AddrTxOutput
 	//var txins []*types.TxOutPoint
 	err := walletdb.View(w.db, func(tx walletdb.ReadTx) error {
@@ -471,21 +470,11 @@ func (w *Wallet) getAddrAndAddrTxOutputByAddr(addr string, requiredConfs int32) 
 			spendAmount += txout.Amount
 			//totalAmount += txout.Amount
 		} else if txout.Spend == 2 {
-			if !confirmed(int32(w.chainParams.CoinbaseMaturity), txout.Block.Height, syncBlock.Height) {
 				totalAmount += txout.Amount
 				confirmAmount += txout.Amount
-			} else {
-				totalAmount += txout.Amount
-				unspendAmount += txout.Amount
-			}
 		} else {
-			if !confirmed(requiredConfs, txout.Block.Height, syncBlock.Height) {
-				totalAmount += txout.Amount
-				confirmAmount += txout.Amount
-			} else {
 				totalAmount += txout.Amount
 				unspendAmount += txout.Amount
-			}
 		}
 	}
 
@@ -681,15 +670,6 @@ func (w *Wallet) insertTx(txins []types.TxOutPoint, txouts []wtxmgr.AddrTxOutput
 				if err != nil {
 					return err
 				}
-				//blockhash,err:=hash.NewHashFromStr(txr.BlockHash)
-				//if(err!=nil){
-				//	log.Info("vin NewHashFromStr err :", err.Error())
-				//	return err
-				//}
-				//spendtoblock:=wtxmgr.Block{
-				//	Hash:*blockhash,
-				//	Height:int32(txr.BlockHeight),
-				//}
 				spendto := wtxmgr.SpendTo{
 					Index:  txi.OutIndex,
 					TxHash: *txHash,
@@ -755,10 +735,12 @@ func parseTx(tr corejson.TxRawResult, height int32) ([]types.TxOutPoint, []wtxmg
 		return nil, nil, err
 	}
 	spend := int32(0)
+	if tr.Confirmations < config.Cfg.Confirmations{
+		spend=int32(2)
+	}
 	for j := 0; j < len(tr.Vin); j++ {
 		vi := tr.Vin[j]
 		if vi.Coinbase != "" {
-			spend = int32(2)
 			continue
 		}
 		if vi.Txid == "" && vi.Vout == 0 {
@@ -916,48 +898,6 @@ func (w *Wallet) Updateblock(toHeight int64) error {
 	return nil
 }
 
-//func (w *Wallet) UpdateMempool() error {
-//	txIdstr, err := w.Httpclient.getMempool()
-//	if err != nil {
-//		log.Info("getMempool err:", err.Error())
-//		return err
-//	}
-//	log.Info("getMempool result:", txIdstr)
-//	var txIds []string
-//	if err := json.Unmarshal([]byte(txIdstr), &txIds); err != nil {
-//		log.Info("err:", err.Error())
-//		return err
-//	}
-//	var txins []types.TxOutPoint
-//	var txouts []wtxmgr.AddrTxOutput
-//	var trrs []corejson.TxRawResult
-//	for _, txid := range txIds {
-//		res, err := w.Httpclient.getRawTransaction(txid)
-//		if err != nil {
-//			log.Info("getRawTransaction err:", err.Error())
-//			return err
-//		}
-//		var txJson corejson.TxRawResult
-//		if err := json.Unmarshal([]byte(res), &txJson); err != nil {
-//			log.Info("err:", err.Error())
-//			return err
-//		}
-//		txin, txout, err := parseTx(txJson,0)
-//		if err != nil {
-//			log.Info("parseTx err:", err.Error())
-//			return err
-//		}
-//		txins = append(txins, txin...)
-//		txouts = append(txouts, txout...)
-//		trrs = append(trrs, txJson)
-//	}
-//	err = w.insertTx(txins, txouts, trrs)
-//	if err != nil {
-//		log.Info("insertTx err:", err.Error())
-//		return err
-//	}
-//	return nil
-//}
 
 // NextAccount creates the next account and returns its account number.  The
 // name must be unique to the account.  In order to support automatic seed
@@ -1226,56 +1166,7 @@ out:
 			req.err <- nil
 			continue
 
-		//case req := <-w.changePassphrase:
-		//	err := walletdb.Update(w.db, func(tx walletdb.ReadWriteTx) error {
-		//		addrmgrNs := tx.ReadWriteBucket(waddrmgrNamespaceKey)
-		//		return w.Manager.ChangePassphrase(
-		//			addrmgrNs, req.old, req.new, req.private,
-		//			&waddrmgr.DefaultScryptOptions,
-		//		)
-		//	})
-		//	req.err <- err
-		//	continue
-		//
-		//case req := <-w.changePassphrases:
-		//	err := walletdb.Update(w.db, func(tx walletdb.ReadWriteTx) error {
-		//		addrmgrNs := tx.ReadWriteBucket(waddrmgrNamespaceKey)
-		//		err := w.Manager.ChangePassphrase(
-		//			addrmgrNs, req.publicOld, req.publicNew,
-		//			false, &waddrmgr.DefaultScryptOptions,
-		//		)
-		//		if err != nil {
-		//			return err
-		//		}
-		//
-		//		return w.Manager.ChangePassphrase(
-		//			addrmgrNs, req.privateOld, req.privateNew,
-		//			true, &waddrmgr.DefaultScryptOptions,
-		//		)
-		//	})
-		//	req.err <- err
-		//	continue
-		//
-		//case req := <-w.holdUnlockRequests:
-		//	if w.Manager.IsLocked() {
-		//		close(req)
-		//		continue
-		//	}
-		//
-		//	req <- holdChan
-		//	<-holdChan // Block until the lock is released.
-		//
-		//	// If, after holding onto the unlocked wallet for some
-		//	// time, the timeout has expired, lock it now instead
-		//	// of hoping it gets unlocked next time the top level
-		//	// select runs.
-		//	select {
-		//	case <-timeout:
-		//		// Let the top level select fallthrough so the
-		//		// wallet is locked.
-		//	default:
-		//		continue
-		//	}
+
 
 		case w.lockState <- w.Manager.IsLocked():
 			continue
@@ -1378,13 +1269,6 @@ func (w *Wallet) GetUtxo(addr string) ([]wtxmgr.Utxo, error) {
 			uo.Index = txout.Index
 			uo.Amount = txout.Amount
 			utxos = append(utxos, uo)
-		} else if txout.Spend == 2 {
-			if txout.Block.Height-w.Manager.SyncedTo().Height >= int32(w.chainParams.CoinbaseMaturity) {
-				uo.Txid = txout.Txid.String()
-				uo.Index = txout.Index
-				uo.Amount = txout.Amount
-				utxos = append(utxos, uo)
-			}
 		}
 	}
 	return utxos, nil
@@ -1412,7 +1296,6 @@ func (w *Wallet) SendOutputs(outputs []*types.TxOutput, account int64, //uint32,
 		return nil, err
 	}
 
-	synced := w.Manager.SyncedTo()
 	var sendAddress string
 	var sendAddrTxOutput []wtxmgr.AddrTxOutput
 	var prk string
@@ -1424,7 +1307,6 @@ b:
 		}
 
 		for _, output := range aaar.AddrsOutput {
-			//log.Info("output:", output)
 			if output.balance.UnspendAmount > (payAmout + types.Amount(feeAmout)) {
 				addr, err := address.DecodeAddress(output.Addr)
 				sendAddress = output.Addr
@@ -1444,51 +1326,44 @@ b:
 					return nil, err
 				}
 				prk = hex.EncodeToString(prikey.SerializeSecret())
-				var confirm int32
 				for _, output1 := range output.Txoutput {
-					confirm = minconf
-					if output1.Spend != 1 && output1.SpendTo == nil {
-						if output1.Spend == 2 {
-							confirm = int32(w.chainParams.CoinbaseMaturity)
-						}
-						if confirmed(confirm, output1.Block.Height, synced.Height) {
-							if output1.Amount >= payAmout && payAmout > types.Amount(0) {
-								pre := types.NewOutPoint(&output1.Txid, output1.Index)
-								tx.AddTxIn(types.NewTxInput(pre, nil))
-								selfTxOut := types.NewTxOutput(uint64(output1.Amount-payAmout), frompkscipt)
-								feeAmout = util.CalcMinRequiredTxRelayFee(int64(tx.SerializeSize()+selfTxOut.SerializeSize()), types.Amount(config.Cfg.MinTxFee))
-								if (output1.Amount - payAmout) >= types.Amount(feeAmout) {
-									selfTxOut.Amount = uint64(output1.Amount - payAmout - types.Amount(feeAmout))
-									tx.AddTxOut(selfTxOut)
-									payAmout = types.Amount(0)
-									feeAmout = int64(0)
-									sendAddrTxOutput = append(sendAddrTxOutput, output1)
-									break b
-								} else {
-									selfTxOut.Amount = uint64(output1.Amount - payAmout)
-									tx.AddTxOut(selfTxOut)
-									payAmout = types.Amount(0)
-									sendAddrTxOutput = append(sendAddrTxOutput, output1)
-								}
-							} else if output1.Amount < payAmout && payAmout > types.Amount(0) {
-								pre := types.NewOutPoint(&output1.Txid, output1.Index)
-								tx.AddTxIn(types.NewTxInput(pre, nil))
-								payAmout = payAmout - output1.Amount
+					if output1.Spend == 0 && output1.SpendTo == nil {
+						if output1.Amount >= payAmout && payAmout > types.Amount(0) {
+							pre := types.NewOutPoint(&output1.Txid, output1.Index)
+							tx.AddTxIn(types.NewTxInput(pre, nil))
+							selfTxOut := types.NewTxOutput(uint64(output1.Amount-payAmout), frompkscipt)
+							feeAmout = util.CalcMinRequiredTxRelayFee(int64(tx.SerializeSize()+selfTxOut.SerializeSize()), types.Amount(config.Cfg.MinTxFee))
+							if (output1.Amount - payAmout) >= types.Amount(feeAmout) {
+								selfTxOut.Amount = uint64(output1.Amount - payAmout - types.Amount(feeAmout))
+								tx.AddTxOut(selfTxOut)
+								payAmout = types.Amount(0)
+								feeAmout = int64(0)
 								sendAddrTxOutput = append(sendAddrTxOutput, output1)
-							} else if output1.Amount >= types.Amount(feeAmout) && payAmout == types.Amount(0) {
-								pre := types.NewOutPoint(&output1.Txid, output1.Index)
-								feeTxin := types.NewTxInput(pre, nil)
-								feeTxOut := types.NewTxOutput(uint64(output1.Amount-types.Amount(feeAmout)), frompkscipt)
-								feeAmout = util.CalcMinRequiredTxRelayFee(int64(tx.SerializeSize()+feeTxOut.SerializeSize()+feeTxin.SerializeSize()), types.Amount(config.Cfg.MinTxFee))
-								if output1.Amount >= types.Amount(feeAmout) {
-									feeTxOut.Amount = uint64(output1.Amount - types.Amount(feeAmout))
-									tx.AddTxIn(feeTxin)
-									tx.AddTxOut(feeTxOut)
-									payAmout = types.Amount(0)
-									feeAmout = int64(0)
-									sendAddrTxOutput = append(sendAddrTxOutput, output1)
-									break b
-								}
+								break b
+							} else {
+								selfTxOut.Amount = uint64(output1.Amount - payAmout)
+								tx.AddTxOut(selfTxOut)
+								payAmout = types.Amount(0)
+								sendAddrTxOutput = append(sendAddrTxOutput, output1)
+							}
+						} else if output1.Amount < payAmout && payAmout > types.Amount(0) {
+							pre := types.NewOutPoint(&output1.Txid, output1.Index)
+							tx.AddTxIn(types.NewTxInput(pre, nil))
+							payAmout = payAmout - output1.Amount
+							sendAddrTxOutput = append(sendAddrTxOutput, output1)
+						} else if output1.Amount >= types.Amount(feeAmout) && payAmout == types.Amount(0) {
+							pre := types.NewOutPoint(&output1.Txid, output1.Index)
+							feeTxin := types.NewTxInput(pre, nil)
+							feeTxOut := types.NewTxOutput(uint64(output1.Amount-types.Amount(feeAmout)), frompkscipt)
+							feeAmout = util.CalcMinRequiredTxRelayFee(int64(tx.SerializeSize()+feeTxOut.SerializeSize()+feeTxin.SerializeSize()), types.Amount(config.Cfg.MinTxFee))
+							if output1.Amount >= types.Amount(feeAmout) {
+								feeTxOut.Amount = uint64(output1.Amount - types.Amount(feeAmout))
+								tx.AddTxIn(feeTxin)
+								tx.AddTxOut(feeTxOut)
+								payAmout = types.Amount(0)
+								feeAmout = int64(0)
+								sendAddrTxOutput = append(sendAddrTxOutput, output1)
+								break b
 							}
 						}
 					}
@@ -1510,12 +1385,6 @@ b:
 	if err != nil {
 		return nil, err
 	}
-	//mtxHex, err := marshal.MessageToHex(&message.MsgTx{Tx: signTx})
-	//if err != nil {
-	//	log.Info("txSign err:", err.Error())
-	//	return nil, err
-	//}
-	//log.Info("txSign succ:", mtxHex)
 	log.Trace(fmt.Sprintf("signTx size:%v", len(signTx)), "signTx", signTx)
 	msg, err := w.Httpclient.SendRawTransaction(signTx, false)
 	if err != nil {
@@ -1545,4 +1414,62 @@ b:
 	}
 
 	return &msg, nil
+}
+
+
+//sendPairs creates and sends payment transactions.
+//It returns the transaction hash in string format upon success
+//All errors are returned in btcjson.RPCError format
+func (w *Wallet)  SendPairs( amounts map[string]types.Amount,
+	account int64 /*uint32*/, minconf int32, feeSatPerKb types.Amount) (string, error) {
+	check,err := w.Httpclient.CheckSyncUpdate(int64(w.SyncHeight))
+
+	if check ==false{
+		return "",err
+	}
+	outputs, err := makeOutputs(amounts, w.ChainParams())
+	if err != nil {
+		return "", err
+	}
+	tx, err := w.SendOutputs(outputs, account, minconf, feeSatPerKb)
+	if err != nil {
+		if err == txrules.ErrAmountNegative {
+			return "", qitmeerjson.ErrNeedPositiveAmount
+		}
+		if waddrmgr.IsError(err, waddrmgr.ErrLocked) {
+			return "", &qitmeerjson.ErrWalletUnlockNeeded
+		}
+		switch err.(type) {
+		case qitmeerjson.RPCError:
+			return "", err
+		}
+
+		return "", &qitmeerjson.RPCError{
+			Code:    qitmeerjson.ErrRPCInternal.Code,
+			Message: err.Error(),
+		}
+	}
+	return *tx, nil
+}
+
+// makeOutputs creates a slice of transaction outputs from a pair of address
+// strings to amounts.  This is used to create the outputs to include in newly
+// created transactions from a JSON object describing the output destinations
+// and amounts.
+func makeOutputs(pairs map[string]types.Amount, chainParams *chaincfg.Params) ([]*types.TxOutput, error) {
+	outputs := make([]*types.TxOutput, 0, len(pairs))
+	for addrStr, amt := range pairs {
+		addr, err := address.DecodeAddress(addrStr)
+		if err != nil {
+			return nil, fmt.Errorf("cannot decode address: %s", err)
+		}
+
+		pkScript, err := txscript.PayToAddrScript(addr)
+		if err != nil {
+			return nil, fmt.Errorf("cannot create txout script: %s", err)
+		}
+
+		outputs = append(outputs, types.NewTxOutput(uint64(amt), pkScript))
+	}
+	return outputs, nil
 }
