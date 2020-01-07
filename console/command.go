@@ -53,6 +53,8 @@ func BindFlags() {
 	Command.PersistentFlags().Int64Var(&preCfg.MinTxFee, "mintxfee", fileCfg.MinTxFee, "The minimum transaction fee in AtomMEER/kB default 20000 (aka. 0.0002 Qitmeer/kB)")
 }
 
+
+
 // LoadConfig config file and flags
 func LoadConfig(cmd *cobra.Command, args []string) {
 	// load configfile ane merge command ,but don't udpate configfile

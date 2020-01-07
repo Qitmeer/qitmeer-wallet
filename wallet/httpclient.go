@@ -6,6 +6,7 @@ import (
 	"crypto/x509"
 	"encoding/json"
 	"fmt"
+	"github.com/Qitmeer/qitmeer-wallet/globalvariable"
 	"io/ioutil"
 	"net"
 	"net/http"
@@ -19,6 +20,8 @@ import (
 
 	"github.com/samuel/go-socks/socks"
 )
+
+
 
 type htpc struct {
 	RPCUser       string
@@ -147,11 +150,11 @@ func (cfg *htpc) CheckSyncUpdate(localheight int64) (bool, error) {
 	if err!=nil{
 		return false,err
 	}
-	blockheight, err := strconv.ParseInt(str, 10, 32)
+	blockheight, err := strconv.ParseInt(str, globalvariable.Strbase, globalvariable.Strbitsize)
 	if err != nil {
 		return false,err
 	}
-	if (blockheight-localheight) <100{
+	if (blockheight-localheight) < globalvariable.CheckSyncUpdatediffnum{
 		return true, nil
 	}else{
 		return false,fmt.Errorf("db Update incomplete")

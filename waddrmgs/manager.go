@@ -51,6 +51,9 @@ const (
 	AccountMergePayNum=-1
 
 
+	Default_send_minconf =1
+
+
 	// defaultAccountName is the initial name of the default account.  Note
 	// that the default account may be renamed and is not a reserved name,
 	// so the default account might not be named "default" and non-default

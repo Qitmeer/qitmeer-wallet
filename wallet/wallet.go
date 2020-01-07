@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/Qitmeer/qitmeer-wallet/globalvariable"
 	"github.com/Qitmeer/qitmeer-wallet/json/qitmeerjson"
 	"os"
 	"strconv"
@@ -97,7 +98,7 @@ func (wt *Wallet) Start() {
 
 	go func() {
 
-		updateBlockTicker := time.NewTicker(30 * time.Second)
+		updateBlockTicker := time.NewTicker(globalvariable.WebupdateBlockTicker * time.Second)
 		for {
 			select {
 			case <-updateBlockTicker.C:
@@ -171,8 +172,7 @@ type AddrAndAddrTxOutput struct {
 var (
 	waddrmgrNamespaceKey = []byte("waddrmgr")
 	wtxmgrNamespaceKey   = []byte("wtxmgr")
-	// 地址对应的交易in out 桶
-	//waddrtrNamespaceKey   = []byte("waddrtr")
+
 )
 
 // ImportPrivateKey imports a private key to the wallet and writes the new
@@ -205,27 +205,6 @@ func (w *Wallet) ImportPrivateKey(scope waddrmgr.KeyScope, wif *utils.WIF,
 			return err
 		}
 
-		// We'll only update our birthday with the new one if it is
-		// before our current one. Otherwise, if we do, we can
-		// potentially miss detecting relevant chain events that
-		// occurred between them while rescanning.
-		//birthdayBlock, _, err := w.Manager.BirthdayBlock(addrmgrNs)
-		//if err != nil {
-		//	return err
-		//}
-		//if bs.Height >= birthdayBlock.Height {
-		//	return nil
-		//}
-		//
-		//err = w.Manager.SetBirthday(addrmgrNs, bs.Timestamp)
-		//if err != nil {
-		//	return err
-		//}
-		//
-		//// To ensure this birthday block is correct, we'll mark it as
-		//// unverified to prompt a sanity check at the next restart to
-		//// ensure it is correct as it was provided by the caller.
-		//return w.Manager.SetBirthdayBlock(addrmgrNs, *bs, false)
 		return nil
 	})
 	if err != nil {
@@ -323,33 +302,14 @@ func Open(db walletdb.DB, pubPass []byte, cbs *waddrmgr.OpenCallbacks,
 
 	w := &Wallet{
 		cfg: cfg,
-		//publicPassphrase:    pubPass,
 		db:      db,
 		Manager: addrMgr,
-		//TxStore:             txMgr,
-		//lockedOutpoints:     map[wire.OutPoint]struct{}{},
-		//recoveryWindow:      recoveryWindow,
-		//rescanAddJob:        make(chan *RescanJob),
-		//rescanBatch:         make(chan *rescanBatch),
-		//rescanNotifications: make(chan interface{}),
-		//rescanProgress:      make(chan *RescanProgressMsg),
-		//rescanFinished:      make(chan *RescanFinishedMsg),
-		//createTxRequests:    make(chan createTxRequest),
 		unlockRequests: make(chan unlockRequest),
-		//lockRequests:        make(chan struct{}),
-		//holdUnlockRequests:  make(chan chan heldUnlock),
 		lockState: make(chan bool),
-		//changePassphrase:    make(chan changePassphraseRequest),
-		//changePassphrases:   make(chan changePassphrasesRequest),
 		chainParams: params,
-		//quit:                make(chan struct{}),
 
 	}
 
-	//w.NtfnServer = newNotificationServer(w)
-	//w.TxStore.NotifyUnspent = func(hash *chainhash.Hash, index uint32) {
-	//	w.NtfnServer.notifyUnspentOutput(0, hash, index)
-	//}
 
 	return w, nil
 }
@@ -378,10 +338,7 @@ func (w *Wallet) GetTx(txid string) (corejson.TxRawResult, error) {
 	if err != nil {
 		return trx, err
 	}
-	//b, err := json.Marshal(trx)
-	//if err != nil {
-	//	return trx, err
-	//}
+
 	return trx, nil
 }
 
@@ -466,10 +423,10 @@ func (w *Wallet) getAddrAndAddrTxOutputByAddr(addr string, requiredConfs int32) 
 	var totalAmount types.Amount
 	var confirmAmount types.Amount
 	for _, txout := range txouts {
-		if txout.Spend == 1 {
+		if txout.Spend == wtxmgr.SpendF {
 			spendAmount += txout.Amount
 			//totalAmount += txout.Amount
-		} else if txout.Spend == 2 {
+		} else if txout.Spend == wtxmgr.SpendT {
 				totalAmount += txout.Amount
 				confirmAmount += txout.Amount
 		} else {
@@ -488,6 +445,14 @@ func (w *Wallet) getAddrAndAddrTxOutputByAddr(addr string, requiredConfs int32) 
 	return &ato, nil
 }
 
+const (
+	defaultPage = 1
+	defaultPagesize=10
+	defaultMaxPageSize=1000000000
+	stypeZ int32=0
+	stypeF int32=1
+	stypeT int32=2
+)
 /**
 stype 0 Turn in 1 Turn out 2 all no page
 */
@@ -498,10 +463,10 @@ func (w *Wallet) GetListTxByAddr(addr string, stype int32, page int32, pageSize 
 		return nil, err
 	}
 	if page == 0 {
-		page = 1
+		page = defaultPage
 	}
 	if pageSize == 0 {
-		pageSize = 10
+		pageSize = defaultPagesize
 	}
 	startIndex := (page - 1) * pageSize
 	var endIndex int32
@@ -509,15 +474,16 @@ func (w *Wallet) GetListTxByAddr(addr string, stype int32, page int32, pageSize 
 	var txhss []hash.Hash
 	var txhssin []hash.Hash
 	var dataLen int32
-	if stype == 0 {
+	switch stype {
+	case stypeZ:
 		dataLen = int32(len(at.Txoutput))
 		if page < 0 {
 			for _, txput := range at.Txoutput {
 				txhss = append(txhss, txput.Txid)
 			}
 			dataLen = int32(len(txhss))
-			page = 1
-			pageSize = 1000000000
+			page = defaultPage
+			pageSize = defaultMaxPageSize
 		} else {
 			if startIndex > dataLen {
 				return nil, fmt.Errorf("No data")
@@ -532,17 +498,93 @@ func (w *Wallet) GetListTxByAddr(addr string, stype int32, page int32, pageSize 
 				}
 			}
 		}
-	} else if stype == 1 {
+	case stypeF:
 		for _, txput := range at.Txoutput {
-			if txput.Spend == 1 && txput.SpendTo != nil {
+			if txput.Spend == wtxmgr.SpendF && txput.SpendTo != nil {
 				txhssin = append(txhssin, txput.SpendTo.TxHash)
 			}
 		}
 		dataLen = int32(len(txhssin))
 		if page < 0 {
 			txhss = append(txhss, txhssin...)
-			page = 1
-			pageSize = 1000000000
+			page = defaultPage
+			pageSize = defaultMaxPageSize
+		} else {
+			if startIndex > dataLen {
+				return nil, fmt.Errorf("No data")
+			} else {
+				if (startIndex + pageSize) > dataLen {
+					endIndex = dataLen
+				} else {
+					endIndex = (startIndex + pageSize)
+				}
+				for s := startIndex; s < endIndex; s++ {
+					txhss = append(txhss, txhssin[s])
+				}
+			}
+		}
+	case stypeT:
+		for _, txput := range at.Txoutput {
+			txhss = append(txhss, txput.Txid)
+			if txput.Spend == wtxmgr.SpendF && txput.SpendTo != nil {
+				txhss = append(txhss, txput.SpendTo.TxHash)
+			}
+		}
+		dataLen = int32(len(txhss))
+		if page < 0 {
+			page = defaultPage
+			pageSize = defaultMaxPageSize
+		} else {
+			if startIndex > dataLen {
+				return nil, fmt.Errorf("No data")
+			} else {
+				if (startIndex + pageSize) > dataLen {
+					endIndex = dataLen
+				} else {
+					endIndex = (startIndex + pageSize)
+				}
+				for s := startIndex; s < endIndex; s++ {
+					txhss = append(txhss, txhssin[s])
+				}
+			}
+		}
+	default:
+		return nil,fmt.Errorf("err stype")
+	}
+	if stype == stypeZ {
+		dataLen = int32(len(at.Txoutput))
+		if page < 0 {
+			for _, txput := range at.Txoutput {
+				txhss = append(txhss, txput.Txid)
+			}
+			dataLen = int32(len(txhss))
+			page = defaultPage
+			pageSize = defaultMaxPageSize
+		} else {
+			if startIndex > dataLen {
+				return nil, fmt.Errorf("No data")
+			} else {
+				if (startIndex + pageSize) > dataLen {
+					endIndex = dataLen
+				} else {
+					endIndex = (startIndex + pageSize)
+				}
+				for s := startIndex; s < endIndex; s++ {
+					txhss = append(txhss, at.Txoutput[s].Txid)
+				}
+			}
+		}
+	} else if stype == stypeF{
+		for _, txput := range at.Txoutput {
+			if txput.Spend == wtxmgr.SpendF && txput.SpendTo != nil {
+				txhssin = append(txhssin, txput.SpendTo.TxHash)
+			}
+		}
+		dataLen = int32(len(txhssin))
+		if page < 0 {
+			txhss = append(txhss, txhssin...)
+			page = defaultPage
+			pageSize = defaultMaxPageSize
 		} else {
 			if startIndex > dataLen {
 				return nil, fmt.Errorf("No data")
@@ -560,14 +602,14 @@ func (w *Wallet) GetListTxByAddr(addr string, stype int32, page int32, pageSize 
 	} else {
 		for _, txput := range at.Txoutput {
 			txhss = append(txhss, txput.Txid)
-			if txput.Spend == 1 && txput.SpendTo != nil {
+			if txput.Spend == wtxmgr.SpendF && txput.SpendTo != nil {
 				txhss = append(txhss, txput.SpendTo.TxHash)
 			}
 		}
 		dataLen = int32(len(txhss))
 		if page < 0 {
-			page = 1
-			pageSize = 1000000000
+			page = defaultPage
+			pageSize = defaultMaxPageSize
 		} else {
 			if startIndex > dataLen {
 				return nil, fmt.Errorf("No data")
@@ -665,7 +707,7 @@ func (w *Wallet) insertTx(txins []types.TxOutPoint, txouts []wtxmgr.AddrTxOutput
 			if err != nil {
 				return err
 			}
-			if spendedOut.Spend != 1 {
+			if spendedOut.Spend != wtxmgr.SpendF {
 				txHash, err := hash.NewHashFromStr(txr.Txid)
 				if err != nil {
 					return err
@@ -673,9 +715,8 @@ func (w *Wallet) insertTx(txins []types.TxOutPoint, txouts []wtxmgr.AddrTxOutput
 				spendto := wtxmgr.SpendTo{
 					Index:  txi.OutIndex,
 					TxHash: *txHash,
-					//Block:spendtoblock,
 				}
-				spendedOut.Spend = 1
+				spendedOut.Spend = wtxmgr.SpendF
 				spendedOut.Address = addr
 				spendedOut.SpendTo = &spendto
 
@@ -734,9 +775,9 @@ func parseTx(tr corejson.TxRawResult, height int32) ([]types.TxOutPoint, []wtxmg
 	if err != nil {
 		return nil, nil, err
 	}
-	spend := int32(0)
+	spend := wtxmgr.SpendZ
 	if tr.Confirmations < config.Cfg.Confirmations{
-		spend=int32(2)
+		spend=wtxmgr.SpendT
 	}
 	for j := 0; j < len(tr.Vin); j++ {
 		vi := tr.Vin[j]
@@ -996,13 +1037,6 @@ func (w *Wallet) NewAddress(
 	if err != nil {
 		return nil, err
 	}
-	//// Notify the rpc server about the newly created address.
-	//err = chainClient.NotifyReceived([]btcutil.Address{addr})
-	//if err != nil {
-	//	return nil, err
-	//}
-	//
-	//w.NtfnServer.notifyAccountProperties(props)
 
 	return addr, nil
 }
@@ -1264,7 +1298,7 @@ func (w *Wallet) GetUtxo(addr string) ([]wtxmgr.Utxo, error) {
 
 	for _, txout := range txouts {
 		uo := wtxmgr.Utxo{}
-		if txout.Spend == 0 {
+		if txout.Spend == wtxmgr.SpendZ {
 			uo.Txid = txout.Txid.String()
 			uo.Index = txout.Index
 			uo.Amount = txout.Amount
@@ -1296,7 +1330,6 @@ func (w *Wallet) SendOutputs(outputs []*types.TxOutput, account int64, //uint32,
 		return nil, err
 	}
 
-	var sendAddress string
 	var sendAddrTxOutput []wtxmgr.AddrTxOutput
 	var prk string
 b:
@@ -1307,9 +1340,9 @@ b:
 		}
 
 		for _, output := range aaar.AddrsOutput {
+			log.Trace(fmt.Sprintf("addr:%s,unspend:%v",output.Addr,output.balance.UnspendAmount))
 			if output.balance.UnspendAmount > (payAmout + types.Amount(feeAmout)) {
 				addr, err := address.DecodeAddress(output.Addr)
-				sendAddress = output.Addr
 				if err != nil {
 					return nil, err
 				}
@@ -1327,7 +1360,8 @@ b:
 				}
 				prk = hex.EncodeToString(prikey.SerializeSecret())
 				for _, output1 := range output.Txoutput {
-					if output1.Spend == 0 && output1.SpendTo == nil {
+					output1.Address = output.Addr
+					if output1.Spend == wtxmgr.SpendZ && output1.SpendTo == nil {
 						if output1.Amount >= payAmout && payAmout > types.Amount(0) {
 							pre := types.NewOutPoint(&output1.Txid, output1.Index)
 							tx.AddTxIn(types.NewTxInput(pre, nil))
@@ -1341,10 +1375,13 @@ b:
 								sendAddrTxOutput = append(sendAddrTxOutput, output1)
 								break b
 							} else {
-								selfTxOut.Amount = uint64(output1.Amount - payAmout)
-								tx.AddTxOut(selfTxOut)
-								payAmout = types.Amount(0)
+								if uint64(output1.Amount - payAmout) >0{
+									selfTxOut.Amount = uint64(output1.Amount - payAmout)
+									tx.AddTxOut(selfTxOut)
+								}
 								sendAddrTxOutput = append(sendAddrTxOutput, output1)
+								payAmout = types.Amount(0)
+
 							}
 						} else if output1.Amount < payAmout && payAmout > types.Amount(0) {
 							pre := types.NewOutPoint(&output1.Txid, output1.Index)
@@ -1371,9 +1408,9 @@ b:
 			}
 		}
 	}
-	if payAmout != types.Amount(0) || feeAmout != 0 {
+	if payAmout.ToCoin() != types.Amount(0).ToCoin() || feeAmout != 0 {
 		log.Trace("payAmout", "payAmout", payAmout)
-		log.Trace("feeAmout", "feeAmout", types.Amount(feeAmout))
+		log.Trace("feeAmout", "feeAmout", feeAmout)
 		//log.Info("balance is not enough")
 		return nil, fmt.Errorf("balance is not enough")
 	}
@@ -1387,7 +1424,7 @@ b:
 	}
 	log.Trace(fmt.Sprintf("signTx size:%v", len(signTx)), "signTx", signTx)
 	msg, err := w.Httpclient.SendRawTransaction(signTx, false)
-	if err != nil {
+	if err != nil{
 		return nil, err
 	} else {
 		msg=strings.ReplaceAll(msg,"\"","")
@@ -1398,8 +1435,7 @@ b:
 		ns := tx.ReadWriteBucket(wtxmgrNamespaceKey)
 		outns := ns.NestedReadWriteBucket(wtxmgr.BucketAddrtxout)
 		for _, txoutput := range sendAddrTxOutput {
-			txoutput.Address = sendAddress
-			txoutput.Spend = 1
+			txoutput.Spend = wtxmgr.SpendF
 			err = w.TxStore.UpdateAddrTxOut(outns, &txoutput)
 			if err != nil {
 				log.Error("UpdateAddrTxOut to spend err", "err", err.Error())
@@ -1422,11 +1458,11 @@ b:
 //All errors are returned in btcjson.RPCError format
 func (w *Wallet)  SendPairs( amounts map[string]types.Amount,
 	account int64 /*uint32*/, minconf int32, feeSatPerKb types.Amount) (string, error) {
-	check,err := w.Httpclient.CheckSyncUpdate(int64(w.SyncHeight))
-
-	if check ==false{
-		return "",err
-	}
+	//check,err := w.Httpclient.CheckSyncUpdate(int64(w.SyncHeight))
+	//
+	//if check ==false{
+	//	return "",err
+	//}
 	outputs, err := makeOutputs(amounts, w.ChainParams())
 	if err != nil {
 		return "", err

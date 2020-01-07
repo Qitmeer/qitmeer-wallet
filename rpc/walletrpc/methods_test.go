@@ -4,58 +4,42 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"github.com/Qitmeer/qitmeer-wallet/config"
 	"github.com/Qitmeer/qitmeer/log"
 
 	//"os"
 	//"path/filepath"
 	"testing"
 
-	"github.com/Qitmeer/qitmeer/crypto/ecc/secp256k1"
-	"github.com/Qitmeer/qitmeer/params"
+	qjson "github.com/Qitmeer/qitmeer-wallet/json"
 	"github.com/Qitmeer/qitmeer-wallet/json/qitmeerjson"
 	util "github.com/Qitmeer/qitmeer-wallet/utils"
 	"github.com/Qitmeer/qitmeer-wallet/wallet"
-	qjson "github.com/Qitmeer/qitmeer-wallet/json"
-	//"time"
-	//"time"
+	"github.com/Qitmeer/qitmeer/crypto/ecc/secp256k1"
+	"github.com/Qitmeer/qitmeer/params"
 )
 
-//func TestListAccounts(t *testing.T) {
-//	w, err := open_wallet()
-//	if err != nil {
-//		t.Log("open wallet err", err)
-//		return
-//	}
-//
-//	l, err := test_wallet_listAccounts(w)
-//	if err != nil {
-//		t.Log(err)
-//		return
-//	}
-//
-//	t.Log(l)
-//
-//}
 
 func open_wallet() (*wallet.Wallet, error) {
-	//dbpath, _ := os.Getwd() //  "C:\\Users\\luoshan\\AppData\\Local\\Qitwallet\\testnet"
-	dbpath:="C:\\Users\\luoshan\\AppData\\Local\\Qitwallet\\testnet"
-	//dbpath = filepath.Join(dbpath, "testnet")
+	dbpath:="/Users/luoshan/Library/Application Support/Qitwallet/testnet"
+	tomlpath:="/Users/luoshan/GolandProjects/qitmeer-wallet/config.toml"
+	pubpass:="public"
+	dbpass:="123456"
+	err:=config.LoadConfig(tomlpath)
+	if err !=nil{
+		log.Error("TestLoadConfig err","err", err.Error())
+		fmt.Println("TestLoadConfig err :"+err.Error())
+		return nil ,err
+	}
 	activeNet := &params.TestNetParams
-	load := wallet.NewLoader(activeNet, dbpath, 250,nil)
-	w, err := load.OpenExistingWallet([]byte("public"), false)
+	load := wallet.NewLoader(activeNet, dbpath, 250,config.Cfg)
+	w, err := load.OpenExistingWallet([]byte(pubpass), false)
 	if err != nil {
 		log.Error("openWallet err","err", err.Error())
 		return nil, err
 	}
-	//w.Start()
-	//err=w.Unlock([]byte("123456"),time.After(10*time.Minute))
-	//if err!=nil{
-	//	log.Info("err:",err.Error())
-	//	return nil,err
-	//}
-	//err = w.UnLockManager([]byte("123456"))
-	err = w.UnLockManager([]byte("123456"))
+
+	err = w.UnLockManager([]byte(dbpass))
 	if err != nil {
 		fmt.Errorf("UnLockManager err:%s", err.Error())
 		return nil, err
@@ -81,9 +65,8 @@ func test_wallet_createNewAccount(w *wallet.Wallet) error {
 func test_wallet_getbalance(w *wallet.Wallet) (*wallet.Balance, error){
 	minconf:=3
 	cmd:=&qitmeerjson.GetBalanceByAddressCmd{
-		//Address:"Tmjc34zWMTAASHTwcNtPppPujFKVK5SeuaJ",
-		//Address:"TmcAh3FGNCEZMNtmU6RWme18D5GxQGwE3xb",
-		Address:"TmaTi4yt947FXPcWTAkMNDqtRELKceEFBb5",
+		Address:"TmgD1mu8zMMV9aWmJrXqQYnWRhR9SBfDZG6",
+		//Address:"TmfDniZnvsjdH98GsH4aetL3XQKFUTWPp4e",
 		//Address:"TmbsdsjwzuGboFQ9GcKg6EUmrr3tokzozyF",
 		MinConf:minconf,
 	}
@@ -93,6 +76,7 @@ func test_wallet_getbalance(w *wallet.Wallet) (*wallet.Balance, error){
 		return nil,err
 	}
 	r:=b.(*wallet.Balance)
+	fmt.Printf("test_wallet_getbalance  UnspendAmount:%v\n",r.UnspendAmount)
 	//log.Info("test_wallet_getbalance :",b)
 	//log.Info("test_wallet_getbalance  ConfirmAmount:",r.ConfirmAmount)
 	//log.Info("test_wallet_getbalance  UnspendAmount:",r.UnspendAmount)
@@ -234,10 +218,10 @@ func test_wallet_getAccountAndAddress(w *wallet.Wallet) (interface{}, error) {
 }
 func test_wallet_sendToAddress(w *wallet.Wallet)( interface{}, error){
 	cmd:=&qitmeerjson.SendToAddressCmd{
-		Address:"TmZQiY7WZarVk6Fax1NgUJCoVmonrEFRzwy",
+		Address:"TmgD1mu8zMMV9aWmJrXqQYnWRhR9SBfDZG6",
 		//Address:"TmbCBKbZF8PeSdj5Chm22T4hZRMJY5D8XyX",
 		//Address:"TmbsdsjwzuGboFQ9GcKg6EUmrr3tokzozyF",
-		Amount :   float64(31),
+		Amount :   float64(1),
 	}
 	msg, err := SendToAddress(cmd, w)
 	if err != nil {
@@ -281,11 +265,11 @@ func test_wif(w *wallet.Wallet) error {
 }
 
 func TestWallet_Method(t *testing.T) {
-	//w, err := open_wallet()
-	//if err != nil {
-	//	log.Info("open_wallet err:", err)
-	//	return
-	//}
+	w, err := open_wallet()
+	if err != nil {
+		log.Info("open_wallet err:", err)
+		return
+	}
 	//w.UpdateMempool()
 	//
 	//test_wallet_createNewAccount(w)
@@ -310,10 +294,15 @@ func TestWallet_Method(t *testing.T) {
 	//
 	//
 	//
-	//test_wallet_getbalance(w)
+	test_wallet_getbalance(w)
 	//
 	//
-	//test_wallet_sendToAddress(w)
+	msg,err:=test_wallet_sendToAddress(w)
+	if err!=nil{
+		fmt.Printf(err.Error())
+	}else{
+		fmt.Printf("%s\n",msg)
+	}
 	//
 	//
 	//test_wif(w)

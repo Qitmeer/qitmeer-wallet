@@ -1,6 +1,5 @@
 package qitmeerjson
 
-
 // AddMultisigAddressCmd defines the addmutisigaddress JSON-RPC command.
 type AddMultisigAddressCmd struct {
 	NRequired int

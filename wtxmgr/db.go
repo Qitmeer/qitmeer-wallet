@@ -200,7 +200,7 @@ func ReadAddrTxOutput(v []byte, txout *AddrTxOutput) (err error) {
 	txout.Amount = types.Amount(byteOrder.Uint64(v[36:44]))
 	copy(txout.Block.Hash[:], v[44:76])
 	txout.Block.Height = int32(byteOrder.Uint32(v[88:92]))
-	txout.Spend = int32(byteOrder.Uint32(v[92:96]))
+	txout.Spend = spend(byteOrder.Uint32(v[92:96]))
 	if len(v) == 132 {
 		st := SpendTo{}
 		st.Index = byteOrder.Uint32(v[96:100])

@@ -47,9 +47,19 @@ type AddrTxOutput struct {
 	Index  uint32
 	Amount types.Amount
 	Block Block
-	Spend int32 // index 0  unspend 1 spend 2 unconfirm
+	Spend spend
 	SpendTo *SpendTo
 }
+
+type spend int32
+const (
+	SpendZ spend=0 // unspend
+	SpendF spend=1 // spend
+	SpendT spend=2 // unconfirm
+
+)
+
+
 type Utxo struct {
 	Txid string
 	Index  uint32

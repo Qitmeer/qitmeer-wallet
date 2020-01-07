@@ -10,19 +10,10 @@ import (
 	"github.com/Qitmeer/qitmeer/core/address"
 	"github.com/Qitmeer/qitmeer/crypto/ecc/secp256k1"
 	"github.com/Qitmeer/qitmeer/log"
-	//"github.com/Qitmeer/qitmeer-wallet/wallet/txrules"
 
-	//"bytes"
-	//"encoding/base64"
-	//"encoding/hex"
-	//"encoding/json"
-	//"errors"
-	//"fmt"
 	"github.com/Qitmeer/qitmeer-wallet/json/qitmeerjson"
 	waddrmgr "github.com/Qitmeer/qitmeer-wallet/waddrmgs"
 	"github.com/Qitmeer/qitmeer/core/types"
-	//"sync"
-	//"time"
 
 	"github.com/Qitmeer/qitmeer-wallet/wallet"
 )
@@ -307,7 +298,7 @@ func SendToAddress(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
 	}
 
 	// sendtoaddress always spends from the default account, this matches bitcoind
-	return w.SendPairs(pairs, int64(waddrmgr.AccountMergePayNum), 1, txrules.DefaultRelayFeePerKb)
+	return w.SendPairs(pairs, int64(waddrmgr.AccountMergePayNum), waddrmgr.Default_send_minconf, txrules.DefaultRelayFeePerKb)
 }
 
 func Updateblock(icmd interface{}, w *wallet.Wallet) error {
