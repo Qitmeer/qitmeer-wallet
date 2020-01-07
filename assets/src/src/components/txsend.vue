@@ -109,7 +109,7 @@ export default {
           _this.$emit("alertResError", response.data.error, () => {});
           return;
         }
-        this.$alert("发送交易成功", {
+        this.$alert("发送交易成功", {
           showClose: false,
           closeOnClickModal: false,
           closeOnPressEscape: false,

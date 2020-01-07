@@ -128,7 +128,7 @@ export default {
             return;
           }
           this.$message({
-            message: "恢复成功成功!",
+            message: "恢复成功成功!",
             type: "success",
             duration: 1000,
             onClose: function() {
