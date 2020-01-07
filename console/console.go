@@ -21,7 +21,7 @@ import (
 
 const (
 	Name     = "wallet-cli:"
-	Default_minconf =1
+	Default_minconf =16
 )
 var w *wallet.Wallet
 var isWin = runtime.GOOS == "windows"
@@ -189,11 +189,7 @@ func getlisttxbyaddr(addr string,page int32,pageSize int32,stype int32)( interfa
 		a:=result.(*qjson.PageTxRawResult)
 		fmt.Printf("total:%v\n",a.Total)
 		for _, t := range a.Transactions {
-			//b,err:=json.Marshal(t)
-			//if err!=nil{
-			//	fmt.Println("getlisttxbyaddr err:",err.Error())
-			//	return nil, err
-			//}
+
 			fmt.Printf("%s\n",string(t.Txid))
 		}
 	}
