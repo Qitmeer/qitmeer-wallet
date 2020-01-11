@@ -4,16 +4,14 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	waddrmgr "github.com/Qitmeer/qitmeer-wallet/waddrmgs"
-	"github.com/Qitmeer/qitmeer/crypto/bip39"
-	"github.com/Qitmeer/qitmeer/crypto/ecc/secp256k1"
-
 	"github.com/Qitmeer/qitmeer-wallet/config"
 	"github.com/Qitmeer/qitmeer-wallet/json/qitmeerjson"
 	"github.com/Qitmeer/qitmeer-wallet/rpc/walletrpc"
 	"github.com/Qitmeer/qitmeer-wallet/util"
-	qjson "github.com/Qitmeer/qitmeer-wallet/json"
+	waddrmgr "github.com/Qitmeer/qitmeer-wallet/waddrmgs"
 	"github.com/Qitmeer/qitmeer-wallet/wallet"
+	"github.com/Qitmeer/qitmeer/crypto/bip39"
+	"github.com/Qitmeer/qitmeer/crypto/ecc/secp256k1"
 	"github.com/Qitmeer/qitmeer/qx"
 	"path/filepath"
 	"runtime"
@@ -183,15 +181,7 @@ func getlisttxbyaddr(addr string,page int32,pageSize int32,stype int32)( interfa
 	}
 	result, err := walletrpc.Getlisttxbyaddr(cmd, w)
 	if err != nil {
-		fmt.Println("getlisttxbyaddr","err", err.Error())
 		return nil, err
-	}else{
-		a:=result.(*qjson.PageTxRawResult)
-		fmt.Printf("total:%v\n",a.Total)
-		for _, t := range a.Transactions {
-
-			fmt.Printf("%s\n",string(t.Txid))
-		}
 	}
 	return result, nil
 }

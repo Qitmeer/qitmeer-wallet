@@ -1308,6 +1308,8 @@ func (w *Wallet) GetUtxo(addr string) ([]wtxmgr.Utxo, error) {
 	return utxos, nil
 }
 
+// Sendoutputs can only be accessed by a single thread at the same time to prevent the referenced utxo from being referenced again under the concurrency
+var syncSendOutputs *sync.Mutex = new(sync.Mutex)
 // SendOutputs creates and sends payment transactions. It returns the
 // transaction upon success.
 func (w *Wallet) SendOutputs(outputs []*types.TxOutput, account int64, //uint32,
@@ -1315,6 +1317,8 @@ func (w *Wallet) SendOutputs(outputs []*types.TxOutput, account int64, //uint32,
 
 	// Ensure the outputs to be created adhere to the network's consensus
 	// rules.
+	syncSendOutputs.Lock()
+	defer syncSendOutputs.Unlock()
 	tx := types.NewTransaction()
 	payAmout := types.Amount(0)
 	feeAmout := int64(0)
@@ -1442,6 +1446,7 @@ b:
 				return err
 			}
 		}
+		log.Trace("UpdateAddrTxOut to spend succ ")
 		return nil
 	})
 	if err != nil {
@@ -1458,11 +1463,11 @@ b:
 //All errors are returned in btcjson.RPCError format
 func (w *Wallet)  SendPairs( amounts map[string]types.Amount,
 	account int64 /*uint32*/, minconf int32, feeSatPerKb types.Amount) (string, error) {
-	//check,err := w.Httpclient.CheckSyncUpdate(int64(w.SyncHeight))
-	//
-	//if check ==false{
-	//	return "",err
-	//}
+	check,err := w.Httpclient.CheckSyncUpdate(int64(w.Manager.SyncedTo().Height))
+
+	if check ==false{
+		return "",err
+	}
 	outputs, err := makeOutputs(amounts, w.ChainParams())
 	if err != nil {
 		return "", err

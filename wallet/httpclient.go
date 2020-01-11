@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/Qitmeer/qitmeer-wallet/globalvariable"
+	"github.com/Qitmeer/qitmeer/log"
 	"io/ioutil"
 	"net"
 	"net/http"
@@ -154,6 +155,7 @@ func (cfg *htpc) CheckSyncUpdate(localheight int64) (bool, error) {
 	if err != nil {
 		return false,err
 	}
+	log.Trace(fmt.Sprintf("blockheight:%v,localheight:%v",blockheight,localheight))
 	if (blockheight-localheight) < globalvariable.CheckSyncUpdatediffnum{
 		return true, nil
 	}else{
