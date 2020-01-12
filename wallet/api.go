@@ -340,6 +340,29 @@ func (api *API) SendToAddress(addressStr string, amount float64, comment string,
 	return api.wt.SendPairs( pairs, waddrmgr.AccountMergePayNum, waddrmgr.Default_send_minconf, txrules.DefaultRelayFeePerKb)
 }
 
+
+//SendToAddress handles a sendtoaddress RPC request by creating a new
+//transaction spending unspent transaction outputs for a wallet to another
+//payment address.  Leftover inputs not sent to the payment address or a fee
+//for the miner are sent back to a new address in the wallet.  Upon success,
+//the TxID for the created transaction is returned.
+// func sendToAddress(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
+// 	cmd := icmd.(*qitmeerjson.SendToAddressCmd)
+func (api *API) SendToAddressBatch( addrsAmount map[string]float64) (string, error) {
+
+	pairs := make(map[string]types.Amount)
+	for addr, amount := range addrsAmount {
+		amt, err := types.NewAmount(amount)
+		if err != nil {
+			return "", err
+		}
+		pairs[addr]=types.Amount(amt)
+	}
+
+	// sendtoaddress always spends from the default account, this matches bitcoind
+	return api.wt.SendPairs( pairs, waddrmgr.AccountMergePayNum, waddrmgr.Default_send_minconf, txrules.DefaultRelayFeePerKb)
+}
+
 // SendToAddressByAccount by account
 func (api *API) SendToAddressByAccount(accountName string, addressStr string, amount float64, comment string, commentTo string) (string, error) {
 
