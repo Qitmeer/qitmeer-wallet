@@ -156,7 +156,7 @@ func (cfg *htpc) CheckSyncUpdate(localheight int64) (bool, error) {
 		return false,err
 	}
 	log.Trace(fmt.Sprintf("blockheight:%v,localheight:%v",blockheight,localheight))
-	if (blockheight-localheight) < globalvariable.CheckSyncUpdatediffnum{
+	if (blockheight-localheight) < (config.Cfg.Confirmations+globalvariable.CheckSyncUpdatediffnum){
 		return true, nil
 	}else{
 		return false,fmt.Errorf("db Update incomplete")
