@@ -43,25 +43,24 @@ type SpendTo struct {
 
 type AddrTxOutput struct {
 	Address string
-	Txid chainhash.Hash
-	Index  uint32
-	Amount types.Amount
-	Block Block
-	Spend spend
+	TxId    chainhash.Hash
+	Index   uint32
+	Amount  types.Amount
+	Block   Block
+	Spend   SpendStatus
 	SpendTo *SpendTo
 }
 
-type spend int32
+type SpendStatus int32
 const (
-	SpendZ spend=0 // unspend
-	SpendF spend=1 // spend
-	SpendT spend=2 // unconfirm
-
+	SpendStatusUnspent     SpendStatus =0
+	SpendStatusSpend       SpendStatus =1
+	SpendStatusUnconfirmed SpendStatus =2
 )
 
 
 type Utxo struct {
-	Txid string
+	TxId   string
 	Index  uint32
 	Amount types.Amount
 }
@@ -202,7 +201,7 @@ func (s *Store) UpdateAddrTxOut(ns walletdb.ReadWriteBucket,txout *AddrTxOutput)
 	if(err!=nil){
 		return err
 	}else{
-		k:=canonicalOutPoint(&txout.Txid,txout.Index)
+		k:=canonicalOutPoint(&txout.TxId,txout.Index)
 		v:=ValueAddrTxOutput(txout)
 		err:=outrw.Put(k,v)
 		return err
@@ -214,7 +213,7 @@ func (s *Store) GetAddrTxOut(ns walletdb.ReadWriteBucket,address string,point ty
 	txout:=outrw.Get(k)
 	addTxOutPut:=AddrTxOutput{}
 	err:=ReadAddrTxOutput(txout,&addTxOutPut)
-	if(err!=nil){
+	if err!=nil{
 		return nil,err
 	}
 	return &addTxOutPut,nil

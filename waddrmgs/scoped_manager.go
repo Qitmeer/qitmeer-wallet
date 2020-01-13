@@ -186,30 +186,7 @@ func (s *ScopedKeyManager) Scope() KeyScope {
 func (s *ScopedKeyManager) AddrSchema() ScopeAddrSchema {
 	return s.addrSchema
 }
-//
-//// zeroSensitivePublicData performs a best try effort to remove and zero all
-//// sensitive public data associated with the address manager such as
-//// hierarchical deterministic extended public keys and the crypto public keys.
-//func (s *ScopedKeyManager) zeroSensitivePublicData() {
-//	// Clear all of the account private keys.
-//	for _, acctInfo := range s.acctInfo {
-//		acctInfo.acctKeyPub.Zero()
-//		acctInfo.acctKeyPub = nil
-//	}
-//}
-//
-//// Close cleanly shuts down the manager.  It makes a best try effort to remove
-//// and zero all private key and sensitive public key material associated with
-//// the address manager from memory.
-//func (s *ScopedKeyManager) Close() {
-//	s.mtx.Lock()
-//	defer s.mtx.Unlock()
-//
-//	// Attempt to clear sensitive public key material from memory too.
-//	s.zeroSensitivePublicData()
-//	return
-//}
-//
+
 // keyToManaged returns a new managed address for the provided derived key and
 // its derivation path which consists of the account, branch, and index.
 //
@@ -413,13 +390,7 @@ func (s *ScopedKeyManager) AccountProperties(ns walletdb.ReadBucket,
 
 	props := &AccountProperties{AccountNumber: account}
 
-	// Until keys can be imported into any account, special handling is
-	// required for the imported account.
-	//
-	// loadAccountInfo errors when using it on the imported account since
-	// the accountInfo struct is filled with a BIP0044 account's extended
-	// keys, and the imported accounts has none.
-	//
+
 	// Since only the imported account allows imports currently, the number
 	// of imported keys for any other account is zero, and since the
 	// imported account cannot contain non-imported keys, the external and
@@ -451,28 +422,7 @@ func (s *ScopedKeyManager) AccountProperties(ns walletdb.ReadBucket,
 	return props, nil
 }
 
-//// DeriveFromKeyPath attempts to derive a maximal child key (under the BIP0044
-//// scheme) from a given key path. If key derivation isn't possible, then an
-//// error will be returned.
-//func (s *ScopedKeyManager) DeriveFromKeyPath(ns walletdb.ReadBucket,
-//	kp DerivationPath) (ManagedAddress, error) {
-//
-//	s.mtx.Lock()
-//	defer s.mtx.Unlock()
-//
-//	extKey, err := s.deriveKeyFromPath(
-//		ns, kp.Account, kp.Branch, kp.Index, !s.rootManager.IsLocked(),
-//	)
-//	if err != nil {
-//		return nil, err
-//	}
-//
-//	return s.keyToManaged(extKey, kp.Account, kp.Branch, kp.Index)
-//}
-//
-// deriveKeyFromPath returns either a public or private derived extended key
-// based on the private flag for the given an account, branch, and index.
-//
+
 // This function MUST be called with the manager lock held for writes.
 func (s *ScopedKeyManager) deriveKeyFromPath(ns walletdb.ReadBucket, account, branch,
 	index uint32, private bool) (*bip32.Key, error) {
@@ -864,192 +814,6 @@ func (s *ScopedKeyManager) nextAddresses(ns walletdb.ReadWriteBucket,
 	return managedAddresses, nil
 }
 
-//// extendAddresses ensures that all addresses up to and including the lastIndex
-//// are derived for either an internal or external branch. If the child at
-//// lastIndex is invalid, this method will proceed until the next valid child is
-//// found. An error is returned if method failed to properly extend addresses
-//// up to the requested index.
-////
-//// This function MUST be called with the manager lock held for writes.
-//func (s *ScopedKeyManager) extendAddresses(ns walletdb.ReadWriteBucket,
-//	account uint32, lastIndex uint32, internal bool) error {
-//
-//	// The next address can only be generated for accounts that have
-//	// already been created.
-//	acctInfo, err := s.loadAccountInfo(ns, account)
-//	if err != nil {
-//		return err
-//	}
-//
-//	// Choose the account key to used based on whether the address manager
-//	// is locked.
-//	acctKey := acctInfo.acctKeyPub
-//	if !s.rootManager.IsLocked() {
-//		acctKey = acctInfo.acctKeyPriv
-//	}
-//
-//	// Choose the branch key and index depending on whether or not this is
-//	// an internal address.
-//	branchNum, nextIndex := ExternalBranch, acctInfo.nextExternalIndex
-//	if internal {
-//		branchNum = InternalBranch
-//		nextIndex = acctInfo.nextInternalIndex
-//	}
-//
-//	addrType := s.addrSchema.ExternalAddrType
-//	if internal {
-//		addrType = s.addrSchema.InternalAddrType
-//	}
-//
-//	// If the last index requested is already lower than the next index, we
-//	// can return early.
-//	if lastIndex < nextIndex {
-//		return nil
-//	}
-//
-//	// Ensure the requested number of addresses doesn't exceed the maximum
-//	// allowed for this account.
-//	if lastIndex > MaxAddressesPerAccount {
-//		str := fmt.Sprintf("last index %d would exceed the maximum "+
-//			"allowed number of addresses per account of %d",
-//			lastIndex, MaxAddressesPerAccount)
-//		return managerError(ErrTooManyAddresses, str, nil)
-//	}
-//
-//	// Derive the appropriate branch key and ensure it is zeroed when done.
-//	branchKey, err := acctKey.Child(branchNum)
-//	if err != nil {
-//		str := fmt.Sprintf("failed to derive extended key branch %d",
-//			branchNum)
-//		return managerError(ErrKeyChain, str, err)
-//	}
-//	defer branchKey.Zero() // Ensure branch key is zeroed when done.
-//
-//	// Starting from this branch's nextIndex, derive all child indexes up to
-//	// and including the requested lastIndex. If a invalid child is
-//	// detected, this loop will continue deriving until it finds the next
-//	// subsequent index.
-//	addressInfo := make([]*unlockDeriveInfo, 0, lastIndex-nextIndex)
-//	for nextIndex <= lastIndex {
-//		// There is an extremely small chance that a particular child is
-//		// invalid, so use a loop to derive the next valid child.
-//		var nextKey *hdkeychain.ExtendedKey
-//		for {
-//			// Derive the next child in the external chain branch.
-//			key, err := branchKey.Child(nextIndex)
-//			if err != nil {
-//				// When this particular child is invalid, skip to the
-//				// next index.
-//				if err == hdkeychain.ErrInvalidChild {
-//					nextIndex++
-//					continue
-//				}
-//
-//				str := fmt.Sprintf("failed to generate child %d",
-//					nextIndex)
-//				return managerError(ErrKeyChain, str, err)
-//			}
-//			key.SetNet(s.rootManager.chainParams)
-//
-//			nextIndex++
-//			nextKey = key
-//			break
-//		}
-//
-//		// Now that we know this key can be used, we'll create the
-//		// proper derivation path so this information can be available
-//		// to callers.
-//		derivationPath := DerivationPath{
-//			Account: account,
-//			Branch:  branchNum,
-//			Index:   nextIndex - 1,
-//		}
-//
-//		// Create a new managed address based on the public or private
-//		// key depending on whether the generated key is private.
-//		// Also, zero the next key after creating the managed address
-//		// from it.
-//		addr, err := newManagedAddressFromExtKey(
-//			s, derivationPath, nextKey, addrType,
-//		)
-//		if err != nil {
-//			return err
-//		}
-//		if internal {
-//			addr.internal = true
-//		}
-//		managedAddr := addr
-//		nextKey.Zero()
-//
-//		info := unlockDeriveInfo{
-//			managedAddr: managedAddr,
-//			branch:      branchNum,
-//			index:       nextIndex - 1,
-//		}
-//		addressInfo = append(addressInfo, &info)
-//	}
-//
-//	// Now that all addresses have been successfully generated, update the
-//	// database in a single transaction.
-//	for _, info := range addressInfo {
-//		ma := info.managedAddr
-//		addressID := ma.Address().ScriptAddress()
-//
-//		switch a := ma.(type) {
-//		case *managedAddress:
-//			err := putChainedAddress(
-//				ns, &s.scope, addressID, account, ssFull,
-//				info.branch, info.index, adtChain,
-//			)
-//			if err != nil {
-//				return maybeConvertDbError(err)
-//			}
-//		case *scriptAddress:
-//			encryptedHash, err := s.rootManager.cryptoKeyPub.Encrypt(a.AddrHash())
-//			if err != nil {
-//				str := fmt.Sprintf("failed to encrypt script hash %x",
-//					a.AddrHash())
-//				return managerError(ErrCrypto, str, err)
-//			}
-//
-//			err = putScriptAddress(
-//				ns, &s.scope, a.AddrHash(), ImportedAddrAccount,
-//				ssNone, encryptedHash, a.scriptEncrypted,
-//			)
-//			if err != nil {
-//				return maybeConvertDbError(err)
-//			}
-//		}
-//	}
-//
-//	// Finally update the next address tracking and add the addresses to
-//	// the cache after the newly generated addresses have been successfully
-//	// added to the db.
-//	for _, info := range addressInfo {
-//		ma := info.managedAddr
-//		s.addrs[addrKey(ma.Address().ScriptAddress())] = ma
-//
-//		// Add the new managed address to the list of addresses that
-//		// need their private keys derived when the address manager is
-//		// next unlocked.
-//		if s.rootManager.IsLocked() && !s.rootManager.WatchOnly() {
-//			s.deriveOnUnlock = append(s.deriveOnUnlock, info)
-//		}
-//	}
-//
-//	// Set the last address and next address for tracking.
-//	ma := addressInfo[len(addressInfo)-1].managedAddr
-//	if internal {
-//		acctInfo.nextInternalIndex = nextIndex
-//		acctInfo.lastInternalAddr = ma
-//	} else {
-//		acctInfo.nextExternalIndex = nextIndex
-//		acctInfo.lastExternalAddr = ma
-//	}
-//
-//	return nil
-//}
-//
 // NextExternalAddresses returns the specified number of next chained addresses
 // that are intended for external use from the address manager.
 func (s *ScopedKeyManager) NextExternalAddresses(ns walletdb.ReadWriteBucket,
@@ -1067,150 +831,6 @@ func (s *ScopedKeyManager) NextExternalAddresses(ns walletdb.ReadWriteBucket,
 	return s.nextAddresses(ns, account, numAddresses, false)
 }
 
-//// NextInternalAddresses returns the specified number of next chained addresses
-//// that are intended for internal use such as change from the address manager.
-//func (s *ScopedKeyManager) NextInternalAddresses(ns walletdb.ReadWriteBucket,
-//	account uint32, numAddresses uint32) ([]ManagedAddress, error) {
-//
-//	// Enforce maximum account number.
-//	if account > MaxAccountNum {
-//		err := managerError(ErrAccountNumTooHigh, errAcctTooHigh, nil)
-//		return nil, err
-//	}
-//
-//	s.mtx.Lock()
-//	defer s.mtx.Unlock()
-//
-//	return s.nextAddresses(ns, account, numAddresses, true)
-//}
-//
-//// ExtendExternalAddresses ensures that all valid external keys through
-//// lastIndex are derived and stored in the wallet. This is used to ensure that
-//// wallet's persistent state catches up to a external child that was found
-//// during recovery.
-//func (s *ScopedKeyManager) ExtendExternalAddresses(ns walletdb.ReadWriteBucket,
-//	account uint32, lastIndex uint32) error {
-//
-//	if account > MaxAccountNum {
-//		err := managerError(ErrAccountNumTooHigh, errAcctTooHigh, nil)
-//		return err
-//	}
-//
-//	s.mtx.Lock()
-//	defer s.mtx.Unlock()
-//
-//	return s.extendAddresses(ns, account, lastIndex, false)
-//}
-//
-//// ExtendInternalAddresses ensures that all valid internal keys through
-//// lastIndex are derived and stored in the wallet. This is used to ensure that
-//// wallet's persistent state catches up to an internal child that was found
-//// during recovery.
-//func (s *ScopedKeyManager) ExtendInternalAddresses(ns walletdb.ReadWriteBucket,
-//	account uint32, lastIndex uint32) error {
-//
-//	if account > MaxAccountNum {
-//		err := managerError(ErrAccountNumTooHigh, errAcctTooHigh, nil)
-//		return err
-//	}
-//
-//	s.mtx.Lock()
-//	defer s.mtx.Unlock()
-//
-//	return s.extendAddresses(ns, account, lastIndex, true)
-//}
-//
-//// LastExternalAddress returns the most recently requested chained external
-//// address from calling NextExternalAddress for the given account.  The first
-//// external address for the account will be returned if none have been
-//// previously requested.
-////
-//// This function will return an error if the provided account number is greater
-//// than the MaxAccountNum constant or there is no account information for the
-//// passed account.  Any other errors returned are generally unexpected.
-//func (s *ScopedKeyManager) LastExternalAddress(ns walletdb.ReadBucket,
-//	account uint32) (ManagedAddress, error) {
-//
-//	// Enforce maximum account number.
-//	if account > MaxAccountNum {
-//		err := managerError(ErrAccountNumTooHigh, errAcctTooHigh, nil)
-//		return nil, err
-//	}
-//
-//	s.mtx.Lock()
-//	defer s.mtx.Unlock()
-//
-//	// Load account information for the passed account.  It is typically
-//	// cached, but if not it will be loaded from the database.
-//	acctInfo, err := s.loadAccountInfo(ns, account)
-//	if err != nil {
-//		return nil, err
-//	}
-//
-//	if acctInfo.nextExternalIndex > 0 {
-//		return acctInfo.lastExternalAddr, nil
-//	}
-//
-//	return nil, managerError(ErrAddressNotFound, "no previous external address", nil)
-//}
-//
-//// LastInternalAddress returns the most recently requested chained internal
-//// address from calling NextInternalAddress for the given account.  The first
-//// internal address for the account will be returned if none have been
-//// previously requested.
-////
-//// This function will return an error if the provided account number is greater
-//// than the MaxAccountNum constant or there is no account information for the
-//// passed account.  Any other errors returned are generally unexpected.
-//func (s *ScopedKeyManager) LastInternalAddress(ns walletdb.ReadBucket,
-//	account uint32) (ManagedAddress, error) {
-//
-//	// Enforce maximum account number.
-//	if account > MaxAccountNum {
-//		err := managerError(ErrAccountNumTooHigh, errAcctTooHigh, nil)
-//		return nil, err
-//	}
-//
-//	s.mtx.Lock()
-//	defer s.mtx.Unlock()
-//
-//	// Load account information for the passed account.  It is typically
-//	// cached, but if not it will be loaded from the database.
-//	acctInfo, err := s.loadAccountInfo(ns, account)
-//	if err != nil {
-//		return nil, err
-//	}
-//
-//	if acctInfo.nextInternalIndex > 0 {
-//		return acctInfo.lastInternalAddr, nil
-//	}
-//
-//	return nil, managerError(ErrAddressNotFound, "no previous internal address", nil)
-//}
-//
-//// NewRawAccount creates a new account for the scoped manager. This method
-//// differs from the NewAccount method in that this method takes the acount
-//// number *directly*, rather than taking a string name for the account, then
-//// mapping that to the next highest account number.
-//func (s *ScopedKeyManager) NewRawAccount(ns walletdb.ReadWriteBucket, number uint32) error {
-//	if s.rootManager.WatchOnly() {
-//		return managerError(ErrWatchingOnly, errWatchingOnly, nil)
-//	}
-//
-//	s.mtx.Lock()
-//	defer s.mtx.Unlock()
-//
-//	if s.rootManager.IsLocked() {
-//		return managerError(ErrLocked, errLocked, nil)
-//	}
-//
-//	// As this is an ad hoc account that may not follow our normal linear
-//	// derivation, we'll create a new name for this account based off of
-//	// the account number.
-//	name := fmt.Sprintf("act:%v", number)
-//	return s.newAccount(ns, number, name)
-//}
-//
 // NewAccount creates and returns a new account stored in the manager based on
 // the given account name.  If an account with the same name already exists,
 // ErrDuplicateAccount will be returned.  Since creating a new account requires
@@ -1323,93 +943,13 @@ func (s *ScopedKeyManager) newAccount(ns walletdb.ReadWriteBucket,
 	return putLastAccount(ns, &s.scope, account)
 }
 
-//// RenameAccount renames an account stored in the manager based on the given
-//// account number with the given name.  If an account with the same name
-//// already exists, ErrDuplicateAccount will be returned.
-//func (s *ScopedKeyManager) RenameAccount(ns walletdb.ReadWriteBucket,
-//	account uint32, name string) error {
-//
-//	s.mtx.Lock()
-//	defer s.mtx.Unlock()
-//
-//	// Ensure that a reserved account is not being renamed.
-//	if isReservedAccountNum(account) {
-//		str := "reserved account cannot be renamed"
-//		return managerError(ErrInvalidAccount, str, nil)
-//	}
-//
-//	// Check that account with the new name does not exist
-//	_, err := s.lookupAccount(ns, name)
-//	if err == nil {
-//		str := fmt.Sprintf("account with the same name already exists")
-//		return managerError(ErrDuplicateAccount, str, err)
-//	}
-//
-//	// Validate account name
-//	if err := ValidateAccountName(name); err != nil {
-//		return err
-//	}
-//
-//	rowInterface, err := fetchAccountInfo(ns, &s.scope, account)
-//	if err != nil {
-//		return err
-//	}
-//
-//	// Ensure the account type is a default account.
-//	row, ok := rowInterface.(*dbDefaultAccountRow)
-//	if !ok {
-//		str := fmt.Sprintf("unsupported account type %T", row)
-//		err = managerError(ErrDatabase, str, nil)
-//	}
-//
-//	// Remove the old name key from the account id index.
-//	if err = deleteAccountIDIndex(ns, &s.scope, account); err != nil {
-//		return err
-//	}
-//
-//	// Remove the old name key from the account name index.
-//	if err = deleteAccountNameIndex(ns, &s.scope, row.name); err != nil {
-//		return err
-//	}
-//	err = putAccountInfo(
-//		ns, &s.scope, account, row.pubKeyEncrypted,
-//		row.privKeyEncrypted, row.nextExternalIndex,
-//		row.nextInternalIndex, name,
-//	)
-//	if err != nil {
-//		return err
-//	}
-//
-//	// Update in-memory account info with new name if cached and the db
-//	// write was successful.
-//	if err == nil {
-//		if acctInfo, ok := s.acctInfo[account]; ok {
-//			acctInfo.acctName = name
-//		}
-//	}
-//
-//	return err
-//}
-//
-// ImportPrivateKey imports a WIF private key into the address manager.  The
-// imported address is created using either a compressed or uncompressed
-// serialized public key, depending on the CompressPubKey bool of the WIF.
-//
-// All imported addresses will be part of the account defined by the
-// ImportedAddrAccount constant.
-//
-// NOTE: When the address manager is watching-only, the private key itself will
-// not be stored or available since it is private data.  Instead, only the
-// public key will be stored.  This means it is paramount the private key is
-// kept elsewhere as the watching-only address manager will NOT ever have access
-// to it.
-//
+
 // This function will return an error if the address manager is locked and not
 // watching-only, or not for the same network as the key trying to be imported.
 // It will also return an error if the address already exists.  Any other
 // errors returned are generally unexpected.
 func (s *ScopedKeyManager) ImportPrivateKey(ns walletdb.ReadWriteBucket,
-	wif *utils.WIF, bs *BlockStamp) (ManagedPubKeyAddress, error) {
+	wif *utils.WIF) (ManagedPubKeyAddress, error) {
 
 	// Ensure the address is intended for network the address manager is
 	// associated with.
@@ -1523,116 +1063,6 @@ func (s *ScopedKeyManager) ImportPrivateKey(ns walletdb.ReadWriteBucket,
 	return managedAddr, nil
 }
 
-//// ImportScript imports a user-provided script into the address manager.  The
-//// imported script will act as a pay-to-script-hash address.
-////
-//// All imported script addresses will be part of the account defined by the
-//// ImportedAddrAccount constant.
-////
-//// When the address manager is watching-only, the script itself will not be
-//// stored or available since it is considered private data.
-////
-//// This function will return an error if the address manager is locked and not
-//// watching-only, or the address already exists.  Any other errors returned are
-//// generally unexpected.
-//func (s *ScopedKeyManager) ImportScript(ns walletdb.ReadWriteBucket,
-//	script []byte, bs *BlockStamp) (ManagedScriptAddress, error) {
-//
-//	s.mtx.Lock()
-//	defer s.mtx.Unlock()
-//
-//	// The manager must be unlocked to encrypt the imported script.
-//	if s.rootManager.IsLocked() && !s.rootManager.WatchOnly() {
-//		return nil, managerError(ErrLocked, errLocked, nil)
-//	}
-//
-//	// Prevent duplicates.
-//	scriptHash := btcutil.Hash160(script)
-//	alreadyExists := s.existsAddress(ns, scriptHash)
-//	if alreadyExists {
-//		str := fmt.Sprintf("address for script hash %x already exists",
-//			scriptHash)
-//		return nil, managerError(ErrDuplicateAddress, str, nil)
-//	}
-//
-//	// Encrypt the script hash using the crypto public key so it is
-//	// accessible when the address manager is locked or watching-only.
-//	encryptedHash, err := s.rootManager.cryptoKeyPub.Encrypt(scriptHash)
-//	if err != nil {
-//		str := fmt.Sprintf("failed to encrypt script hash %x",
-//			scriptHash)
-//		return nil, managerError(ErrCrypto, str, err)
-//	}
-//
-//	// Encrypt the script for storage in database using the crypto script
-//	// key when not a watching-only address manager.
-//	var encryptedScript []byte
-//	if !s.rootManager.WatchOnly() {
-//		encryptedScript, err = s.rootManager.cryptoKeyScript.Encrypt(
-//			script,
-//		)
-//		if err != nil {
-//			str := fmt.Sprintf("failed to encrypt script for %x",
-//				scriptHash)
-//			return nil, managerError(ErrCrypto, str, err)
-//		}
-//	}
-//
-//	// The start block needs to be updated when the newly imported address
-//	// is before the current one.
-//	updateStartBlock := false
-//	s.rootManager.mtx.Lock()
-//	if bs.Height < s.rootManager.syncState.startBlock.Height {
-//		updateStartBlock = true
-//	}
-//	s.rootManager.mtx.Unlock()
-//
-//	// Save the new imported address to the db and update start block (if
-//	// needed) in a single transaction.
-//	err = putScriptAddress(
-//		ns, &s.scope, scriptHash, ImportedAddrAccount, ssNone,
-//		encryptedHash, encryptedScript,
-//	)
-//	if err != nil {
-//		return nil, maybeConvertDbError(err)
-//	}
-//
-//	if updateStartBlock {
-//		err := putStartBlock(ns, bs)
-//		if err != nil {
-//			return nil, maybeConvertDbError(err)
-//		}
-//	}
-//
-//	// Now that the database has been updated, update the start block in
-//	// memory too if needed.
-//	if updateStartBlock {
-//		s.rootManager.mtx.Lock()
-//		s.rootManager.syncState.startBlock = *bs
-//		s.rootManager.mtx.Unlock()
-//	}
-//
-//	// Create a new managed address based on the imported script.  Also,
-//	// when not a watching-only address manager, make a copy of the script
-//	// since it will be cleared on lock and the script the caller passed
-//	// should not be cleared out from under the caller.
-//	scriptAddr, err := newScriptAddress(
-//		s, ImportedAddrAccount, scriptHash, encryptedScript,
-//	)
-//	if err != nil {
-//		return nil, err
-//	}
-//	if !s.rootManager.WatchOnly() {
-//		scriptAddr.scriptCT = make([]byte, len(script))
-//		copy(scriptAddr.scriptCT, script)
-//	}
-//
-//	// Add the new managed address to the cache of recent addresses and
-//	// return it.
-//	s.addrs[addrKey(scriptHash)] = scriptAddr
-//	return scriptAddr, nil
-//}
-//
 // lookupAccount loads account number stored in the manager for the given
 // account name
 //
@@ -1656,51 +1086,18 @@ func (s *ScopedKeyManager) fetchUsed(ns walletdb.ReadBucket,
 
 	return fetchAddressUsed(ns, &s.scope, addressID)
 }
-//
-//// MarkUsed updates the used flag for the provided address.
-//func (s *ScopedKeyManager) MarkUsed(ns walletdb.ReadWriteBucket,
-//	address types.Address) error {
-//
-//	addressID := address.ScriptAddress()
-//	err := markAddressUsed(ns, &s.scope, addressID)
-//	if err != nil {
-//		return maybeConvertDbError(err)
-//	}
-//
-//	// Clear caches which might have stale entries for used addresses
-//	s.mtx.Lock()
-//	delete(s.addrs, addrKey(addressID))
-//	s.mtx.Unlock()
-//	return nil
-//}
-//
-//// ChainParams returns the chain parameters for this address manager.
-//func (s *ScopedKeyManager) ChainParams() *chaincfg.Params {
-//	// NOTE: No need for mutex here since the net field does not change
-//	// after the manager instance is created.
-//
-//	return s.rootManager.chainParams
-//}
-//
+
 // AccountName returns the account name for the given account number stored in
 // the manager.
 func (s *ScopedKeyManager) AccountName(ns walletdb.ReadBucket, account uint32) (string, error) {
 	return fetchAccountName(ns, &s.scope, account)
 }
 
-//// ForEachAccount calls the given function with each account stored in the
-//// manager, breaking early on error.
-//func (s *ScopedKeyManager) ForEachAccount(ns walletdb.ReadBucket,
-//	fn func(account uint32) error) error {
-//
-//	return forEachAccount(ns, &s.scope, fn)
-//}
-//
+
 // LastAccount returns the last account stored in the manager.
 func (s *ScopedKeyManager) LastAccount(ns walletdb.ReadBucket) (uint32, error) {
 	return fetchLastAccount(ns, &s.scope)
 }
-//
 // ForEachAccountAddress calls the given function with each address of the
 // given account stored in the manager, breaking early on error.
 func (s *ScopedKeyManager) ForEachAccountAddress(ns walletdb.ReadBucket,
@@ -1724,36 +1121,3 @@ func (s *ScopedKeyManager) ForEachAccountAddress(ns walletdb.ReadBucket,
 	return nil
 }
 
-//// ForEachActiveAccountAddress calls the given function with each active
-//// address of the given account stored in the manager, breaking early on error.
-////
-//// TODO(tuxcanfly): actually return only active addresses
-//func (s *ScopedKeyManager) ForEachActiveAccountAddress(ns walletdb.ReadBucket, account uint32,
-//	fn func(maddr ManagedAddress) error) error {
-//
-//	return s.ForEachAccountAddress(ns, account, fn)
-//}
-//
-//// ForEachActiveAddress calls the given function with each active address
-//// stored in the manager, breaking early on error.
-//func (s *ScopedKeyManager) ForEachActiveAddress(ns walletdb.ReadBucket,
-//	fn func(addr types.Address) error) error {
-//
-//	s.mtx.Lock()
-//	defer s.mtx.Unlock()
-//
-//	addrFn := func(rowInterface interface{}) error {
-//		managedAddr, err := s.rowInterfaceToManaged(ns, rowInterface)
-//		if err != nil {
-//			return err
-//		}
-//		return fn(managedAddr.Address())
-//	}
-//
-//	err := forEachActiveAddress(ns, &s.scope, addrFn)
-//	if err != nil {
-//		return maybeConvertDbError(err)
-//	}
-//
-//	return nil
-//}

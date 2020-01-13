@@ -232,7 +232,7 @@ func (c *Console) Interactive() {
 					}
 					company:="i"
 					detail:="false"
-					b,err:=getbalance(Default_minconf,arg1)
+					b,err:=getbalance(arg1)
 					if err!=nil{
 						fmt.Println(err.Error())
 						return
@@ -328,7 +328,7 @@ func (c *Console) Interactive() {
 					dumpPrivKey(arg1)
 					break
 				case "getAccountAndAddress":
-					getAccountAndAddress(int32(Default_minconf))
+					getAccountAndAddress()
 					break
 				case "sendToAddress":
 					if arg1 =="" {

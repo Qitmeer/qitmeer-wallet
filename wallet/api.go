@@ -54,9 +54,7 @@ func (api *API) Unlock(walletPriPass string, second int64) error {
 		log.Error("Failed to unlock new wallet during old wallet key import", "err", err)
 		return err
 	}
-	// } else {
-	// 	return nil
-	// }
+
 	return nil
 }
 
@@ -69,7 +67,7 @@ func (api *API) Lock() error {
 // GetAccountsAndBalance List all accounts[{account,balance}]
 func (api *API) GetAccountsAndBalance() (map[string]*Balance, error) {
 	accountsBalances := make(map[string]*Balance)
-	aaas, err := api.wt.GetAccountAndAddress(waddrmgr.KeyScopeBIP0044, int32(16))
+	aaas, err := api.wt.GetAccountAndAddress(waddrmgr.KeyScopeBIP0044)
 	if err != nil {
 		return nil, err
 	}
@@ -95,7 +93,7 @@ func (api *API) GetAccountsAndBalance() (map[string]*Balance, error) {
 
 // GetBalanceByAccount get account balance
 func (api *API) GetBalanceByAccount(name string) (*Balance, error) {
-	aaas, err := api.wt.GetAccountAndAddress(waddrmgr.KeyScopeBIP0044, int32(16))
+	aaas, err := api.wt.GetAccountAndAddress(waddrmgr.KeyScopeBIP0044)
 	if err != nil {
 		return nil, err
 	}
@@ -167,13 +165,13 @@ func (api *API) GetAddressesByAccount(accountName string) ([]string, error) {
 		return nil, err
 	}
 
-	addrs, err := api.wt.AccountAddresses(account)
+	adds, err := api.wt.AccountAddresses(account)
 	if err != nil {
 		return nil, err
 	}
 
-	addrStrs := make([]string, len(addrs))
-	for i, a := range addrs {
+	addrStrs := make([]string, len(adds))
+	for i, a := range adds {
 		addrStrs[i] = a.Encode()
 	}
 	return addrStrs, nil
@@ -219,13 +217,10 @@ func (api *API) DumpPrivKey(addrStr string) (string, error) {
 }
 
 // ImportWifPrivKey import a WIF-encoded private key and adding it to an account
-//
 // importPrivKey handles an importprivkey request by parsing
 // a WIF-encoded private key and adding it to an account.
-func (api *API) ImportWifPrivKey(accountName string, privKey string, rescan bool) error {
+func (api *API) ImportWifPrivKey(accountName string, privKey string) error {
 	// Ensure that private keys are only imported to the correct account.
-	//
-	// todo
 	if accountName != "" && accountName != waddrmgr.ImportedAddrAccountName {
 		return &qitmeerjson.ErrNotImportedAccount
 	}
@@ -245,7 +240,7 @@ func (api *API) ImportWifPrivKey(accountName string, privKey string, rescan bool
 	}
 
 	// Import the private key, handling any errors.
-	_, err = api.wt.ImportPrivateKey(waddrmgr.KeyScopeBIP0044, wif, nil, rescan)
+	_, err = api.wt.ImportPrivateKey(waddrmgr.KeyScopeBIP0044, wif)
 	switch {
 	case waddrmgr.IsError(err, waddrmgr.ErrDuplicateAddress):
 		// Do not return duplicate key errors to the client.
@@ -258,10 +253,9 @@ func (api *API) ImportWifPrivKey(accountName string, privKey string, rescan bool
 }
 
 // ImportPrivKey import priv key
-//
 // func importPrivKey(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
 // 	cmd := icmd.(*qitmeerjson.ImportPrivKeyCmd)
-func (api *API) ImportPrivKey(accountName string, privKey string, rescan bool) error {
+func (api *API) ImportPrivKey(accountName string, privKey string) error {
 	// Ensure that private keys are only imported to the correct account.
 	//
 	// Yes, Label is the account name.
@@ -289,7 +283,7 @@ func (api *API) ImportPrivKey(accountName string, privKey string, rescan bool) e
 	}
 
 	// Import the private key, handling any errors.
-	_, err = api.wt.ImportPrivateKey(waddrmgr.KeyScopeBIP0044, wif, nil, rescan)
+	_, err = api.wt.ImportPrivateKey(waddrmgr.KeyScopeBIP0044, wif)
 	switch {
 	case waddrmgr.IsError(err, waddrmgr.ErrDuplicateAddress):
 		// Do not return duplicate key errors to the client.
@@ -306,19 +300,7 @@ func (api *API) ImportPrivKey(accountName string, privKey string, rescan bool) e
 //payment address.  Leftover inputs not sent to the payment address or a fee
 //for the miner are sent back to a new address in the wallet.  Upon success,
 //the TxID for the created transaction is returned.
-// func sendToAddress(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
-// 	cmd := icmd.(*qitmeerjson.SendToAddressCmd)
-func (api *API) SendToAddress(addressStr string, amount float64, comment string, commentTo string) (string, error) {
-
-	// Transaction comments are not yet supported.  Error instead of
-	// pretending to save them.
-	//if !isNilOrEmpty(cmd.Comment) || !isNilOrEmpty(cmd.CommentTo) {
-	if comment != "" || commentTo != "" {
-		return "", &qitmeerjson.RPCError{
-			Code:    qitmeerjson.ErrRPCUnimplemented,
-			Message: "Transaction comments are not yet supported",
-		}
-	}
+func (api *API) SendToAddress(addressStr string, amount float64) (string, error) {
 
 	amt, err := types.NewAmount(amount)
 	if err != nil {
@@ -335,20 +317,12 @@ func (api *API) SendToAddress(addressStr string, amount float64, comment string,
 		addressStr: amt,
 	}
 
-	// sendtoaddress always spends from the default account, this matches bitcoind
-	//return sendPairs(api.wt, pairs, waddrmgr.DefaultAccountNum, 1, txrules.DefaultRelayFeePerKb)
-	return api.wt.SendPairs( pairs, waddrmgr.AccountMergePayNum, waddrmgr.Default_send_minconf, txrules.DefaultRelayFeePerKb)
+	return api.wt.SendPairs( pairs, waddrmgr.AccountMergePayNum, txrules.DefaultRelayFeePerKb)
 }
 
 
-//SendToAddress handles a sendtoaddress RPC request by creating a new
-//transaction spending unspent transaction outputs for a wallet to another
-//payment address.  Leftover inputs not sent to the payment address or a fee
-//for the miner are sent back to a new address in the wallet.  Upon success,
-//the TxID for the created transaction is returned.
-// func sendToAddress(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
-// 	cmd := icmd.(*qitmeerjson.SendToAddressCmd)
-func (api *API) SendToAddressBatch( addrsAmount map[string]float64) (string, error) {
+
+func (api *API) SendToMany( addrsAmount map[string]float64) (string, error) {
 
 	pairs := make(map[string]types.Amount)
 	for addr, amount := range addrsAmount {
@@ -356,11 +330,14 @@ func (api *API) SendToAddressBatch( addrsAmount map[string]float64) (string, err
 		if err != nil {
 			return "", err
 		}
+		if amt < 0 {
+			return "", qitmeerjson.ErrNeedPositiveAmount
+		}
+
 		pairs[addr]=types.Amount(amt)
 	}
 
-	// sendtoaddress always spends from the default account, this matches bitcoind
-	return api.wt.SendPairs( pairs, waddrmgr.AccountMergePayNum, waddrmgr.Default_send_minconf, txrules.DefaultRelayFeePerKb)
+	return api.wt.SendPairs( pairs, waddrmgr.AccountMergePayNum,txrules.DefaultRelayFeePerKb)
 }
 
 // SendToAddressByAccount by account
@@ -371,16 +348,6 @@ func (api *API) SendToAddressByAccount(accountName string, addressStr string, am
 		return "", err
 	}
 
-	// Transaction comments are not yet supported.  Error instead of
-	// pretending to save them.
-	//if !isNilOrEmpty(cmd.Comment) || !isNilOrEmpty(cmd.CommentTo) {
-	if comment != "" || commentTo != "" {
-		return "", &qitmeerjson.RPCError{
-			Code:    qitmeerjson.ErrRPCUnimplemented,
-			Message: "Transaction comments are not yet supported",
-		}
-	}
-
 	amt, err := types.NewAmount(amount)
 	if err != nil {
 		return "", err
@@ -396,13 +363,12 @@ func (api *API) SendToAddressByAccount(accountName string, addressStr string, am
 		addressStr: amt,
 	}
 
-	// sendtoaddress always spends from the default account, this matches bitcoind
-	return api.wt.SendPairs( pairs, int64(accountNum), waddrmgr.Default_send_minconf, txrules.DefaultRelayFeePerKb)
+	return api.wt.SendPairs( pairs, int64(accountNum),txrules.DefaultRelayFeePerKb)
 }
 
 //GetBalanceByAddr get balance by address
-func (api *API) GetBalanceByAddr(addrStr string, minConf int32) (*Balance, error) {
-	m, err := api.wt.GetBalance(addrStr, minConf)
+func (api *API) GetBalanceByAddr(addrStr string) (*Balance, error) {
+	m, err := api.wt.GetBalance(addrStr)
 	if err != nil {
 		return nil, err
 	}
@@ -410,8 +376,8 @@ func (api *API) GetBalanceByAddr(addrStr string, minConf int32) (*Balance, error
 }
 
 //GetTxListByAddr get addr tx list
-func (api *API) GetTxListByAddr(addr string, stype int32, page int32, pageSize int32) (clijson.PageTxRawResult, error) {
-	rs, err := api.wt.GetListTxByAddr(addr, stype, page, pageSize)
+func (api *API) GetTxListByAddr(addr string, sType int32, page int32, pageSize int32) (clijson.PageTxRawResult, error) {
+	rs, err := api.wt.GetListTxByAddr(addr, sType, page, pageSize)
 	return *rs, err
 }
 

@@ -19,7 +19,6 @@ import (
 
 const (
 	Name     = "wallet-cli:"
-	Default_minconf =16
 )
 var w *wallet.Wallet
 var isWin = runtime.GOOS == "windows"
@@ -144,12 +143,11 @@ func createNewAccount(arg string) error {
 	fmt.Printf("%s",msg)
 	return nil
 }
-func getbalance(minconf int ,addr string) ( *wallet.Balance, error){
+func getbalance(addr string) ( *wallet.Balance, error){
 	cmd:=&qitmeerjson.GetBalanceByAddressCmd{
 		Address:addr,
-		MinConf:minconf,
 	}
-	b,err:=walletrpc.Getbalance(cmd,w)
+	b,err:=walletrpc.GetBalance(cmd,w)
 	if(err!=nil){
 		fmt.Println("getbalance","err",err.Error())
 		return nil,err
@@ -157,11 +155,8 @@ func getbalance(minconf int ,addr string) ( *wallet.Balance, error){
 	r:=b.(*wallet.Balance)
 	return r, nil
 }
-func  listAccountsBalance(min int)( interface{}, error){
-	cmd:=&qitmeerjson.ListAccountsCmd{
-		MinConf:&min,
-	}
-	msg, err := walletrpc.ListAccounts(cmd, w)
+func  listAccountsBalance()( interface{}, error){
+	msg, err := walletrpc.ListAccounts( w)
 	if err != nil {
 		fmt.Println("listAccountsBalance","err", err.Error())
 		return nil, err
@@ -179,7 +174,7 @@ func getlisttxbyaddr(addr string,page int32,pageSize int32,stype int32)( interfa
 		Page:page,
 		PageSize:pageSize,
 	}
-	result, err := walletrpc.Getlisttxbyaddr(cmd, w)
+	result, err := walletrpc.GetListTxByAddr(cmd, w)
 	if err != nil {
 		return nil, err
 	}
@@ -255,7 +250,7 @@ func importPrivKey(privKey string) (interface{}, error) {
 		PrivKey: privKey,
 		Rescan:  &v,
 	}
-	msg, err := walletrpc.ImportPrivKey(cmd, w)
+	msg, err := walletrpc.ImportPrimKey(cmd, w)
 	if err != nil {
 		fmt.Println("importPrivKey","err", err.Error())
 		return nil, err
@@ -269,7 +264,7 @@ func importWifPrivKey(wifprivKey string) (interface{}, error) {
 		PrivKey: wifprivKey,
 		Rescan:  &v,
 	}
-	msg, err := walletrpc.ImportWifPrivKey(cmd, w)
+	msg, err := walletrpc.ImportWifiPrimKey(cmd, w)
 	if err != nil {
 		fmt.Println("importWifPrivKey","err", err.Error())
 		return nil, err
@@ -281,7 +276,7 @@ func dumpPrivKey(address string) (interface{}, error) {
 	cmd := &qitmeerjson.DumpPrivKeyCmd{
 		Address: address,
 	}
-	msg, err := walletrpc.DumpPrivKey(cmd, w)
+	msg, err := walletrpc.DumpPrimKey(cmd, w)
 	if err != nil {
 		fmt.Println("dumpPrivKey","err", err.Error())
 		return nil, err
@@ -289,8 +284,8 @@ func dumpPrivKey(address string) (interface{}, error) {
 	fmt.Printf("%s\n",msg)
 	return msg, nil
 }
-func getAccountAndAddress(minconf int32) (interface{}, error) {
-	msg, err := walletrpc.GetAccountAndAddress(w, minconf)
+func getAccountAndAddress() (interface{}, error) {
+	msg, err := walletrpc.GetAccountAndAddress(w)
 	if err != nil {
 		fmt.Println("err:", err.Error())
 		return nil, err
@@ -320,7 +315,7 @@ func updateblock(height int64)(  error){
 	cmd:=&qitmeerjson.UpdateBlockToCmd{
 		Toheight:height,
 	}
-	err := walletrpc.Updateblock(cmd, w)
+	err := walletrpc.UpdateBlock(cmd, w)
 	if err != nil {
 		fmt.Println("updateblock:","error", err.Error())
 		return err

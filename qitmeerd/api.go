@@ -126,7 +126,7 @@ func (api *API) Reset(name string) error {
 		return fmt.Errorf("qitmeerd %s not found", name)
 	}
 
-	htpc, err := wallet.NewHtpcByCfg(resetQitmeerd)
+	hc, err := wallet.NewHtpcByCfg(resetQitmeerd)
 	if err != nil {
 		return fmt.Errorf("make rpc clent error: %s", err.Error())
 	}
@@ -134,7 +134,7 @@ func (api *API) Reset(name string) error {
 	api.cfg.QitmeerdSelect = name
 	api.qitmeerd.Status.CurrentName = name
 	// update wallet httpclient
-	api.qitmeerd.Wt.Httpclient = htpc
+	api.qitmeerd.Wt.HttpClient = hc
 
 	return nil
 }

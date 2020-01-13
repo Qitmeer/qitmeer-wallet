@@ -44,12 +44,12 @@ func (qitmeerd *Qitmeerd) GetStatus() {
 	for {
 		select {
 		case <-ticker.C:
-			if qitmeerd.Wt.Httpclient == nil {
-				log.Debug("qitmeerd GetNodeInfo,but Httpclient nil")
+			if qitmeerd.Wt.HttpClient == nil {
+				log.Debug("qitmeerd GetNodeInfo,but HttpClient nil")
 				continue
 			}
 
-			nodeInfo, err := qitmeerd.Wt.Httpclient.GetNodeInfo()
+			nodeInfo, err := qitmeerd.Wt.HttpClient.GetNodeInfo()
 			if err != nil {
 				qitmeerd.Status.err = fmt.Sprintf("getNodeInfo err: %v", err)
 				log.Error("qitmeerd GetNodeInfo err", "err", err)

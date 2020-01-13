@@ -221,7 +221,7 @@ func (l *Loader) OpenExistingWallet(pubPassphrase []byte, canConsolePrompt bool)
 		return nil, err
 	}
 	log.Trace("OpenExistingWallet", "open ok", true)
-	w.Httpclient, err = NewHtpc()
+	w.HttpClient, err = NewHtpc()
 	if err != nil {
 		log.Error(fmt.Sprintf("wallet start, NewHtpc err: %s", err))
 		return nil, err

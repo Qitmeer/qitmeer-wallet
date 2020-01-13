@@ -67,8 +67,6 @@ func LoadConfig(cmd *cobra.Command, args []string) {
 			}
 			return
 		}
-		// log.Error(fmt.Sprintf("config file err: %s", err))
-		// return
 	}
 
 	fileCfg.ConfigFile = preCfg.ConfigFile
@@ -222,7 +220,7 @@ var getbalanceCmd = &cobra.Command{
 		}
 		company := "i"
 		detail := "false"
-		b, err := getbalance(Default_minconf, args[0])
+		b, err := getbalance( args[0])
 		if err != nil {
 			fmt.Println(err.Error())
 			return
@@ -354,7 +352,7 @@ var listAccountsBalanceCmd = &cobra.Command{
 			fmt.Println(err.Error())
 			return
 		}
-		listAccountsBalance(Default_minconf)
+		listAccountsBalance()
 	},
 }
 var getlisttxbyaddrCmd = &cobra.Command{

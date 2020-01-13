@@ -142,7 +142,7 @@ func (api *API) createWallet(seed []byte, walletPass string, unlockPass string) 
 		log.Error("createWallet UnLockManager error", "err", err)
 	}
 
-	_, err = wt.ImportPrivateKey(waddrmgr.KeyScopeBIP0044, wif, nil, false)
+	_, err = wt.ImportPrivateKey(waddrmgr.KeyScopeBIP0044, wif)
 	if err != nil {
 		log.Error("createWallet ImportPrivateKey", " err", err)
 		return &crateError{Code: -1, Msg: fmt.Sprintf("createWallet ImportPrivateKey err: %s", err)}

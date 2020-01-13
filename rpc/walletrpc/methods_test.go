@@ -7,8 +7,6 @@ import (
 	"github.com/Qitmeer/qitmeer-wallet/config"
 	"github.com/Qitmeer/qitmeer/log"
 
-	//"os"
-	//"path/filepath"
 	"testing"
 
 	qjson "github.com/Qitmeer/qitmeer-wallet/json"
@@ -44,7 +42,7 @@ func open_wallet() (*wallet.Wallet, error) {
 		fmt.Errorf("UnLockManager err:%s", err.Error())
 		return nil, err
 	}
-	w.Httpclient ,err= wallet.NewHtpc()
+	w.HttpClient,err= wallet.NewHtpc()
 	if err!=nil{
 		fmt.Errorf("NewHtpc err:%s", err.Error())
 		return nil, err
@@ -70,7 +68,7 @@ func test_wallet_getbalance(w *wallet.Wallet) (*wallet.Balance, error){
 		//Address:"TmbsdsjwzuGboFQ9GcKg6EUmrr3tokzozyF",
 		MinConf:minconf,
 	}
-	b,err:=Getbalance(cmd,w)
+	b,err:= GetBalance(cmd,w)
 	if(err!=nil){
 		log.Info("errr:",err.Error())
 		return nil,err
@@ -85,11 +83,8 @@ func test_wallet_getbalance(w *wallet.Wallet) (*wallet.Balance, error){
 	return r, nil
 }
 func test_wallet_listAccounts(w *wallet.Wallet)( interface{}, error){
-	min:=3
-	cmd:=&qitmeerjson.ListAccountsCmd{
-		MinConf:&min,
-	}
-	msg, err := ListAccounts(cmd, w)
+
+	msg, err := ListAccounts( w)
 	if err != nil {
 		return nil, err
 	}
@@ -103,7 +98,7 @@ func test_wallet_getlisttxbyaddr(w *wallet.Wallet)( interface{}, error){
 		Page:int32(1),
 		PageSize:int32(100),
 	}
-	result, err := Getlisttxbyaddr(cmd, w)
+	result, err := GetListTxByAddr(cmd, w)
 	if err != nil {
 		log.Info("errr:", err.Error())
 		return nil, err
@@ -171,7 +166,7 @@ func test_wallet_importPrivKey(w *wallet.Wallet) (interface{}, error) {
 		PrivKey: "7e445aa5ffd834cb2d3b2db50f8997dd21af29bec3d296aaa066d902b93f484b",
 		Rescan:  &v,
 	}
-	msg, err := ImportPrivKey(cmd, w)
+	msg, err := ImportPrimKey(cmd, w)
 	if err != nil {
 		log.Info("errr:", err.Error())
 		return nil, err
@@ -185,7 +180,7 @@ func test_wallet_importWifPrivKey(w *wallet.Wallet) (interface{}, error) {
 		PrivKey: "9QwXzXVQBFNm1fxP8jCqHJG9jZKjqrUKjYiTvaRxEbFobiNrvzhgZ",
 		Rescan:  &v,
 	}
-	msg, err := ImportWifPrivKey(cmd, w)
+	msg, err := ImportWifiPrimKey(cmd, w)
 	if err != nil {
 		log.Info("errr:", err.Error())
 		return nil, err
@@ -197,7 +192,7 @@ func test_wallet_dumpPrivKey(w *wallet.Wallet) (interface{}, error) {
 	cmd := &qitmeerjson.DumpPrivKeyCmd{
 		Address: address,
 	}
-	msg, err := DumpPrivKey(cmd, w)
+	msg, err := DumpPrimKey(cmd, w)
 	if err != nil {
 		log.Info("errr:", err.Error())
 		return nil, err
@@ -206,7 +201,7 @@ func test_wallet_dumpPrivKey(w *wallet.Wallet) (interface{}, error) {
 	return msg, nil
 }
 func test_wallet_getAccountAndAddress(w *wallet.Wallet) (interface{}, error) {
-	msg, err := GetAccountAndAddress(w, 16)
+	msg, err := GetAccountAndAddress(w)
 	if err != nil {
 		log.Info("errr:", err.Error())
 		return nil, err
@@ -235,7 +230,7 @@ func test_wallet_updateblock(w *wallet.Wallet)(  error){
 	cmd:=&qitmeerjson.UpdateBlockToCmd{
 		Toheight:0,
 	}
-	err := Updateblock(cmd, w)
+	err := UpdateBlock(cmd, w)
 	if err != nil {
 		log.Info("errr:", err.Error())
 		return err

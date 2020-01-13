@@ -133,15 +133,6 @@ func readCanonicalOutPoint(k []byte, op *types.TxOutPoint) error {
 	op.OutIndex = byteOrder.Uint32(k[32:36])
 	return nil
 }
-func ReadCanonicalOutPoint(k []byte, op *types.TxOutPoint) error {
-	if len(k) < 36 {
-		str := "short canonical outpoint"
-		return storeError(ErrData, str, nil)
-	}
-	copy(op.Hash[:], k)
-	op.OutIndex = byteOrder.Uint32(k[32:36])
-	return nil
-}
 
 // Details regarding blocks are saved as k/v pairs in the blocks bucket.
 // blockRecords are keyed by their height.  The value is serialized as such:
@@ -173,7 +164,7 @@ func ValueAddrTxOutput(txout *AddrTxOutput) []byte {
 	} else {
 		v = make([]byte, 96+36)
 	}
-	copy(v, txout.Txid[:])
+	copy(v, txout.TxId[:])
 	byteOrder.PutUint32(v[32:36], txout.Index)
 	byteOrder.PutUint64(v[36:44], uint64(txout.Amount))
 	copy(v[44:76], txout.Block.Hash[:])
@@ -182,8 +173,6 @@ func ValueAddrTxOutput(txout *AddrTxOutput) []byte {
 	if len(v) == 132 {
 		byteOrder.PutUint32(v[96:100], txout.SpendTo.Index)
 		copy(v[100:132], txout.SpendTo.TxHash[:])
-		//byteOrder.PutUint32(v[132:136], uint32(txout.SpendTo.Block.Height))
-		//copy(v[136:168],txout.SpendTo.Block.Hash[:])
 	}
 	return v
 }
@@ -195,12 +184,12 @@ func ReadAddrTxOutput(v []byte, txout *AddrTxOutput) (err error) {
 		}
 	}()
 
-	copy(txout.Txid[:], v[0:32])
+	copy(txout.TxId[:], v[0:32])
 	txout.Index = byteOrder.Uint32(v[32:36])
 	txout.Amount = types.Amount(byteOrder.Uint64(v[36:44]))
 	copy(txout.Block.Hash[:], v[44:76])
 	txout.Block.Height = int32(byteOrder.Uint32(v[88:92]))
-	txout.Spend = spend(byteOrder.Uint32(v[92:96]))
+	txout.Spend = SpendStatus(byteOrder.Uint32(v[92:96]))
 	if len(v) == 132 {
 		st := SpendTo{}
 		st.Index = byteOrder.Uint32(v[96:100])
@@ -297,12 +286,6 @@ type blockIterator struct {
 	err  error
 }
 
-func makeBlockIterator(ns walletdb.ReadWriteBucket, height int32) blockIterator {
-	seek := make([]byte, 4)
-	byteOrder.PutUint32(seek, uint32(height))
-	c := ns.NestedReadWriteBucket(bucketBlocks).ReadWriteCursor()
-	return blockIterator{c: c, seek: seek}
-}
 
 func makeReadBlockIterator(ns walletdb.ReadBucket, height int32) blockIterator {
 	seek := make([]byte, 4)
@@ -389,15 +372,6 @@ func (it *blockIterator) prev() bool {
 	return true
 }
 
-// unavailable until https://github.com/boltdb/bolt/issues/620 is fixed.
-// func (it *blockIterator) delete() error {
-// 	err := it.c.Delete()
-// 	if err != nil {
-// 		str := "failed to delete block record"
-// 		storeError(ErrDatabase, str, err)
-// 	}
-// 	return nil
-// }
 
 func (it *blockIterator) reposition(height int32) {
 	it.c.Seek(keyBlockRecord(height))
@@ -436,7 +410,6 @@ func valueTxRecord(rec *TxRecord) ([]byte, error) {
 	if rec.SerializedTx == nil {
 		txSize := rec.MsgTx.SerializeSize()
 		v = make([]byte, 8, 8+txSize)
-		//err := rec.MsgTx.Serialize(bytes.NewBuffer(v[8:]))
 		bu, err := rec.MsgTx.Serialize()
 		if err != nil {
 			str := fmt.Sprintf("unable to serialize transaction %v", rec.Hash)
@@ -461,15 +434,6 @@ func putTxRecord(ns walletdb.ReadWriteBucket, rec *TxRecord, block *Block) error
 	err = ns.NestedReadWriteBucket(bucketTxRecords).Put(k, v)
 	if err != nil {
 		str := fmt.Sprintf("%s: put failed for %v", bucketTxRecords, rec.Hash)
-		return storeError(ErrDatabase, str, err)
-	}
-	return nil
-}
-
-func putRawTxRecord(ns walletdb.ReadWriteBucket, k, v []byte) error {
-	err := ns.NestedReadWriteBucket(bucketTxRecords).Put(k, v)
-	if err != nil {
-		str := fmt.Sprintf("%s: put failed", bucketTxRecords)
 		return storeError(ErrDatabase, str, err)
 	}
 	return nil
@@ -512,7 +476,6 @@ func fetchTxRecord(ns walletdb.ReadBucket, txHash *chainhash.Hash, block *Block)
 	return rec, err
 }
 
-// TODO: This reads more than necessary.  Pass the pkscript location instead to
 // avoid the wire.MsgTx deserialization.
 func fetchRawTxRecordPkScript(k, v []byte, index uint32) ([]byte, error) {
 	var rec TxRecord
@@ -759,11 +722,6 @@ type creditIterator struct {
 	err    error
 }
 
-func makeCreditIterator(ns walletdb.ReadWriteBucket, prefix []byte) creditIterator {
-	c := ns.NestedReadWriteBucket(bucketCredits).ReadWriteCursor()
-	return creditIterator{c: c, prefix: prefix}
-}
-
 func makeReadCreditIterator(ns walletdb.ReadBucket, prefix []byte) creditIterator {
 	c := ns.NestedReadBucket(bucketCredits).ReadCursor()
 	return creditIterator{c: readCursor{c}, prefix: prefix}
@@ -970,20 +928,7 @@ func deleteRawDebit(ns walletdb.ReadWriteBucket, k []byte) error {
 	return nil
 }
 
-// debitIterator allows for in-order iteration of all debit records for a
-// mined transaction.
-//
-// Example usage:
-//
-//   prefix := keyTxRecord(txHash, block)
-//   it := makeDebitIterator(ns, prefix)
-//   for it.next() {
-//           // Use it.elem
-//           // If necessary, read additional details from it.ck, it.cv
-//   }
-//   if it.err != nil {
-//           // Handle error
-//   }
+
 type debitIterator struct {
 	c      walletdb.ReadWriteCursor // Set to nil after final iteration
 	prefix []byte
@@ -993,10 +938,6 @@ type debitIterator struct {
 	err    error
 }
 
-func makeDebitIterator(ns walletdb.ReadWriteBucket, prefix []byte) debitIterator {
-	c := ns.NestedReadWriteBucket(bucketDebits).ReadWriteCursor()
-	return debitIterator{c: c, prefix: prefix}
-}
 
 func makeReadDebitIterator(ns walletdb.ReadBucket, prefix []byte) debitIterator {
 	c := ns.NestedReadBucket(bucketDebits).ReadCursor()
@@ -1496,51 +1437,4 @@ func fetchVersion(ns walletdb.ReadBucket) (uint32, error) {
 	}
 
 	return byteOrder.Uint32(v), nil
-}
-
-func scopedUpdate(db walletdb.DB, namespaceKey []byte, f func(walletdb.ReadWriteBucket) error) error {
-	tx, err := db.BeginReadWriteTx()
-	if err != nil {
-		str := "cannot begin update"
-		return storeError(ErrDatabase, str, err)
-	}
-	err = f(tx.ReadWriteBucket(namespaceKey))
-	if err != nil {
-		rollbackErr := tx.Rollback()
-		if rollbackErr != nil {
-			const desc = "rollback failed"
-			serr, ok := err.(Error)
-			if !ok {
-				// This really shouldn't happen.
-				return storeError(ErrDatabase, desc, rollbackErr)
-			}
-			serr.Desc = desc + ": " + serr.Desc
-			return serr
-		}
-		return err
-	}
-	err = tx.Commit()
-	if err != nil {
-		str := "commit failed"
-		return storeError(ErrDatabase, str, err)
-	}
-	return nil
-}
-
-func scopedView(db walletdb.DB, namespaceKey []byte, f func(walletdb.ReadBucket) error) error {
-	tx, err := db.BeginReadTx()
-	if err != nil {
-		str := "cannot begin view"
-		return storeError(ErrDatabase, str, err)
-	}
-	err = f(tx.ReadBucket(namespaceKey))
-	rollbackErr := tx.Rollback()
-	if err != nil {
-		return err
-	}
-	if rollbackErr != nil {
-		str := "cannot close view"
-		return storeError(ErrDatabase, str, rollbackErr)
-	}
-	return nil
 }

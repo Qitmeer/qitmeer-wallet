@@ -1,11 +1,9 @@
 package qitmeerjson
 
-
 import (
 	"encoding/json"
 	"fmt"
 	"reflect"
-	"sort"
 	"strconv"
 	"strings"
 	"sync"
@@ -273,18 +271,5 @@ func MustRegisterCmd(method string, cmd interface{}, flags UsageFlag) {
 	}
 }
 
-// RegisteredCmdMethods returns a sorted list of methods for all registered
-// commands.
-func RegisteredCmdMethods() []string {
-	registerLock.Lock()
-	defer registerLock.Unlock()
 
-	methods := make([]string, 0, len(methodToInfo))
-	for k := range methodToInfo {
-		methods = append(methods, k)
-	}
-
-	sort.Sort(sort.StringSlice(methods))
-	return methods
-}
 
