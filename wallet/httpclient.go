@@ -40,7 +40,7 @@ type httpConfig struct {
 const (
 	strIntBase           = 10
 	strIntBitSize32        =32
-	syncDiffNum          =100
+	syncDiffNum          = 200
 )
 
 

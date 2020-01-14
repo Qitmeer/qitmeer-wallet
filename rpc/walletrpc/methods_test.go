@@ -17,6 +17,9 @@ import (
 	"github.com/Qitmeer/qitmeer/params"
 )
 
+func TestOpenWallet(t *testing.T){
+
+}
 
 func open_wallet() (*wallet.Wallet, error) {
 	dbpath:="/Users/luoshan/Library/Application Support/Qitwallet/testnet"
@@ -61,12 +64,10 @@ func test_wallet_createNewAccount(w *wallet.Wallet) error {
 	return nil
 }
 func test_wallet_getbalance(w *wallet.Wallet) (*wallet.Balance, error){
-	minconf:=3
 	cmd:=&qitmeerjson.GetBalanceByAddressCmd{
 		Address:"TmgD1mu8zMMV9aWmJrXqQYnWRhR9SBfDZG6",
 		//Address:"TmfDniZnvsjdH98GsH4aetL3XQKFUTWPp4e",
 		//Address:"TmbsdsjwzuGboFQ9GcKg6EUmrr3tokzozyF",
-		MinConf:minconf,
 	}
 	b,err:= GetBalance(cmd,w)
 	if(err!=nil){
