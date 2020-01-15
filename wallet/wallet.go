@@ -726,7 +726,7 @@ func (wt *Wallet) handleBlockSynced(order int64) error {
 	if err != nil {
 		return fmt.Errorf("blockhash string to hash  err:%s", err.Error())
 	}
-	if br.Confirmations > config.Cfg.Confirmations && br.Txsvalid ==true{
+	if br.Confirmations > config.Cfg.Confirmations {
 		stamp := &waddrmgr.BlockStamp{Hash: *hs, Height: br.Order}
 		err = walletdb.Update(wt.db, func(tx walletdb.ReadWriteTx) error {
 			ns := tx.ReadWriteBucket(waddrmgrNamespaceKey)
