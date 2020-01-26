@@ -63,7 +63,7 @@ func test_wallet_createNewAccount(w *wallet.Wallet) error {
 	log.Info("test_wallet_createNewAccount :",msg)
 	return nil
 }
-func test_wallet_getbalance(w *wallet.Wallet) (*wallet.Balance, error){
+func test_wallet_getBalance(w *wallet.Wallet) (*wallet.Balance, error){
 	cmd:=&qitmeerjson.GetBalanceByAddressCmd{
 		Address:"TmgD1mu8zMMV9aWmJrXqQYnWRhR9SBfDZG6",
 		//Address:"TmfDniZnvsjdH98GsH4aetL3XQKFUTWPp4e",
@@ -75,12 +75,12 @@ func test_wallet_getbalance(w *wallet.Wallet) (*wallet.Balance, error){
 		return nil,err
 	}
 	r:=b.(*wallet.Balance)
-	fmt.Printf("test_wallet_getbalance  UnspendAmount:%v\n",r.UnspendAmount)
-	//log.Info("test_wallet_getbalance :",b)
-	//log.Info("test_wallet_getbalance  ConfirmAmount:",r.ConfirmAmount)
-	//log.Info("test_wallet_getbalance  UnspendAmount:",r.UnspendAmount)
-	//log.Info("test_wallet_getbalance  SpendAmount:",r.SpendAmount)
-	//log.Info("test_wallet_getbalance  TotalAmount:",r.TotalAmount)
+	fmt.Printf("test_wallet_getBalance  UnspendAmount:%v\n",r.UnspendAmount)
+	//log.Info("test_wallet_getBalance :",b)
+	//log.Info("test_wallet_getBalance  ConfirmAmount:",r.ConfirmAmount)
+	//log.Info("test_wallet_getBalance  UnspendAmount:",r.UnspendAmount)
+	//log.Info("test_wallet_getBalance  SpendAmount:",r.SpendAmount)
+	//log.Info("test_wallet_getBalance  TotalAmount:",r.TotalAmount)
 	return r, nil
 }
 func test_wallet_listAccounts(w *wallet.Wallet)( interface{}, error){
@@ -175,20 +175,20 @@ func test_wallet_importPrivKey(w *wallet.Wallet) (interface{}, error) {
 	log.Info("test_wallet_importPrivKey ","result",msg)
 	return msg, nil
 }
-func test_wallet_importWifPrivKey(w *wallet.Wallet) (interface{}, error) {
+func test_wallet_importrivKey(w *wallet.Wallet) (interface{}, error) {
 	v := false
 	cmd := &qitmeerjson.ImportPrivKeyCmd{
 		PrivKey: "9QwXzXVQBFNm1fxP8jCqHJG9jZKjqrUKjYiTvaRxEbFobiNrvzhgZ",
 		Rescan:  &v,
 	}
-	msg, err := ImportWifiPrimKey(cmd, w)
+	msg, err := ImportWifPrimKey(cmd, w)
 	if err != nil {
 		log.Info("errr:", err.Error())
 		return nil, err
 	}
 	return msg, nil
 }
-func test_wallet_dumpPrivKey(w *wallet.Wallet) (interface{}, error) {
+func test_wallet_dumpPriKey(w *wallet.Wallet) (interface{}, error) {
 	address := "TmbsdsjwzuGboFQ9GcKg6EUmrr3tokzozyF"
 	cmd := &qitmeerjson.DumpPrivKeyCmd{
 		Address: address,
@@ -198,7 +198,7 @@ func test_wallet_dumpPrivKey(w *wallet.Wallet) (interface{}, error) {
 		log.Info("errr:", err.Error())
 		return nil, err
 	}
-	log.Info("test_wallet_dumpPrivKey ","result",msg)
+	log.Info("test_wallet_dumpPriKey ","result",msg)
 	return msg, nil
 }
 func test_wallet_getAccountAndAddress(w *wallet.Wallet) (interface{}, error) {
@@ -286,11 +286,11 @@ func TestWallet_Method(t *testing.T) {
 	//test_wallet_getAccountByAddress(w)
 	//
 	//
-	//test_wallet_dumpPrivKey(w)
+	//test_wallet_dumpPriKey(w)
 	//
 	//
 	//
-	test_wallet_getbalance(w)
+	test_wallet_getBalance(w)
 	//
 	//
 	msg,err:=test_wallet_sendToAddress(w)

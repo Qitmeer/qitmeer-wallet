@@ -94,7 +94,7 @@ export default {
             method: "post",
             data: JSON.stringify({
               id: new Date().getTime(),
-              method: "wallet_dumpPrivKey",
+              method: "wallet_dumpPriKey",
               params: [addr]
             })
           })

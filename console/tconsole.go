@@ -225,14 +225,14 @@ func (c *Console) Interactive() {
 				case "createNewAccount":
 					createNewAccount(arg1)
 					break
-				case "getbalance":
+				case "getBalance":
 					if arg1==""{
 						fmt.Println("Please enter your address.")
 						break
 					}
 					company:="i"
 					detail:="false"
-					b,err:=getbalance(arg1)
+					b,err:=getBalance(arg1)
 					if err!=nil{
 						fmt.Println(err.Error())
 						return
@@ -266,13 +266,13 @@ func (c *Console) Interactive() {
 				//case "listAccountsBalance":
 				//	listAccountsBalance(Default_minconf)
 				//	break
-				case "getlisttxbyaddr":
+				case "getListTxByAddr":
 					if arg1 == ""{
-						fmt.Println("getlisttxbyaddr err :Please enter your address.")
+						fmt.Println("getListTxByAddr err :Please enter your address.")
 						break
 					}
 					if arg2 == ""{
-						fmt.Println("getlisttxbyaddr err :Please enter your page.")
+						fmt.Println("getListTxByAddr err :Please enter your page.")
 						break
 					}
 					stype :=int32(2)
@@ -283,7 +283,7 @@ func (c *Console) Interactive() {
 					}else{
 						stype=int32(2)
 					}
-					getlisttxbyaddr(arg1,int32(-1),int32(100),stype)
+					getListTxByAddr(arg1,int32(-1),int32(100),stype)
 					break
 				case "getNewAddress":
 					if arg1 == ""{
@@ -306,26 +306,26 @@ func (c *Console) Interactive() {
 					}
 					getAccountByAddress(arg1)
 					break
-				case "importPrivKey":
+				case "importPriKey":
 					if arg1 == ""{
-						fmt.Println("importPrivKey err :Please enter your privkey.")
+						fmt.Println("importPriKey err :Please enter your priKey.")
 						break
 					}
-					importPrivKey(arg1)
+					importPriKey(arg1)
 					break
-				case "importWifPrivKey":
+				case "importwifPriKey":
 					if arg1 == ""{
-						fmt.Println("importWifPrivKey err :Please enter your wif privkey.")
+						fmt.Println("importwifPriKey err :Please enter your wif priKey.")
 						break
 					}
-					importWifPrivKey(arg1)
+					importWifPriKey(arg1)
 					break
-				case "dumpPrivKey":
+				case "dumpPriKey":
 					if arg1 == ""{
-						fmt.Println("dumpPrivKey err :Please enter your address.")
+						fmt.Println("dumpPriKey err :Please enter your address.")
 						break
 					}
-					dumpPrivKey(arg1)
+					dumpPriKey(arg1)
 					break
 				case "getAccountAndAddress":
 					getAccountAndAddress()

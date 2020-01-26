@@ -37,15 +37,8 @@ type MigrationManager struct {
 // migration.Manager interface.
 var _ migration.Manager = (*MigrationManager)(nil)
 
-// NewMigrationManager creates a new migration manager for the transaction
-// manager. The given bucket should reflect the top-level bucket in which all
-// of the transaction manager's data is contained within.
-func NewMigrationManager(ns walletdb.ReadWriteBucket) *MigrationManager {
-	return &MigrationManager{ns: ns}
-}
 
 // Name returns the name of the service we'll be attempting to upgrade.
-//
 // NOTE: This method is part of the migration.Manager interface.
 func (m *MigrationManager) Name() string {
 	return "wallet transaction manager"

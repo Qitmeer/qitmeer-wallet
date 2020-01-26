@@ -1065,9 +1065,9 @@ func (wt *Wallet) AccountName(scope waddrmgr.KeyScope, accountNumber uint32) (st
 	return accountName, err
 }
 
-func (wt *Wallet) GetUtxo(addr string) ([]wtxmgr.Utxo, error) {
+func (wt *Wallet) GetUtxo(addr string) ([]wtxmgr.UTxo, error) {
 	var txouts []wtxmgr.AddrTxOutput
-	var utxos []wtxmgr.Utxo
+	var utxos []wtxmgr.UTxo
 	err := walletdb.View(wt.db, func(tx walletdb.ReadTx) error {
 		hs := []byte(addr)
 		ns := tx.ReadBucket(wtxmgrNamespaceKey)
@@ -1094,7 +1094,7 @@ func (wt *Wallet) GetUtxo(addr string) ([]wtxmgr.Utxo, error) {
 	}
 
 	for _, txout := range txouts {
-		uo := wtxmgr.Utxo{}
+		uo := wtxmgr.UTxo{}
 		if txout.Spend == wtxmgr.SpendStatusUnspent {
 			uo.TxId = txout.TxId.String()
 			uo.Index = txout.Index
@@ -1155,11 +1155,11 @@ b:
 				if err != nil {
 					return nil, err
 				}
-				prikey, err := pri.PrivKey()
+				priKey, err := pri.PrivKey()
 				if err != nil {
 					return nil, err
 				}
-				prk = hex.EncodeToString(prikey.SerializeSecret())
+				prk = hex.EncodeToString(priKey.SerializeSecret())
 				for _, output:= range addroutput.Txoutput {
 					output.Address = addroutput.Addr
 					if output.Spend == wtxmgr.SpendStatusUnspent {

@@ -114,7 +114,7 @@ func (api *API) GetBalanceByAccount(name string) (*Balance, error) {
 }
 
 // GetUtxo addr unspend utxo
-func (api *API) GetUtxo(addr string) ([]wtxmgr.Utxo, error) {
+func (api *API) GetUtxo(addr string) ([]wtxmgr.UTxo, error) {
 	results, err := api.wt.GetUtxo(addr)
 	if err != nil {
 		return nil, err
@@ -198,7 +198,7 @@ func (api *API) GetAccountByAddress(addrStr string) (string, error) {
 
 // DumpPrivKey dump a single address private key
 //
-// dumpPrivKey handles a dumpprivkey request with the private key
+// dumpPriKey handles a dumpprivkey request with the private key
 // for a single address, or an appropiate error if the wallet
 // is locked.
 func (api *API) DumpPrivKey(addrStr string) (string, error) {

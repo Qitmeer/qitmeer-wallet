@@ -141,9 +141,7 @@ func GetAccountByAddress(iCmd interface{}, w *wallet.Wallet) (interface{}, error
 	return acctName, nil
 }
 
-// dumpPrivKey handles a dumpprivkey request with the private key
-// for a single address, or an appropiate error if the wallet
-// is locked.
+// DumpPrimKey
 func DumpPrimKey(iCmd interface{}, w *wallet.Wallet) (interface{}, error) {
 	cmd := iCmd.(*qitmeerjson.DumpPrivKeyCmd)
 
@@ -161,10 +159,9 @@ func DumpPrimKey(iCmd interface{}, w *wallet.Wallet) (interface{}, error) {
 	return key, err
 }
 
-// importPrivKey handles an importprivkey request by parsing
-// a WIF-encoded private key and adding it to an account.
-func ImportWifiPrimKey(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
-	cmd := icmd.(*qitmeerjson.ImportPrivKeyCmd)
+// ImportWifPrimKey
+func ImportWifPrimKey(iCmd interface{}, w *wallet.Wallet) (interface{}, error) {
+	cmd := iCmd.(*qitmeerjson.ImportPrivKeyCmd)
 
 	// Ensure that private keys are only imported to the correct account.
 	//

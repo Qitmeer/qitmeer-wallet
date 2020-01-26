@@ -1,15 +1,11 @@
-// Copyright (c) 2015-2017 The btcsuite developers
-// Copyright (c) 2015-2016 The Decred developers
-// Use of this source code is governed by an ISC
-// license that can be found in the LICENSE file.
 
 package wtxmgr
 
 import (
 	"fmt"
-	"github.com/Qitmeer/qitmeer/core/types"
 	"github.com/Qitmeer/qitmeer-wallet/walletdb"
 	"github.com/Qitmeer/qitmeer/common/hash"
+	"github.com/Qitmeer/qitmeer/core/types"
 )
 
 // CreditRecord contains metadata regarding a transaction credit for a known
@@ -68,10 +64,10 @@ func (s *Store) minedTxDetails(ns walletdb.ReadBucket, txHash *hash.Hash, recKey
 		}
 
 		// The credit iterator does not record whether this credit was
-		// spent by an unmined transaction, so check that here.
+		// spent by an unMined transaction, so check that here.
 		if !credIter.elem.Spent {
 			k := canonicalOutPoint(txHash, credIter.elem.Index)
-			spent := existsRawUnminedInput(ns, k) != nil
+			spent := existsRawUnMinedInput(ns, k) != nil
 			credIter.elem.Spent = spent
 		}
 		details.Credits = append(details.Credits, credIter.elem)
@@ -92,9 +88,9 @@ func (s *Store) minedTxDetails(ns walletdb.ReadBucket, txHash *hash.Hash, recKey
 	return &details, debIter.err
 }
 
-// unminedTxDetails fetches the TxDetails for the unmined transaction with the
-// hash txHash and the passed unmined record value.
-func (s *Store) unminedTxDetails(ns walletdb.ReadBucket, txHash *hash.Hash, v []byte) (*TxDetails, error) {
+// unMinedTxDetails fetches the TxDetails for the unMined transaction with the
+// hash txHash and the passed unMined record value.
+func (s *Store) unMinedTxDetails(ns walletdb.ReadBucket, txHash *hash.Hash, v []byte) (*TxDetails, error) {
 	details := TxDetails{
 		Block: BlockMeta{Block: Block{Height: -1}},
 	}
@@ -103,7 +99,7 @@ func (s *Store) unminedTxDetails(ns walletdb.ReadBucket, txHash *hash.Hash, v []
 		return nil, err
 	}
 
-	it := makeReadUnminedCreditIterator(ns, txHash)
+	it := makeReadUnMinedCreditIterator(ns, txHash)
 	for it.next() {
 		if int(it.elem.Index) >= len(details.MsgTx.TxOut) {
 			str := "saved credit index exceeds number of outputs"
@@ -111,19 +107,14 @@ func (s *Store) unminedTxDetails(ns walletdb.ReadBucket, txHash *hash.Hash, v []
 		}
 
 		// Set the Spent field since this is not done by the iterator.
-		it.elem.Spent = existsRawUnminedInput(ns, it.ck) != nil
+		it.elem.Spent = existsRawUnMinedInput(ns, it.ck) != nil
 		details.Credits = append(details.Credits, it.elem)
 	}
 	if it.err != nil {
 		return nil, it.err
 	}
 
-	// Debit records are not saved for unmined transactions.  Instead, they
-	// must be looked up for each transaction input manually.  There are two
-	// kinds of previous credits that may be debited by an unmined
-	// transaction: mined unspent outputs (which remain marked unspent even
-	// when spent by an unmined transaction), and credits from other unmined
-	// transactions.  Both situations must be considered.
+
 	for i, output := range details.MsgTx.TxIn {
 		opKey := canonicalOutPoint(&output.PreviousOut.Hash,
 			output.PreviousOut.OutIndex)
@@ -142,7 +133,7 @@ func (s *Store) unminedTxDetails(ns walletdb.ReadBucket, txHash *hash.Hash, v []
 			continue
 		}
 
-		v := existsRawUnminedCredit(ns, opKey)
+		v := existsRawUnMinedCredit(ns, opKey)
 		if v == nil {
 			continue
 		}
@@ -167,11 +158,11 @@ func (s *Store) unminedTxDetails(ns walletdb.ReadBucket, txHash *hash.Hash, v []
 // Not finding a transaction with this hash is not an error.  In this case,
 // a nil TxDetails is returned.
 func (s *Store) TxDetails(ns walletdb.ReadBucket, txHash *hash.Hash) (*TxDetails, error) {
-	// First, check whether there exists an unmined transaction with this
+	// First, check whether there exists an unMined transaction with this
 	// hash.  Use it if found.
-	v := existsRawUnmined(ns, txHash[:])
+	v := existsRawUnMined(ns, txHash[:])
 	if v != nil {
-		return s.unminedTxDetails(ns, txHash, v)
+		return s.unMinedTxDetails(ns, txHash, v)
 	}
 
 	// Otherwise, if there exists a mined transaction with this matching
@@ -185,7 +176,7 @@ func (s *Store) TxDetails(ns walletdb.ReadBucket, txHash *hash.Hash) (*TxDetails
 }
 
 // UniqueTxDetails looks up all recorded details for a transaction recorded
-// mined in some particular block, or an unmined transaction if block is nil.
+// mined in some particular block, or an unMined transaction if block is nil.
 //
 // Not finding a transaction with this hash from this block is not an error.  In
 // this case, a nil TxDetails is returned.
@@ -193,11 +184,11 @@ func (s *Store) UniqueTxDetails(ns walletdb.ReadBucket, txHash *hash.Hash,
 	block *Block) (*TxDetails, error) {
 
 	if block == nil {
-		v := existsRawUnmined(ns, txHash[:])
+		v := existsRawUnMined(ns, txHash[:])
 		if v == nil {
 			return nil, nil
 		}
-		return s.unminedTxDetails(ns, txHash, v)
+		return s.unMinedTxDetails(ns, txHash, v)
 	}
 
 	k, v := existsTxRecord(ns, txHash, block)
@@ -207,29 +198,29 @@ func (s *Store) UniqueTxDetails(ns walletdb.ReadBucket, txHash *hash.Hash,
 	return s.minedTxDetails(ns, txHash, k, v)
 }
 
-// rangeUnminedTransactions executes the function f with TxDetails for every
-// unmined transaction.  f is not executed if no unmined transactions exist.
+// rangeUnMinedTransactions executes the function f with TxDetails for every
+// unMined transaction.  f is not executed if no unMined transactions exist.
 // Error returns from f (if any) are propigated to the caller.  Returns true
 // (signaling breaking out of a RangeTransactions) iff f executes and returns
 // true.
-func (s *Store) rangeUnminedTransactions(ns walletdb.ReadBucket, f func([]TxDetails) (bool, error)) (bool, error) {
+func (s *Store) rangeUnMinedTransactions(ns walletdb.ReadBucket, f func([]TxDetails) (bool, error)) (bool, error) {
 	var details []TxDetails
-	err := ns.NestedReadBucket(bucketUnmined).ForEach(func(k, v []byte) error {
+	err := ns.NestedReadBucket(bucketUnMined).ForEach(func(k, v []byte) error {
 		if len(k) < 32 {
 			str := fmt.Sprintf("%s: short key (expected %d "+
-				"bytes, read %d)", bucketUnmined, 32, len(k))
+				"bytes, read %d)", bucketUnMined, 32, len(k))
 			return storeError(ErrData, str, nil)
 		}
 
 		var txHash hash.Hash
 		copy(txHash[:], k)
-		detail, err := s.unminedTxDetails(ns, &txHash, v)
+		detail, err := s.unMinedTxDetails(ns, &txHash, v)
 		if err != nil {
 			return err
 		}
 
 		// Because the key was created while foreach-ing over the
-		// bucket, it should be impossible for unminedTxDetails to ever
+		// bucket, it should be impossible for unMinedTxDetails to ever
 		// successfully return a nil details struct.
 		details = append(details, *detail)
 		return nil
@@ -247,7 +238,6 @@ func (s *Store) rangeUnminedTransactions(ns walletdb.ReadBucket, f func([]TxDeta
 func (s *Store) rangeBlockTransactions(ns walletdb.ReadBucket, begin, end int32,
 	f func([]TxDetails) (bool, error)) (bool, error) {
 
-	// Mempool height is considered a high bound.
 	if begin < 0 {
 		begin = int32(^uint32(0) >> 1)
 	}
@@ -314,11 +304,11 @@ func (s *Store) rangeBlockTransactions(ns walletdb.ReadBucket, begin, end int32,
 				}
 
 				// The credit iterator does not record whether
-				// this credit was spent by an unmined
+				// this credit was spent by an unMined
 				// transaction, so check that here.
 				if !credIter.elem.Spent {
 					k := canonicalOutPoint(&txHash, credIter.elem.Index)
-					spent := existsRawUnminedInput(ns, k) != nil
+					spent := existsRawUnMinedInput(ns, k) != nil
 					credIter.elem.Spent = spent
 				}
 				detail.Credits = append(detail.Credits, credIter.elem)
@@ -355,9 +345,9 @@ func (s *Store) rangeBlockTransactions(ns walletdb.ReadBucket, begin, end int32,
 
 // RangeTransactions runs the function f on all transaction details between
 // blocks on the best chain over the height range [begin,end].  The special
-// height -1 may be used to also include unmined transactions.  If the end
+// height -1 may be used to also include unMined transactions.  If the end
 // height comes before the begin height, blocks are iterated in reverse order
-// and unmined transactions (if any) are processed first.
+// and unMined transactions (if any) are processed first.
 //
 // The function f may return an error which, if non-nil, is propagated to the
 // caller.  Additionally, a boolean return value allows exiting the function
@@ -369,18 +359,18 @@ func (s *Store) rangeBlockTransactions(ns walletdb.ReadBucket, begin, end int32,
 func (s *Store) RangeTransactions(ns walletdb.ReadBucket, begin, end int32,
 	f func([]TxDetails) (bool, error)) error {
 
-	var addedUnmined bool
+	var addedUnMined bool
 	if begin < 0 {
-		brk, err := s.rangeUnminedTransactions(ns, f)
+		brk, err := s.rangeUnMinedTransactions(ns, f)
 		if err != nil || brk {
 			return err
 		}
-		addedUnmined = true
+		addedUnMined = true
 	}
 
 	brk, err := s.rangeBlockTransactions(ns, begin, end, f)
-	if err == nil && !brk && !addedUnmined && end < 0 {
-		_, err = s.rangeUnminedTransactions(ns, f)
+	if err == nil && !brk && !addedUnMined && end < 0 {
+		_, err = s.rangeUnMinedTransactions(ns, f)
 	}
 	return err
 }
@@ -394,17 +384,14 @@ func (s *Store) PreviousPkScripts(ns walletdb.ReadBucket, rec *TxRecord, block *
 		for _, input := range rec.MsgTx.TxIn {
 			prevOut := &input.PreviousOut
 
-			// Input may spend a previous unmined output, a
-			// mined output (which would still be marked
-			// unspent), or neither.
 
-			v := existsRawUnmined(ns, prevOut.Hash[:])
+			v := existsRawUnMined(ns, prevOut.Hash[:])
 			if v != nil {
 				// Ensure a credit exists for this
-				// unmined transaction before including
+				// unMined transaction before including
 				// the output script.
 				k := canonicalOutPoint(&prevOut.Hash, prevOut.OutIndex)
-				if existsRawUnminedCredit(ns, k) == nil {
+				if existsRawUnMinedCredit(ns, k) == nil {
 					continue
 				}
 

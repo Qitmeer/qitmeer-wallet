@@ -62,7 +62,7 @@ type GetAddressesByAccountCmd struct {
 	Account string
 }
 
-// GetBalanceCmd defines the getbalance JSON-RPC command.
+// GetBalanceCmd defines the getBalance JSON-RPC command.
 type GetBalanceCmd struct {
 	Account *string
 }

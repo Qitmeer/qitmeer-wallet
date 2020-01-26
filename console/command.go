@@ -204,12 +204,12 @@ var getnewaddressCmd = &cobra.Command{
 	},
 }
 
-var getbalanceCmd = &cobra.Command{
-	Use:   "getbalance {address} {string ,company : i(int64),f(float),default i } {bool ,detail : true,false,default false }",
-	Short: "getbalance",
+var getBalanceCmd = &cobra.Command{
+	Use:   "getBalance {address} {string ,company : i(int64),f(float),default i } {bool ,detail : true,false,default false }",
+	Short: "getBalance",
 	Example: `
-		getbalance TmWMuY9q5dUutUTGikhqTVKrnDMG34dEgb5	i true
-		getbalance TmWMuY9q5dUutUTGikhqTVKrnDMG34dEgb5	f false
+		getBalance TmWMuY9q5dUutUTGikhqTVKrnDMG34dEgb5	i true
+		getBalance TmWMuY9q5dUutUTGikhqTVKrnDMG34dEgb5	f false
 		`,
 	Args: cobra.MinimumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
@@ -220,7 +220,7 @@ var getbalanceCmd = &cobra.Command{
 		}
 		company := "i"
 		detail := "false"
-		b, err := getbalance( args[0])
+		b, err := getBalance( args[0])
 		if err != nil {
 			fmt.Println(err.Error())
 			return
@@ -319,10 +319,10 @@ var getAddressesByAccountCmd=&cobra.Command{
 	},
 }
 var importPriKeyCmd = &cobra.Command{
-	Use:   "importprivkey {prikey} {pripassword}",
-	Short: "import prikey ",
+	Use:   "importprivkey {priKey} {pripassword}",
+	Short: "import priKey ",
 	Example: `
-		importprivkey prikey pripassword
+		importprivkey priKey pripassword
 		`,
 	Args: cobra.MinimumNArgs(2),
 	Run: func(cmd *cobra.Command, args []string) {
@@ -336,7 +336,7 @@ var importPriKeyCmd = &cobra.Command{
 			fmt.Println(err.Error())
 			return
 		}
-		importPrivKey(args[0])
+		importPriKey(args[0])
 	},
 }
 var listAccountsBalanceCmd = &cobra.Command{
@@ -356,12 +356,12 @@ var listAccountsBalanceCmd = &cobra.Command{
 	},
 }
 var getlisttxbyaddrCmd = &cobra.Command{
-	Use:   "getlisttxbyaddr {address} {String ,Transaction type : in ,out ,all ,default all } ",
+	Use:   "getListTxByAddr {address} {String ,Transaction type : in ,out ,all ,default all } ",
 	Short: "get all transactions for address",
 	Example: `
-		getlisttxbyaddr Tmjc34zWMTAASHTwcNtPppPujFKVK5SeuaJ in
-		getlisttxbyaddr Tmjc34zWMTAASHTwcNtPppPujFKVK5SeuaJ out 
-		getlisttxbyaddr Tmjc34zWMTAASHTwcNtPppPujFKVK5SeuaJ all
+		getListTxByAddr Tmjc34zWMTAASHTwcNtPppPujFKVK5SeuaJ in
+		getListTxByAddr Tmjc34zWMTAASHTwcNtPppPujFKVK5SeuaJ out 
+		getListTxByAddr Tmjc34zWMTAASHTwcNtPppPujFKVK5SeuaJ all
 		`,
 	Args: cobra.MinimumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
@@ -380,7 +380,7 @@ var getlisttxbyaddrCmd = &cobra.Command{
 				stype = int32(2)
 			}
 		}
-		getlisttxbyaddr(args[0], int32(-1), int32(100), stype)
+		getListTxByAddr(args[0], int32(-1), int32(100), stype)
 	},
 }
 var updateblockCmd = &cobra.Command{
@@ -492,7 +492,7 @@ func init() {
 	Command.AddCommand(createWalletCmd)
 	Command.AddCommand(createNewAccountCmd)
 	Command.AddCommand(getnewaddressCmd)
-	Command.AddCommand(getbalanceCmd)
+	Command.AddCommand(getBalanceCmd)
 	Command.AddCommand(getlisttxbyaddrCmd)
 	Command.AddCommand(updateblockCmd)
 	Command.AddCommand(syncheightCmd)

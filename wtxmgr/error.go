@@ -51,7 +51,7 @@ const (
 	ErrUnknownVersion
 )
 
-var errStrs = [...]string{
+var errStr = [...]string{
 	ErrDatabase:       "ErrDatabase",
 	ErrData:           "ErrData",
 	ErrInput:          "ErrInput",
@@ -63,8 +63,8 @@ var errStrs = [...]string{
 
 // String returns the ErrorCode as a human-readable name.
 func (e ErrorCode) String() string {
-	if e < ErrorCode(len(errStrs)) {
-		return errStrs[e]
+	if e < ErrorCode(len(errStr)) {
+		return errStr[e]
 	}
 	return fmt.Sprintf("ErrorCode(%d)", e)
 }
@@ -87,11 +87,4 @@ func (e Error) Error() string {
 
 func storeError(c ErrorCode, desc string, err error) Error {
 	return Error{Code: c, Desc: desc, Err: err}
-}
-
-// IsNoExists returns whether an error is a Error with the ErrNoExists error
-// code.
-func IsNoExists(err error) bool {
-	serr, ok := err.(Error)
-	return ok && serr.Code == ErrNoExists
 }

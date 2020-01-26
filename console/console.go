@@ -96,15 +96,15 @@ func printHelp() {
 	fmt.Println("\t<command> [arguments]")
 	fmt.Println("\tThe commands are:")
 	fmt.Println("\t<createNewAccount> : Create a new account. Parameter: [account]")
-	fmt.Println("\t<getbalance> : Query the specified address balance. Parameter: [address]")
+	fmt.Println("\t<getBalance> : Query the specified address balance. Parameter: [address]")
 	//fmt.Println("\t<listAccountsBalance> : Obtain all account balances. Parameter: []")
-	fmt.Println("\t<getlisttxbyaddr> : Gets all transaction records at the specified address. Parameter: [address] [stype:in,out,all]")
+	fmt.Println("\t<getListTxByAddr> : Gets all transaction records at the specified address. Parameter: [address] [stype:in,out,all]")
 	fmt.Println("\t<getNewAddress> : Create a new address under the account. Parameter: [account]")
 	fmt.Println("\t<getAddressesByAccount> : Check all addresses under the account. Parameter: [account]")
 	fmt.Println("\t<getAccountByAddress> : Inquire about the account number of the address. Parameter: [address]")
-	fmt.Println("\t<importPrivKey> : Import private key. Parameter: [prikey]")
-	fmt.Println("\t<importWifPrivKey> : Import wif format private key. Parameter: [prikey]")
-	fmt.Println("\t<dumpPrivKey> : Export wif format private key by address. Parameter: [address]")
+	fmt.Println("\t<importPriKey> : Import private key. Parameter: [priKey]")
+	fmt.Println("\t<importWifPriKey> : Import wif format private key. Parameter: [priKey]")
+	fmt.Println("\t<dumpPriKey> : Export wif format private key by address. Parameter: [address]")
 	fmt.Println("\t<getAccountAndAddress> : Check all accounts and addresses. Parameter: []")
 	fmt.Println("\t<sendToAddress> : Transfer transaction. Parameter: [address] [num]")
 	fmt.Println("\t<updateblock> : Update Wallet Block. Parameter: []")
@@ -143,13 +143,13 @@ func createNewAccount(arg string) error {
 	fmt.Printf("%s",msg)
 	return nil
 }
-func getbalance(addr string) ( *wallet.Balance, error){
+func getBalance(addr string) ( *wallet.Balance, error){
 	cmd:=&qitmeerjson.GetBalanceByAddressCmd{
 		Address:addr,
 	}
 	b,err:=walletrpc.GetBalance(cmd,w)
-	if(err!=nil){
-		fmt.Println("getbalance","err",err.Error())
+	if err!=nil {
+		fmt.Println("getBalance","err",err.Error())
 		return nil,err
 	}
 	r:=b.(*wallet.Balance)
@@ -167,12 +167,12 @@ func  listAccountsBalance()( interface{}, error){
 	return msg, nil
 }
 
-func getlisttxbyaddr(addr string,page int32,pageSize int32,stype int32)( interface{}, error){
+func getListTxByAddr(addr string,page int32,pageSize int32, sType int32)( interface{}, error){
 	cmd:=&qitmeerjson.GetListTxByAddrCmd{
-		Address:addr,
-		Stype:stype,
-		Page:page,
-		PageSize:pageSize,
+		Address:  addr,
+		Stype:    sType,
+		Page:     page,
+		PageSize: pageSize,
 	}
 	result, err := walletrpc.GetListTxByAddr(cmd, w)
 	if err != nil {
@@ -184,7 +184,7 @@ func getlisttxbyaddr(addr string,page int32,pageSize int32,stype int32)( interfa
 func getNewAddress(account string) (interface{}, error) {
 	if account == waddrmgr.ImportedAddrAccountName{
 		fmt.Sprintf("Imported account cannot generate address")
-		return nil,fmt.Errorf("Imported account cannot generate address")
+		return nil,fmt.Errorf("imported account cannot generate address")
 	}
 	if account==""{
 		account = "default"
@@ -244,10 +244,10 @@ func getTx(txid string) (interface{}, error) {
 	return msg, nil
 }
 
-func importPrivKey(privKey string) (interface{}, error) {
+func importPriKey(priKey string) (interface{}, error) {
 	v := false
 	cmd := &qitmeerjson.ImportPrivKeyCmd{
-		PrivKey: privKey,
+		PrivKey: priKey,
 		Rescan:  &v,
 	}
 	msg, err := walletrpc.ImportPrimKey(cmd, w)
@@ -258,27 +258,27 @@ func importPrivKey(privKey string) (interface{}, error) {
 	fmt.Printf("%s\n",msg)
 	return msg, nil
 }
-func importWifPrivKey(wifprivKey string) (interface{}, error) {
+func importWifPriKey(wifPriKey string) (interface{}, error) {
 	v := false
 	cmd := &qitmeerjson.ImportPrivKeyCmd{
-		PrivKey: wifprivKey,
+		PrivKey: wifPriKey,
 		Rescan:  &v,
 	}
-	msg, err := walletrpc.ImportWifiPrimKey(cmd, w)
+	msg, err := walletrpc.ImportWifPrimKey(cmd, w)
 	if err != nil {
-		fmt.Println("importWifPrivKey","err", err.Error())
+		fmt.Println("importWifPriKey","err", err.Error())
 		return nil, err
 	}
 	fmt.Printf("%s\n",msg)
 	return msg, nil
 }
-func dumpPrivKey(address string) (interface{}, error) {
+func dumpPriKey(address string) (interface{}, error) {
 	cmd := &qitmeerjson.DumpPrivKeyCmd{
 		Address: address,
 	}
 	msg, err := walletrpc.DumpPrimKey(cmd, w)
 	if err != nil {
-		fmt.Println("dumpPrivKey","err", err.Error())
+		fmt.Println("dumpPriKey","err", err.Error())
 		return nil, err
 	}
 	fmt.Printf("%s\n",msg)
