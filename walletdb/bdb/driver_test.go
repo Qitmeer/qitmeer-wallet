@@ -6,10 +6,10 @@ package bdb_test
 
 import (
 	"fmt"
+	"github.com/Qitmeer/qitmeer-wallet/walletdb"
 	"os"
 	"reflect"
 	"testing"
-	"github.com/Qitmeer/qitmeer-wallet/walletdb"
 )
 
 // dbType is the database type name for this driver.

@@ -10,8 +10,8 @@ import (
 	"runtime/debug"
 
 	"github.com/Qitmeer/qitmeer-wallet/internal/zero"
-	"golang.org/x/crypto/scrypt"
 	"golang.org/x/crypto/nacl/secretbox"
+	"golang.org/x/crypto/scrypt"
 )
 
 var (
@@ -31,9 +31,6 @@ const (
 	Overhead  = secretbox.Overhead
 	KeySize   = 32
 	NonceSize = 24
-	DefaultN  = 16384 // 2^14
-	DefaultR  = 8
-	DefaultP  = 1
 )
 
 // CryptoKey represents a secret key which can be used to encrypt and decrypt

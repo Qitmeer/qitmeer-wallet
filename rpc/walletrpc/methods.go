@@ -141,8 +141,8 @@ func GetAccountByAddress(iCmd interface{}, w *wallet.Wallet) (interface{}, error
 	return acctName, nil
 }
 
-// DumpPrimKey
-func DumpPrimKey(iCmd interface{}, w *wallet.Wallet) (interface{}, error) {
+// DumpPrivKey
+func DumpPrivKey(iCmd interface{}, w *wallet.Wallet) (interface{}, error) {
 	cmd := iCmd.(*qitmeerjson.DumpPrivKeyCmd)
 
 	addr, err := address.DecodeAddress(cmd.Address)
@@ -159,8 +159,8 @@ func DumpPrimKey(iCmd interface{}, w *wallet.Wallet) (interface{}, error) {
 	return key, err
 }
 
-// ImportWifPrimKey
-func ImportWifPrimKey(iCmd interface{}, w *wallet.Wallet) (interface{}, error) {
+// ImportWifPrivKey
+func ImportWifPrivKey(iCmd interface{}, w *wallet.Wallet) (interface{}, error) {
 	cmd := iCmd.(*qitmeerjson.ImportPrivKeyCmd)
 
 	// Ensure that private keys are only imported to the correct account.

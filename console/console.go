@@ -102,9 +102,9 @@ func printHelp() {
 	fmt.Println("\t<getNewAddress> : Create a new address under the account. Parameter: [account]")
 	fmt.Println("\t<getAddressesByAccount> : Check all addresses under the account. Parameter: [account]")
 	fmt.Println("\t<getAccountByAddress> : Inquire about the account number of the address. Parameter: [address]")
-	fmt.Println("\t<importPriKey> : Import private key. Parameter: [priKey]")
-	fmt.Println("\t<importWifPriKey> : Import wif format private key. Parameter: [priKey]")
-	fmt.Println("\t<dumpPriKey> : Export wif format private key by address. Parameter: [address]")
+	fmt.Println("\t<importPrivKey> : Import private key. Parameter: [priKey]")
+	fmt.Println("\t<importWifPrivKey> : Import wif format private key. Parameter: [priKey]")
+	fmt.Println("\t<dumpPrivKey> : Export wif format private key by address. Parameter: [address]")
 	fmt.Println("\t<getAccountAndAddress> : Check all accounts and addresses. Parameter: []")
 	fmt.Println("\t<sendToAddress> : Transfer transaction. Parameter: [address] [num]")
 	fmt.Println("\t<updateblock> : Update Wallet Block. Parameter: []")
@@ -244,7 +244,7 @@ func getTx(txid string) (interface{}, error) {
 	return msg, nil
 }
 
-func importPriKey(priKey string) (interface{}, error) {
+func importPrivKey(priKey string) (interface{}, error) {
 	v := false
 	cmd := &qitmeerjson.ImportPrivKeyCmd{
 		PrivKey: priKey,
@@ -258,27 +258,27 @@ func importPriKey(priKey string) (interface{}, error) {
 	fmt.Printf("%s\n",msg)
 	return msg, nil
 }
-func importWifPriKey(wifPriKey string) (interface{}, error) {
+func importWifPrivKey(wifPriKey string) (interface{}, error) {
 	v := false
 	cmd := &qitmeerjson.ImportPrivKeyCmd{
 		PrivKey: wifPriKey,
 		Rescan:  &v,
 	}
-	msg, err := walletrpc.ImportWifPrimKey(cmd, w)
+	msg, err := walletrpc.ImportWifPrivKey(cmd, w)
 	if err != nil {
-		fmt.Println("importWifPriKey","err", err.Error())
+		fmt.Println("importWifPrivKey","err", err.Error())
 		return nil, err
 	}
 	fmt.Printf("%s\n",msg)
 	return msg, nil
 }
-func dumpPriKey(address string) (interface{}, error) {
+func dumpPrivKey(address string) (interface{}, error) {
 	cmd := &qitmeerjson.DumpPrivKeyCmd{
 		Address: address,
 	}
-	msg, err := walletrpc.DumpPrimKey(cmd, w)
+	msg, err := walletrpc.DumpPrivKey(cmd, w)
 	if err != nil {
-		fmt.Println("dumpPriKey","err", err.Error())
+		fmt.Println("dumpPrivKey","err", err.Error())
 		return nil, err
 	}
 	fmt.Printf("%s\n",msg)

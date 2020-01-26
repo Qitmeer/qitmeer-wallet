@@ -186,7 +186,7 @@ var createNewAccountCmd = &cobra.Command{
 			fmt.Println(err.Error())
 			return
 		}
-		createNewAccount(args[0])
+		_ = createNewAccount(args[0])
 	},
 }
 var getnewaddressCmd = &cobra.Command{
@@ -205,11 +205,11 @@ var getnewaddressCmd = &cobra.Command{
 }
 
 var getBalanceCmd = &cobra.Command{
-	Use:   "getBalance {address} {string ,company : i(int64),f(float),default i } {bool ,detail : true,false,default false }",
-	Short: "getBalance",
+	Use:   "getbalance {address} {string ,company : i(int64),f(float),default i } {bool ,detail : true,false,default false }",
+	Short: "getbalance",
 	Example: `
-		getBalance TmWMuY9q5dUutUTGikhqTVKrnDMG34dEgb5	i true
-		getBalance TmWMuY9q5dUutUTGikhqTVKrnDMG34dEgb5	f false
+		getbalance TmWMuY9q5dUutUTGikhqTVKrnDMG34dEgb5	i true
+		getbalance TmWMuY9q5dUutUTGikhqTVKrnDMG34dEgb5	f false
 		`,
 	Args: cobra.MinimumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
@@ -242,7 +242,6 @@ var getBalanceCmd = &cobra.Command{
 			} else {
 				fmt.Printf("%s\n", b.UnspendAmount.String())
 			}
-			//fmt.Printf("confirm:%s\n",b.ConfirmAmount.String())
 		} else {
 			if detail == "true" {
 				fmt.Printf("unspend:%f\n", b.UnspendAmount.ToCoin())
@@ -252,7 +251,6 @@ var getBalanceCmd = &cobra.Command{
 			} else {
 				fmt.Printf("%f\n", b.UnspendAmount.ToCoin())
 			}
-			//fmt.Printf("confirm:%f\n",b.UnspendAmount.ToCoin())
 		}
 
 	},
@@ -336,7 +334,7 @@ var importPriKeyCmd = &cobra.Command{
 			fmt.Println(err.Error())
 			return
 		}
-		importPriKey(args[0])
+		importPrivKey(args[0])
 	},
 }
 var listAccountsBalanceCmd = &cobra.Command{
@@ -356,12 +354,12 @@ var listAccountsBalanceCmd = &cobra.Command{
 	},
 }
 var getlisttxbyaddrCmd = &cobra.Command{
-	Use:   "getListTxByAddr {address} {String ,Transaction type : in ,out ,all ,default all } ",
+	Use:   "getlisttxbyaddr {address} {String ,Transaction type : in ,out ,all ,default all } ",
 	Short: "get all transactions for address",
 	Example: `
-		getListTxByAddr Tmjc34zWMTAASHTwcNtPppPujFKVK5SeuaJ in
-		getListTxByAddr Tmjc34zWMTAASHTwcNtPppPujFKVK5SeuaJ out 
-		getListTxByAddr Tmjc34zWMTAASHTwcNtPppPujFKVK5SeuaJ all
+		getlisttxbyaddr Tmjc34zWMTAASHTwcNtPppPujFKVK5SeuaJ in
+		getlisttxbyaddr Tmjc34zWMTAASHTwcNtPppPujFKVK5SeuaJ out 
+		getlisttxbyaddr Tmjc34zWMTAASHTwcNtPppPujFKVK5SeuaJ all
 		`,
 	Args: cobra.MinimumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {

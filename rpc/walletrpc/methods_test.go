@@ -161,7 +161,7 @@ func test_wallet_getAccountByAddress(w *wallet.Wallet) (interface{}, error) {
 	log.Info("test_wallet_getAccountByAddress ","result",msg)
 	return msg, nil
 }
-func test_wallet_importPrivKey(w *wallet.Wallet) (interface{}, error) {
+func test_wallet_importPriKey(w *wallet.Wallet) (interface{}, error) {
 	v := false
 	cmd := &qitmeerjson.ImportPrivKeyCmd{
 		PrivKey: "7e445aa5ffd834cb2d3b2db50f8997dd21af29bec3d296aaa066d902b93f484b",
@@ -172,7 +172,7 @@ func test_wallet_importPrivKey(w *wallet.Wallet) (interface{}, error) {
 		log.Info("errr:", err.Error())
 		return nil, err
 	}
-	log.Info("test_wallet_importPrivKey ","result",msg)
+	log.Info("test_wallet_importPriKey ","result",msg)
 	return msg, nil
 }
 func test_wallet_importrivKey(w *wallet.Wallet) (interface{}, error) {
@@ -181,7 +181,7 @@ func test_wallet_importrivKey(w *wallet.Wallet) (interface{}, error) {
 		PrivKey: "9QwXzXVQBFNm1fxP8jCqHJG9jZKjqrUKjYiTvaRxEbFobiNrvzhgZ",
 		Rescan:  &v,
 	}
-	msg, err := ImportWifPrimKey(cmd, w)
+	msg, err := ImportWifPrivKey(cmd, w)
 	if err != nil {
 		log.Info("errr:", err.Error())
 		return nil, err
@@ -193,7 +193,7 @@ func test_wallet_dumpPriKey(w *wallet.Wallet) (interface{}, error) {
 	cmd := &qitmeerjson.DumpPrivKeyCmd{
 		Address: address,
 	}
-	msg, err := DumpPrimKey(cmd, w)
+	msg, err := DumpPrivKey(cmd, w)
 	if err != nil {
 		log.Info("errr:", err.Error())
 		return nil, err
@@ -271,7 +271,7 @@ func TestWallet_Method(t *testing.T) {
 	//test_wallet_createNewAccount(w)
 	//
 	//
-	//test_wallet_importPrivKey(w)
+	//test_wallet_importPriKey(w)
 	//
 	//
 	//test_wallet_getNewAddress(w)

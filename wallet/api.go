@@ -93,16 +93,16 @@ func (api *API) GetAccountsAndBalance() (map[string]*Balance, error) {
 
 // GetBalanceByAccount get account balance
 func (api *API) GetBalanceByAccount(name string) (*Balance, error) {
-	aaas, err := api.wt.GetAccountAndAddress(waddrmgr.KeyScopeBIP0044)
+	results, err := api.wt.GetAccountAndAddress(waddrmgr.KeyScopeBIP0044)
 	if err != nil {
 		return nil, err
 	}
 
 	accountBalance := &Balance{}
 
-	for _, aaa := range aaas {
-		if aaa.AccountName == name {
-			for _, addr := range aaa.AddrsOutput {
+	for _, result := range results {
+		if result.AccountName == name {
+			for _, addr := range result.AddrsOutput {
 				accountBalance.ConfirmAmount = accountBalance.ConfirmAmount + addr.balance.ConfirmAmount
 				accountBalance.SpendAmount = accountBalance.SpendAmount + addr.balance.SpendAmount
 				accountBalance.TotalAmount = accountBalance.TotalAmount + addr.balance.TotalAmount
@@ -113,8 +113,8 @@ func (api *API) GetBalanceByAccount(name string) (*Balance, error) {
 	return accountBalance, nil
 }
 
-// GetUtxo addr unspend utxo
-func (api *API) GetUtxo(addr string) ([]wtxmgr.UTxo, error) {
+// GetUTxo addr unSpend UTxo
+func (api *API) GetUTxo(addr string) ([]wtxmgr.UTxo, error) {
 	results, err := api.wt.GetUtxo(addr)
 	if err != nil {
 		return nil, err
@@ -122,7 +122,7 @@ func (api *API) GetUtxo(addr string) ([]wtxmgr.UTxo, error) {
 	return results, nil
 }
 
-// CreateAccount create acccount
+// CreateAccount create account
 func (api *API) CreateAccount(name string) error {
 	// The wildcard * is reserved by the rpc server with the special meaning
 	// of "all accounts", so disallow naming accounts to this string.
@@ -170,11 +170,11 @@ func (api *API) GetAddressesByAccount(accountName string) ([]string, error) {
 		return nil, err
 	}
 
-	addrStrs := make([]string, len(adds))
+	addrStr := make([]string, len(adds))
 	for i, a := range adds {
-		addrStrs[i] = a.Encode()
+		addrStr[i] = a.Encode()
 	}
-	return addrStrs, nil
+	return addrStr, nil
 }
 
 // GetAccountByAddress get account name
@@ -198,7 +198,7 @@ func (api *API) GetAccountByAddress(addrStr string) (string, error) {
 
 // DumpPrivKey dump a single address private key
 //
-// dumpPriKey handles a dumpprivkey request with the private key
+// dumpPriKey handles a DumpPrivKey request with the private key
 // for a single address, or an appropiate error if the wallet
 // is locked.
 func (api *API) DumpPrivKey(addrStr string) (string, error) {
@@ -216,16 +216,15 @@ func (api *API) DumpPrivKey(addrStr string) (string, error) {
 	return key, err
 }
 
-// ImportWifPrivKey import a WIF-encoded private key and adding it to an account
-// importPrivKey handles an importprivkey request by parsing
+// ImportWifPrvKey import a WIF-encoded private key and adding it to an account
 // a WIF-encoded private key and adding it to an account.
-func (api *API) ImportWifPrivKey(accountName string, privKey string) error {
+func (api *API) ImportWifPrvKey(accountName string, key string) error {
 	// Ensure that private keys are only imported to the correct account.
 	if accountName != "" && accountName != waddrmgr.ImportedAddrAccountName {
 		return &qitmeerjson.ErrNotImportedAccount
 	}
 
-	wif, err := utils.DecodeWIF(privKey, api.wt.ChainParams())
+	wif, err := utils.DecodeWIF(key, api.wt.ChainParams())
 	if err != nil {
 		return &qitmeerjson.RPCError{
 			Code:    qitmeerjson.ErrRPCInvalidAddressOrKey,
@@ -252,10 +251,8 @@ func (api *API) ImportWifPrivKey(accountName string, privKey string) error {
 	return err
 }
 
-// ImportPrivKey import priv key
-// func importPrivKey(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
-// 	cmd := icmd.(*qitmeerjson.ImportPrivKeyCmd)
-func (api *API) ImportPrivKey(accountName string, privKey string) error {
+// ImportPriKey import pri key
+func (api *API) ImportPriKey(accountName string, key string) error {
 	// Ensure that private keys are only imported to the correct account.
 	//
 	// Yes, Label is the account name.
@@ -263,11 +260,11 @@ func (api *API) ImportPrivKey(accountName string, privKey string) error {
 		return &qitmeerjson.ErrNotImportedAccount
 	}
 
-	prihash, err := hex.DecodeString(privKey)
+	priHash, err := hex.DecodeString(key)
 	if err != nil {
 		return err
 	}
-	pri, _ := secp256k1.PrivKeyFromBytes(prihash)
+	pri, _ := secp256k1.PrivKeyFromBytes(priHash)
 	wif, err := utils.NewWIF(pri, api.wt.ChainParams(), true)
 	if err != nil {
 		return &qitmeerjson.RPCError{
@@ -322,10 +319,10 @@ func (api *API) SendToAddress(addressStr string, amount float64) (string, error)
 
 
 
-func (api *API) SendToMany( addrsAmount map[string]float64) (string, error) {
+func (api *API) SendToMany( addAmounts map[string]float64) (string, error) {
 
 	pairs := make(map[string]types.Amount)
-	for addr, amount := range addrsAmount {
+	for addr, amount := range addAmounts {
 		amt, err := types.NewAmount(amount)
 		if err != nil {
 			return "", err
@@ -334,7 +331,7 @@ func (api *API) SendToMany( addrsAmount map[string]float64) (string, error) {
 			return "", qitmeerjson.ErrNeedPositiveAmount
 		}
 
-		pairs[addr]=types.Amount(amt)
+		pairs[addr]= amt
 	}
 
 	return api.wt.SendPairs( pairs, waddrmgr.AccountMergePayNum,txrules.DefaultRelayFeePerKb)

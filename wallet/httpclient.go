@@ -201,7 +201,7 @@ func (cfg *httpConfig) SendRawTransaction(tx string, allowHighFees bool) (string
 }
 
 func (cfg *httpConfig) GetNodeInfo() (*qJson.InfoNodeResult, error) {
-	params := []interface{}{}
+	var params []interface{}
 	buf, err := cfg.getResByte("getNodeInfo", params)
 	if err != nil {
 		return nil, err

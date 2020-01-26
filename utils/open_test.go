@@ -5,7 +5,6 @@ import (
 )
 
 func TestOpen(t *testing.T) {
-	//Open("www.baidu.com")
 	OpenBrowser("http://www.baidu.com")
 }
 

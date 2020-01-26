@@ -213,7 +213,7 @@ func (s *RpcServer) startHTTP(listenAddrs []string) error {
 		s.wg.Add(1)
 		go func(listener net.Listener) {
 			log.Info("RPC server listening on ", "addr", listener.Addr())
-			httpServer.Serve(listener)
+			_ = httpServer.Serve(listener)
 			log.Trace("RPC listener done for %s", listener.Addr())
 			s.wg.Done()
 		}(listener)
@@ -339,7 +339,7 @@ func (s *RpcServer) jsonRPCRead(w http.ResponseWriter, r *http.Request) {
 // close the codec unless a non-recoverable error has occurred. Note, this method will return after
 // a single request has been processed!
 func (s *RpcServer) ServeSingleRequest(ctx context.Context, codec ServerCodec, options CodecOption) {
-	s.serveRequest(ctx, codec, true, options)
+	_ = s.serveRequest(ctx, codec, true, options)
 }
 
 // serveRequest will reads requests from the codec, calls the RPC callback and
@@ -388,7 +388,7 @@ func (s *RpcServer) serveRequest(ctx context.Context, codec ServerCodec, singleS
 			// If a parsing error occurred, send an error
 			if err.Error() != "EOF" {
 				log.Debug(fmt.Sprintf("read error %v\n", err))
-				codec.Write(codec.CreateErrorResponse(nil, err))
+				_ = codec.Write(codec.CreateErrorResponse(nil, err))
 			}
 			// Error or end of stream, wait for requests and tear down
 			pend.Wait()

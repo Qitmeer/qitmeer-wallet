@@ -159,14 +159,14 @@ func (wt *Wallet) ImportPrivateKey(scope waddrmgr.KeyScope, wif *utils.WIF) (str
 	// Attempt to import private key into wallet.
 	var addr types.Address
 	err = walletdb.Update(wt.db, func(tx walletdb.ReadWriteTx) error {
-		addrmgrNs := tx.ReadWriteBucket(waddrmgrNamespaceKey)
-		maddr, err := manager.ImportPrivateKey(addrmgrNs, wif)
+		addrMgrNs := tx.ReadWriteBucket(waddrmgrNamespaceKey)
+		maddr, err := manager.ImportPrivateKey(addrMgrNs, wif)
 		if err != nil {
 			return err
 		}
 		addr = maddr.Address()
 		_, err = manager.AccountProperties(
-			addrmgrNs, waddrmgr.ImportedAddrAccount,
+			addrMgrNs, waddrmgr.ImportedAddrAccount,
 		)
 		if err != nil {
 			return err
@@ -204,7 +204,7 @@ func Create(db walletdb.DB, pubPass, privPass, seed []byte, params *chaincfg.Par
 	// we generate a random seed for the wallet with the recommended seed
 	// length.
 	return walletdb.Update(db, func(tx walletdb.ReadWriteTx) error {
-		addrmgrNs, err := tx.CreateTopLevelBucket(waddrmgrNamespaceKey)
+		addrMgrNs, err := tx.CreateTopLevelBucket(waddrmgrNamespaceKey)
 		if err != nil {
 			return err
 		}
@@ -213,7 +213,7 @@ func Create(db walletdb.DB, pubPass, privPass, seed []byte, params *chaincfg.Par
 			return err
 		}
 		err = waddrmgr.Create(
-			addrmgrNs, seed, pubPass, privPass, params, nil,
+			addrMgrNs, seed, pubPass, privPass, params, nil,
 			birthday,
 		)
 		if err != nil {
@@ -842,9 +842,9 @@ func (wt *Wallet) AccountNumber(scope waddrmgr.KeyScope, accountName string) (ui
 
 	var account uint32
 	err = walletdb.View(wt.db, func(tx walletdb.ReadTx) error {
-		addrmgrNs := tx.ReadBucket(waddrmgrNamespaceKey)
+		addrMgrNs := tx.ReadBucket(waddrmgrNamespaceKey)
 		var err error
-		account, err = manager.LookupAccount(addrmgrNs, accountName)
+		account, err = manager.LookupAccount(addrMgrNs, accountName)
 		return err
 	})
 	return account, err
@@ -857,9 +857,9 @@ func (wt *Wallet) NewAddress(
 		addr types.Address
 	)
 	err := walletdb.Update(wt.db, func(tx walletdb.ReadWriteTx) error {
-		addrmgrNs := tx.ReadWriteBucket(waddrmgrNamespaceKey)
+		addrMgrNs := tx.ReadWriteBucket(waddrmgrNamespaceKey)
 		var err error
-		addr, _, err = wt.newAddress(addrmgrNs, account, scope)
+		addr, _, err = wt.newAddress(addrMgrNs, account, scope)
 		return err
 	})
 	if err != nil {
@@ -898,10 +898,10 @@ func (wt *Wallet) newAddress(addrMgrNs walletdb.ReadWriteBucket, account uint32,
 func (wt *Wallet) DumpWIFPrivateKey(addr types.Address) (string, error) {
 	var maddr waddrmgr.ManagedAddress
 	err := walletdb.View(wt.db, func(tx walletdb.ReadTx) error {
-		waddrmgrNs := tx.ReadBucket(waddrmgrNamespaceKey)
+		waddrMgrNs := tx.ReadBucket(waddrmgrNamespaceKey)
 		// Get private key from wallet if it exists.
 		var err error
-		maddr, err = wt.Manager.Address(waddrmgrNs, addr)
+		maddr, err = wt.Manager.Address(waddrMgrNs, addr)
 		return err
 	})
 	if err != nil {
@@ -920,10 +920,10 @@ func (wt *Wallet) DumpWIFPrivateKey(addr types.Address) (string, error) {
 func (wt *Wallet) getPrivateKey(addr types.Address) (waddrmgr.ManagedPubKeyAddress, error) {
 	var maddr waddrmgr.ManagedAddress
 	err := walletdb.View(wt.db, func(tx walletdb.ReadTx) error {
-		waddrmgrNs := tx.ReadBucket(waddrmgrNamespaceKey)
+		waddrMgrNs := tx.ReadBucket(waddrmgrNamespaceKey)
 		// Get private key from wallet if it exists.
 		var err error
-		maddr, err = wt.Manager.Address(waddrmgrNs, addr)
+		maddr, err = wt.Manager.Address(waddrMgrNs, addr)
 		return err
 	})
 	if err != nil {
@@ -973,8 +973,8 @@ func (wt *Wallet) quitChan() <-chan struct{} {
 
 func (wt *Wallet) UnLockManager(passphrase []byte) error {
 	err := walletdb.View(wt.db, func(tx walletdb.ReadTx) error {
-		addrmgrNs := tx.ReadBucket(waddrmgrNamespaceKey)
-		return wt.Manager.Unlock(addrmgrNs, passphrase)
+		addrMgrNs := tx.ReadBucket(waddrmgrNamespaceKey)
+		return wt.Manager.Unlock(addrMgrNs, passphrase)
 	})
 	if err != nil {
 		return err
@@ -1027,9 +1027,9 @@ out:
 // account.
 func (wt *Wallet) AccountAddresses(account uint32) (addrs []types.Address, err error) {
 	err = walletdb.View(wt.db, func(tx walletdb.ReadTx) error {
-		addrmgrNs := tx.ReadBucket(waddrmgrNamespaceKey)
-		return wt.Manager.ForEachAccountAddress(addrmgrNs, account, func(maddr waddrmgr.ManagedAddress) error {
-			addrs = append(addrs, maddr.Address())
+		addrMgrNs := tx.ReadBucket(waddrmgrNamespaceKey)
+		return wt.Manager.ForEachAccountAddress(addrMgrNs, account, func(mAddr waddrmgr.ManagedAddress) error {
+			addrs = append(addrs, mAddr.Address())
 			return nil
 		})
 	})
@@ -1040,9 +1040,9 @@ func (wt *Wallet) AccountAddresses(account uint32) (addrs []types.Address, err e
 func (wt *Wallet) AccountOfAddress(a types.Address) (uint32, error) {
 	var account uint32
 	err := walletdb.View(wt.db, func(tx walletdb.ReadTx) error {
-		addrmgrNs := tx.ReadBucket(waddrmgrNamespaceKey)
+		addrMgrNs := tx.ReadBucket(waddrmgrNamespaceKey)
 		var err error
-		_, account, err = wt.Manager.AddrAccount(addrmgrNs, a)
+		_, account, err = wt.Manager.AddrAccount(addrMgrNs, a)
 		return err
 	})
 	return account, err
@@ -1057,9 +1057,9 @@ func (wt *Wallet) AccountName(scope waddrmgr.KeyScope, accountNumber uint32) (st
 
 	var accountName string
 	err = walletdb.View(wt.db, func(tx walletdb.ReadTx) error {
-		addrmgrNs := tx.ReadBucket(waddrmgrNamespaceKey)
+		addrMgrNs := tx.ReadBucket(waddrmgrNamespaceKey)
 		var err error
-		accountName, err = manager.AccountName(addrmgrNs, accountNumber)
+		accountName, err = manager.AccountName(addrMgrNs, accountNumber)
 		return err
 	})
 	return accountName, err

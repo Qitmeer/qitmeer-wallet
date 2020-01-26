@@ -306,26 +306,26 @@ func (c *Console) Interactive() {
 					}
 					getAccountByAddress(arg1)
 					break
-				case "importPriKey":
+				case "importPrivKey":
 					if arg1 == ""{
-						fmt.Println("importPriKey err :Please enter your priKey.")
+						fmt.Println("importPrivKey err :Please enter your priKey.")
 						break
 					}
-					importPriKey(arg1)
+					importPrivKey(arg1)
 					break
-				case "importwifPriKey":
+				case "importWifPrivKey":
 					if arg1 == ""{
 						fmt.Println("importwifPriKey err :Please enter your wif priKey.")
 						break
 					}
-					importWifPriKey(arg1)
+					importWifPrivKey(arg1)
 					break
-				case "dumpPriKey":
+				case "dumpPrivKey":
 					if arg1 == ""{
-						fmt.Println("dumpPriKey err :Please enter your address.")
+						fmt.Println("dumpPrivKey err :Please enter your address.")
 						break
 					}
-					dumpPriKey(arg1)
+					dumpPrivKey(arg1)
 					break
 				case "getAccountAndAddress":
 					getAccountAndAddress()

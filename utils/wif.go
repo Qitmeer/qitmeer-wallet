@@ -5,11 +5,10 @@ import (
 	"errors"
 	"fmt"
 
-	
+	"github.com/Qitmeer/qitmeer/common/encode/base58"
+	"github.com/Qitmeer/qitmeer/common/hash"
 	"github.com/Qitmeer/qitmeer/crypto/ecc/secp256k1"
 	"github.com/Qitmeer/qitmeer/params"
-	"github.com/Qitmeer/qitmeer/common/hash"
-	"github.com/Qitmeer/qitmeer/common/encode/base58"
 )
 
 // ErrMalformedPrivateKey describes an error where a WIF-encoded private
@@ -20,7 +19,6 @@ var ErrMalformedPrivateKey = errors.New("malformed private key")
 // ErrChecksumMismatch describes an error where decoding failed due
 // to a bad checksum.
 var ErrChecksumMismatch = errors.New("checksum mismatch")
-var ErrNoxCheckDecode = errors.New("wif nox check decode err")
 
 // compressMagic is the magic byte used to identify a WIF encoding for
 // an address created from a compressed serialized public key.
@@ -90,7 +88,7 @@ func DecodeWIF(wif string,net *params.Params) (*WIF, error) {
 	decodedLen := len(decoded)
 	var compress bool
 	netID:=[2]byte{decoded[0],decoded[1]}
-	if(netID!=net.PrivateKeyID){
+	if netID!=net.PrivateKeyID {
 		return nil,fmt.Errorf("net is err ")
 	}
 	// Length of base58 decoded WIF must be 32 bytes + an optional 1 byte

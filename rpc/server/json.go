@@ -98,17 +98,6 @@ func (err *jsonError) ErrorCode() int {
 	return err.Code
 }
 
-// NewCodec creates a new RPC server codec with support for JSON-RPC 2.0 based
-// on explicitly given encoding and decoding methods.
-func NewCodec(rwc io.ReadWriteCloser, encode, decode func(v interface{}) error) ServerCodec {
-	return &jsonCodec{
-		closed: make(chan interface{}),
-		encode: encode,
-		decode: decode,
-		rw:     rwc,
-	}
-}
-
 // NewJSONCodec creates a new RPC server codec with support for JSON-RPC 2.0.
 func NewJSONCodec(rwc io.ReadWriteCloser) ServerCodec {
 	enc := json.NewEncoder(rwc)
@@ -313,7 +302,7 @@ func (c *jsonCodec) Write(res interface{}) error {
 func (c *jsonCodec) Close() {
 	c.closer.Do(func() {
 		close(c.closed)
-		c.rw.Close()
+		_ = c.rw.Close()
 	})
 }
 

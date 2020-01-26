@@ -5,11 +5,11 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/Qitmeer/qitmeer-wallet/utils"
 	"github.com/Qitmeer/qitmeer/crypto/bip32"
 	"github.com/Qitmeer/qitmeer/crypto/bip39"
 	"github.com/Qitmeer/qitmeer/crypto/ecc/secp256k1"
 	"github.com/Qitmeer/qitmeer/crypto/seed"
-	"github.com/Qitmeer/qitmeer-wallet/utils"
 
 	"github.com/Qitmeer/qitmeer/qx"
 )
@@ -54,18 +54,13 @@ func TestSeed(t *testing.T) {
 
 	t.Log(wif)
 
-	// _, err = wt.ImportPrivateKey(waddrmgr.KeyScopeBIP0044, wif, nil, false)
-	// if err != nil {
-	// 	t.Logf("createWallet ImportPrivateKey err: %s", err)
-	// 	return  }
 }
 
 func TestGan(t *testing.T) {
 	//func GenerateAddr() string {
 
 	ver := "mainnet"
-	//  "privnet":
-	//  "testnet":
+
 
 	s, err := qx.NewEntropy(32)
 	if err != nil {

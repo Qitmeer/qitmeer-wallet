@@ -38,9 +38,9 @@ Available Commands:
   create                create
   createnewaccount      create new account
   getaddressesbyaccount get addresses by account
-  getBalance            getBalance
+  getbalance            getbalance
   getlisttxbyaddr       get all transactions for address
-  importprivkey         import priKey
+  importprivkey         import prikey
   listaccountsbalance   list Accounts Balance
   sendtoaddress         send transaction
   syncheight            Get the number of local synchronization blocks
