@@ -40,6 +40,11 @@ type SpendTo struct {
 	//Block  Block
 }
 
+type TxInputPoint struct{
+	TxOutPoint types.TxOutPoint
+	SpendTo SpendTo
+}
+
 type AddrTxOutput struct {
 	Address string
 	TxId    hash.Hash

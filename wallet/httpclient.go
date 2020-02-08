@@ -195,6 +195,10 @@ func (cfg *httpConfig) getBlockByOrder(i int64) ([]byte, error) {
 	params := []interface{}{i, true}
 	return cfg.getResByte("getBlockByOrder", params)
 }
+func (cfg *httpConfig) isBlue(blockHash string) (string, error) {
+	params := []interface{}{blockHash}
+	return cfg.getResString("isBlue", params)
+}
 func (cfg *httpConfig) SendRawTransaction(tx string, allowHighFees bool) (string, error) {
 	params := []interface{}{tx, allowHighFees}
 	return cfg.getResString("sendRawTransaction", params)

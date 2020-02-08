@@ -297,6 +297,24 @@ func GetBalance(iCmd interface{}, w *wallet.Wallet) (interface{}, error) {
 	return m, nil
 }
 
+func SetSynceToNum(order int64,w *wallet.Wallet) error {
+	err:=w.SetSynceToNum(order)
+	if err != nil {
+		log.Error("GetBalance ", "err ", err.Error())
+		return err
+	}
+	return nil
+}
+
+func GetTxSpendInfo(txId string ,w *wallet.Wallet)(interface{}, error){
+	info,err:=w.GetTxSpendInfo(txId)
+	if err != nil {
+		log.Error("GetTxSpendInfo ", "err ", err.Error())
+		return nil, err
+	}
+	return info, nil
+}
+
 func Unlock(password string, w *wallet.Wallet) error {
 	return w.Unlock([]byte(password), time.After(10*time.Minute))
 }

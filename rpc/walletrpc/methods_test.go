@@ -21,7 +21,29 @@ func TestOpenWallet(t *testing.T){
 
 }
 
-func open_wallet() (*wallet.Wallet, error) {
+func TestSetSynceToNum(t *testing.T) {
+	w,err:=openWallet()
+	if err!=nil{
+		log.Error("openWallet fail","err",err.Error())
+		return
+	}
+	err=SetSynceToNum(100000,w)
+	if err!=nil{
+		log.Error("SetSynceToNum fail","err",err.Error())
+		return
+	}
+	fmt.Printf("TestSetSynceToNum succ")
+}
+func TestGetSyncHeight(t *testing.T){
+	w,err:=openWallet()
+	if err!=nil{
+		log.Error("openWallet fail","err",err.Error())
+		return
+	}
+	fmt.Printf("TestGetSyncHeight: %v\n",w.Manager.SyncedTo().Height)
+}
+
+func openWallet() (*wallet.Wallet, error) {
 	dbpath:="/Users/luoshan/Library/Application Support/Qitwallet/testnet"
 	tomlpath:="/Users/luoshan/GolandProjects/qitmeer-wallet/config.toml"
 	pubpass:="public"
@@ -52,6 +74,9 @@ func open_wallet() (*wallet.Wallet, error) {
 	}
 	return w, nil
 }
+
+
+
 func test_wallet_createNewAccount(w *wallet.Wallet) error {
 	cmd := &qitmeerjson.CreateNewAccountCmd{
 		Account: "luoshan4",
@@ -104,7 +129,7 @@ func test_wallet_getlisttxbyaddr(w *wallet.Wallet)( interface{}, error){
 		log.Info("errr:", err.Error())
 		return nil, err
 	}
-	if(err!=nil){
+	if err!=nil {
 		fmt.Errorf("test_wallet_getlisttxbyaddr err:%s",err.Error())
 	}else{
 		a:=result.(*qjson.PageTxRawResult)
@@ -261,11 +286,11 @@ func test_wif(w *wallet.Wallet) error {
 }
 
 func TestWallet_Method(t *testing.T) {
-	w, err := open_wallet()
-	if err != nil {
-		log.Info("open_wallet err:", err)
-		return
-	}
+	//w, err := open_wallet()
+	//if err != nil {
+	//	log.Info("open_wallet err:", err)
+	//	return
+	//}
 	//w.UpdateMempool()
 	//
 	//test_wallet_createNewAccount(w)
@@ -290,15 +315,15 @@ func TestWallet_Method(t *testing.T) {
 	//
 	//
 	//
-	test_wallet_getBalance(w)
-	//
-	//
-	msg,err:=test_wallet_sendToAddress(w)
-	if err!=nil{
-		fmt.Printf(err.Error())
-	}else{
-		fmt.Printf("%s\n",msg)
-	}
+	//test_wallet_getBalance(w)
+	////
+	////
+	//msg,err:=test_wallet_sendToAddress(w)
+	//if err!=nil{
+	//	fmt.Printf(err.Error())
+	//}else{
+	//	fmt.Printf("%s\n",msg)
+	//}
 	//
 	//
 	//test_wif(w)

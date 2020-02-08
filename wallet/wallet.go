@@ -545,8 +545,47 @@ func (wt *Wallet) GetBalance(addr string) (*Balance, error) {
 	}
 	return &res.balance, nil
 }
+func (wt *Wallet) GetTxSpendInfo(txId string)  ([]*wtxmgr.AddrTxOutput,error){
+	var atos []*wtxmgr.AddrTxOutput
+	txHash,err:=hash.NewHashFromStr(txId)
+	if err!=nil{
+		return nil,err
+	}
+	err=walletdb.Update(wt.db, func(tx walletdb.ReadWriteTx) error {
+		rb := tx.ReadWriteBucket(wtxmgrNamespaceKey)
+		txNrb := rb.NestedReadWriteBucket(wtxmgr.BucketTxJson)
+		outNrb := rb.NestedReadWriteBucket(wtxmgr.BucketAddrtxout)
+		v := txNrb.Get(txHash.Bytes())
+		if v == nil{
+			return fmt.Errorf("txid does not exist")
+		}
+		var txr corejson.TxRawResult
+		err := json.Unmarshal(v, &txr)
+		if err != nil {
+			return err
+		}
+		for i, vOut := range txr.Vout {
+			addr := vOut.ScriptPubKey.Addresses[0]
+			top := types.TxOutPoint{
+				Hash:     *txHash,
+				OutIndex: uint32(i),
+			}
+			var ato, err = wt.TxStore.GetAddrTxOut(outNrb, addr, top)
+			if err != nil {
+				return err
+			}
+			ato.Address=addr
+			atos = append(atos, ato)
+		}
+		return err
+	})
+	if err!=nil{
+		return nil,err
+	}
+	return atos,nil
+}
 
-func (wt *Wallet) insertTx(txins []types.TxOutPoint, txouts []wtxmgr.AddrTxOutput, trrs []corejson.TxRawResult) error {
+func (wt *Wallet) insertTx(txins []wtxmgr.TxInputPoint, txouts []wtxmgr.AddrTxOutput, trrs []corejson.TxRawResult) error {
 	err := walletdb.Update(wt.db, func(tx walletdb.ReadWriteTx) error {
 		ns := tx.ReadWriteBucket(wtxmgrNamespaceKey)
 		txNs := ns.NestedReadWriteBucket(wtxmgr.BucketTxJson)
@@ -573,7 +612,7 @@ func (wt *Wallet) insertTx(txins []types.TxOutPoint, txouts []wtxmgr.AddrTxOutpu
 			}
 		}
 		for _, txi := range txins {
-			v := txNs.Get(txi.Hash.Bytes())
+			v := txNs.Get(txi.TxOutPoint.Hash.Bytes())
 			if v == nil {
 				continue
 			}
@@ -582,22 +621,15 @@ func (wt *Wallet) insertTx(txins []types.TxOutPoint, txouts []wtxmgr.AddrTxOutpu
 			if err != nil {
 				return err
 			}
-			addr := txr.Vout[txi.OutIndex].ScriptPubKey.Addresses[0]
-			spendOut, err := wt.TxStore.GetAddrTxOut(outNs, addr, txi)
+			addr := txr.Vout[txi.TxOutPoint.OutIndex].ScriptPubKey.Addresses[0]
+			spendOut, err := wt.TxStore.GetAddrTxOut(outNs, addr, txi.TxOutPoint)
 			if err != nil {
 				return err
 			}
-			txHash, err := hash.NewHashFromStr(txr.Txid)
-			if err != nil {
-				return err
-			}
-			spendTo := wtxmgr.SpendTo{
-				Index:  txi.OutIndex,
-				TxHash: *txHash,
-			}
+
 			spendOut.Spend = wtxmgr.SpendStatusSpend
 			spendOut.Address = addr
-			spendOut.SpendTo = &spendTo
+			spendOut.SpendTo = &txi.SpendTo
 
 			err = wt.TxStore.UpdateAddrTxOut(outNs, spendOut)
 			if err != nil {
@@ -620,6 +652,15 @@ func (wt *Wallet) SyncTx(order int64) (clijson.BlockHttpResult, error) {
 			log.Trace(fmt.Sprintf("block:%v err,txsvalid is false", block.Hash))
 			return block, nil
 		}
+		isBlue ,err:=wt.HttpClient.isBlue(block.Hash)
+		if err != nil {
+			return block, err
+		}else{
+			if isBlue != "1"{
+				log.Trace(fmt.Sprintf("block:%v err,is not blue", block.Hash))
+				return block, nil
+			}
+		}
 		txIns, txOuts, trRs, err := parseBlockTxs(block)
 		if err != nil {
 			return block, err
@@ -636,8 +677,8 @@ func (wt *Wallet) SyncTx(order int64) (clijson.BlockHttpResult, error) {
 	return block, nil
 }
 
-func parseTx(tr corejson.TxRawResult, height int32) ([]types.TxOutPoint, []wtxmgr.AddrTxOutput, error) {
-	var txins []types.TxOutPoint
+func parseTx(tr corejson.TxRawResult, height int32) ([]wtxmgr.TxInputPoint, []wtxmgr.AddrTxOutput, error) {
+	var txins []wtxmgr.TxInputPoint
 	var txouts []wtxmgr.AddrTxOutput
 	blockhash, err := hash.NewHashFromStr(tr.BlockHash)
 	if err != nil {
@@ -655,7 +696,7 @@ func parseTx(tr corejson.TxRawResult, height int32) ([]types.TxOutPoint, []wtxmg
 	if tr.Confirmations < config.Cfg.Confirmations{
 		spend=wtxmgr.SpendStatusUnconfirmed
 	}
-	for _, vi := range tr.Vin {
+	for i, vi := range tr.Vin {
 		if vi.Coinbase != "" {
 			continue
 		}
@@ -666,11 +707,19 @@ func parseTx(tr corejson.TxRawResult, height int32) ([]types.TxOutPoint, []wtxmg
 			if err != nil {
 				return nil, nil, err
 			} else {
-				txin := types.TxOutPoint{
+				txOutPoint := types.TxOutPoint{
 					Hash:     *hs,
 					OutIndex: vi.Vout,
 				}
-				txins = append(txins, txin)
+				spendTo :=wtxmgr.SpendTo{
+					Index:  uint32(i),
+					TxHash: *txId,
+				}
+				txIn :=wtxmgr.TxInputPoint{
+					TxOutPoint: txOutPoint,
+					SpendTo:    spendTo,
+				}
+				txins = append(txins, txIn)
 			}
 		}
 	}
@@ -693,8 +742,8 @@ func parseTx(tr corejson.TxRawResult, height int32) ([]types.TxOutPoint, []wtxmg
 	return txins, txouts, nil
 }
 
-func parseBlockTxs(block clijson.BlockHttpResult) ([]types.TxOutPoint, []wtxmgr.AddrTxOutput, []corejson.TxRawResult, error) {
-	var txIns []types.TxOutPoint
+func parseBlockTxs(block clijson.BlockHttpResult) ([]wtxmgr.TxInputPoint, []wtxmgr.AddrTxOutput, []corejson.TxRawResult, error) {
+	var txIns []wtxmgr.TxInputPoint
 	var txOuts []wtxmgr.AddrTxOutput
 	var tx []corejson.TxRawResult
 	for _, tr := range block.Transactions {
@@ -713,6 +762,40 @@ func parseBlockTxs(block clijson.BlockHttpResult) ([]types.TxOutPoint, []wtxmgr.
 func (wt *Wallet) GetSyncBlockHeight() int32 {
 	height := wt.Manager.SyncedTo().Height
 	return height
+}
+
+func (wt *Wallet) SetSynceToNum(order int64) error {
+	var block clijson.BlockHttpResult
+	blockByte, err := wt.HttpClient.getBlockByOrder(order)
+	if err != nil {
+		return  err
+	}
+	if err := json.Unmarshal(blockByte, &block); err == nil {
+		if !block.Txsvalid {
+			log.Trace(fmt.Sprintf("block:%v err,txsvalid is false", block.Hash))
+			return nil
+		}
+		hs, err := hash.NewHashFromStr(block.Hash)
+		if err != nil {
+			return fmt.Errorf("blockhash string to hash  err:%s", err.Error())
+		}
+		stamp := &waddrmgr.BlockStamp{Hash: *hs, Height: block.Order}
+		err = walletdb.Update(wt.db, func(tx walletdb.ReadWriteTx) error {
+			ns := tx.ReadWriteBucket(waddrmgrNamespaceKey)
+			err := wt.Manager.SetSyncedTo(ns, stamp)
+			if err != nil {
+				return err
+			}
+			return nil
+		})
+		if err != nil {
+			return err
+		}
+		return nil
+	} else {
+		log.Error(err.Error())
+		return  err
+	}
 }
 
 

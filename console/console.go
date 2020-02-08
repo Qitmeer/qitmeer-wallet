@@ -10,6 +10,7 @@ import (
 	"github.com/Qitmeer/qitmeer-wallet/util"
 	waddrmgr "github.com/Qitmeer/qitmeer-wallet/waddrmgs"
 	"github.com/Qitmeer/qitmeer-wallet/wallet"
+	"github.com/Qitmeer/qitmeer-wallet/wtxmgr"
 	"github.com/Qitmeer/qitmeer/crypto/bip39"
 	"github.com/Qitmeer/qitmeer/crypto/ecc/secp256k1"
 	"github.com/Qitmeer/qitmeer/qx"
@@ -155,6 +156,18 @@ func getBalance(addr string) ( *wallet.Balance, error){
 	r:=b.(*wallet.Balance)
 	return r, nil
 }
+
+func GetTxSpendInfo(txId string) ( []*wtxmgr.AddrTxOutput, error){
+	b,err:=walletrpc.GetTxSpendInfo(txId,w)
+	if err!=nil {
+		fmt.Println("GetTxSpendInfo","err",err.Error())
+		return nil,err
+	}
+	r:=b.([]*wtxmgr.AddrTxOutput)
+	return r, nil
+}
+
+
 func  listAccountsBalance()( interface{}, error){
 	msg, err := walletrpc.ListAccounts( w)
 	if err != nil {

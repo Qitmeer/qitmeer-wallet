@@ -255,6 +255,57 @@ var getBalanceCmd = &cobra.Command{
 
 	},
 }
+
+var getTxSpendInfoCmd = &cobra.Command{
+	Use:   "gettxspendinfo {txId} {index}",
+	Short: "gettxspendinfo",
+	Example: `
+		gettxspendinfo 10c710ffcdf3bea9a21656c26fc0dd5796cb3d0b60aafb2ede49ca1248e9aa0d
+		gettxspendinfo 10c710ffcdf3bea9a21656c26fc0dd5796cb3d0b60aafb2ede49ca1248e9aa0d	0
+		`,
+	Args: cobra.MinimumNArgs(1),
+	Run: func(cmd *cobra.Command, args []string) {
+		err := OpenWallet()
+		if err != nil {
+			fmt.Println(err.Error())
+			return
+		}
+		b, err := GetTxSpendInfo( args[0])
+		if err != nil {
+			fmt.Println(err.Error())
+			return
+		}
+		if len(args) > 1 {
+			index, err :=  strconv.ParseInt(args[1], 10, 64)
+			if err != nil {
+				log.Error("Argument is not of type int")
+				return
+			}
+			if len(b)<int(index+1){
+				log.Error("Index out of array range")
+				return
+			}else{
+				if b[index].SpendTo == nil{
+					fmt.Printf("addr:%v,txid:%v,index:%v,unspend\n",b[index].Address,b[index].TxId,b[index].Index)
+				}else{
+					fmt.Printf("addr:%v,txid:%v,index:%v,spend to: txid:%v,index:%v\n",b[index].Address,b[index].TxId,b[index].Index,b[index].SpendTo.TxHash,b[index].SpendTo.Index)
+				}
+				return
+			}
+		}else{
+			for _, output := range b {
+				if output.SpendTo == nil{
+					fmt.Printf("addr:%v,txid:%v,index:%v,unspend\n",output.Address,output.TxId,output.Index)
+				}else{
+					fmt.Printf("addr:%v,txid:%v,index:%v,spendto: txid:%v,index:%v\n",output.Address,output.TxId,output.Index,output.SpendTo.TxHash,output.SpendTo.Index)
+				}
+				return
+			}
+		}
+
+	},
+}
+
 var sendToAddressCmd = &cobra.Command{
 	Use:   "sendtoaddress {address} {amount} {pripassword} ",
 	Short: "send transaction ",
@@ -452,11 +503,6 @@ var webCmd = &cobra.Command{
 		`,
 	Args: cobra.NoArgs,
 	Run: func(cmd *cobra.Command, args []string) {
-		// b:=checkWalletIeExist(config.Cfg)
-		// if b ==false{
-		// 	fmt.Println("Please create a wallet first,[qitmeer-wallet qc create ]")
-		// 	return
-		// }
 		fmt.Println("web model")
 		qitmeerMain(fileCfg)
 	},
@@ -500,6 +546,7 @@ func init() {
 	Command.AddCommand(listAccountsBalanceCmd)
 	Command.AddCommand(consoleCmd)
 	Command.AddCommand(getTxByTxIdCmd)
+	Command.AddCommand(getTxSpendInfoCmd)
 	Command.AddCommand(webCmd)
 	Command.AddCommand(QxCmd)
 
