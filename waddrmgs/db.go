@@ -1,7 +1,3 @@
-// Copyright (c) 2014-2017 The btcsuite developers
-// Copyright (c) 2015 The Decred developers
-// Use of this source code is governed by an ISC
-// license that can be found in the LICENSE file.
 
 package waddrmgr
 
@@ -10,8 +6,8 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
-	chainhash "github.com/Qitmeer/qitmeer/common/hash"
 	"github.com/Qitmeer/qitmeer-wallet/walletdb"
+	chainhash "github.com/Qitmeer/qitmeer/common/hash"
 	"time"
 )
 
@@ -52,7 +48,6 @@ type syncStatus uint8
 // of supporting sync status on a per-address basis.
 const (
 	ssNone    syncStatus = 0 // not iota as they need to be stable for db
-	ssPartial syncStatus = 1
 	ssFull    syncStatus = 2
 )
 
@@ -267,14 +262,6 @@ func uint32ToBytes(number uint32) []byte {
 	return buf
 }
 
-// uint64ToBytes converts a 64 bit unsigned integer into a 8-byte slice in
-// little-endian order: 1 -> [1 0 0 0 0 0 0 0].
-func uint64ToBytes(number uint64) []byte {
-	buf := make([]byte, 8)
-	binary.LittleEndian.PutUint64(buf, number)
-	return buf
-}
-
 // stringToBytes converts a string into a variable length byte slice in
 // little-endian order: "abc" -> [3 0 0 0 61 62 63]
 func stringToBytes(s string) []byte {
@@ -417,31 +404,6 @@ func putMasterHDKeys(ns walletdb.ReadWriteBucket, masterHDPrivEnc, masterHDPubEn
 	return nil
 }
 
-// fetchMasterHDKeys attempts to fetch both the master HD private and public
-// keys from the database. If this is a watch only wallet, then it's possible
-// that the master private key isn't stored.
-func fetchMasterHDKeys(ns walletdb.ReadBucket) ([]byte, []byte, error) {
-	bucket := ns.NestedReadBucket(mainBucketName)
-
-	var masterHDPrivEnc, masterHDPubEnc []byte
-
-	// First, we'll try to fetch the master private key. If this database
-	// is watch only, or the master has been neutered, then this won't be
-	// found on disk.
-	key := bucket.Get(masterHDPrivName)
-	if key != nil {
-		masterHDPrivEnc = make([]byte, len(key))
-		copy(masterHDPrivEnc[:], key)
-	}
-
-	key = bucket.Get(masterHDPubName)
-	if key != nil {
-		masterHDPubEnc = make([]byte, len(key))
-		copy(masterHDPubEnc[:], key)
-	}
-
-	return masterHDPrivEnc, masterHDPubEnc, nil
-}
 
 // fetchCryptoKeys loads the encrypted crypto keys which are in turn used to
 // protect the extended keys, imported keys, and scripts.  Any of the returned
@@ -845,155 +807,6 @@ func serializeScriptAddress(encryptedHash, encryptedScript []byte) []byte {
 	offset += 4
 	copy(rawData[offset:offset+scriptLen], encryptedScript)
 	return rawData
-}
-
-// deletePrivateKeys removes all private key material from the database.
-//
-// NOTE: Care should be taken when calling this function.  It is primarily
-// intended for use in converting to a watching-only copy.  Removing the private
-// keys from the main database without also marking it watching-only will result
-// in an unusable database.  It will also make any imported scripts and private
-// keys unrecoverable unless there is a backup copy available.
-func deletePrivateKeys(ns walletdb.ReadWriteBucket) error {
-	bucket := ns.NestedReadWriteBucket(mainBucketName)
-
-	// Delete the master private key params and the crypto private and
-	// script keys.
-	if err := bucket.Delete(masterPrivKeyName); err != nil {
-		str := "failed to delete master private key parameters"
-		return managerError(ErrDatabase, str, err)
-	}
-	if err := bucket.Delete(cryptoPrivKeyName); err != nil {
-		str := "failed to delete crypto private key"
-		return managerError(ErrDatabase, str, err)
-	}
-	if err := bucket.Delete(cryptoScriptKeyName); err != nil {
-		str := "failed to delete crypto script key"
-		return managerError(ErrDatabase, str, err)
-	}
-	if err := bucket.Delete(masterHDPrivName); err != nil {
-		str := "failed to delete master HD priv key"
-		return managerError(ErrDatabase, str, err)
-	}
-
-	// With the master key and meta encryption keys deleted, we'll need to
-	// delete the keys for all known scopes as well.
-	scopeBucket := ns.NestedReadWriteBucket(scopeBucketName)
-	err := scopeBucket.ForEach(func(scopeKey, _ []byte) error {
-		if len(scopeKey) != 8 {
-			return nil
-		}
-
-		managerScopeBucket := scopeBucket.NestedReadWriteBucket(scopeKey)
-
-		if err := managerScopeBucket.Delete(coinTypePrivKeyName); err != nil {
-			str := "failed to delete cointype private key"
-			return managerError(ErrDatabase, str, err)
-		}
-
-		// Delete the account extended private key for all accounts.
-		bucket = managerScopeBucket.NestedReadWriteBucket(acctBucketName)
-		err := bucket.ForEach(func(k, v []byte) error {
-			// Skip buckets.
-			if v == nil {
-				return nil
-			}
-
-			// Deserialize the account row first to determine the type.
-			row, err := deserializeAccountRow(k, v)
-			if err != nil {
-				return err
-			}
-
-			switch row.acctType {
-			case accountDefault:
-				arow, err := deserializeDefaultAccountRow(k, row)
-				if err != nil {
-					return err
-				}
-
-				// Reserialize the account without the private key and
-				// store it.
-				row.rawData = serializeDefaultAccountRow(
-					arow.pubKeyEncrypted, nil,
-					arow.nextExternalIndex, arow.nextInternalIndex,
-					arow.name,
-				)
-				err = bucket.Put(k, serializeAccountRow(row))
-				if err != nil {
-					str := "failed to delete account private key"
-					return managerError(ErrDatabase, str, err)
-				}
-			}
-
-			return nil
-		})
-		if err != nil {
-			return maybeConvertDbError(err)
-		}
-
-		// Delete the private key for all imported addresses.
-		bucket = managerScopeBucket.NestedReadWriteBucket(addrBucketName)
-		err = bucket.ForEach(func(k, v []byte) error {
-			// Skip buckets.
-			if v == nil {
-				return nil
-			}
-
-			// Deserialize the address row first to determine the field
-			// values.
-			row, err := deserializeAddressRow(v)
-			if err != nil {
-				return err
-			}
-
-			switch row.addrType {
-			case adtImport:
-				irow, err := deserializeImportedAddress(row)
-				if err != nil {
-					return err
-				}
-
-				// Reserialize the imported address without the private
-				// key and store it.
-				row.rawData = serializeImportedAddress(
-					irow.encryptedPubKey, nil)
-				err = bucket.Put(k, serializeAddressRow(row))
-				if err != nil {
-					str := "failed to delete imported private key"
-					return managerError(ErrDatabase, str, err)
-				}
-
-			case adtScript:
-				srow, err := deserializeScriptAddress(row)
-				if err != nil {
-					return err
-				}
-
-				// Reserialize the script address without the script
-				// and store it.
-				row.rawData = serializeScriptAddress(srow.encryptedHash,
-					nil)
-				err = bucket.Put(k, serializeAddressRow(row))
-				if err != nil {
-					str := "failed to delete imported script"
-					return managerError(ErrDatabase, str, err)
-				}
-			}
-
-			return nil
-		})
-		if err != nil {
-			return maybeConvertDbError(err)
-		}
-
-		return nil
-	})
-	if err != nil {
-		return maybeConvertDbError(err)
-	}
-
-	return nil
 }
 
 // fetchSyncedTo loads the block stamp the manager is synced to from the
@@ -1492,25 +1305,7 @@ func fetchWriteScopeBucket(ns walletdb.ReadWriteBucket,
 
 	return scopedBucket, nil
 }
-// forEachAccount calls the given function with each account stored in the
-// manager, breaking early on error.
-func forEachAccount(ns walletdb.ReadBucket, scope *KeyScope,
-	fn func(account uint32) error) error {
 
-	scopedBucket, err := fetchReadScopeBucket(ns, scope)
-	if err != nil {
-		return err
-	}
-
-	acctBucket := scopedBucket.NestedReadBucket(acctBucketName)
-	return acctBucket.ForEach(func(k, v []byte) error {
-		// Skip buckets.
-		if v == nil {
-			return nil
-		}
-		return fn(binary.LittleEndian.Uint32(k))
-	})
-}
 // forEachKeyScope calls the given function for each known manager scope
 // within the set of scopes known by the root manager.
 func forEachKeyScope(ns walletdb.ReadBucket, fn func(KeyScope) error) error {
@@ -1896,69 +1691,7 @@ func fetchAddressUsed(ns walletdb.ReadBucket, scope *KeyScope,
 	addrHash := sha256.Sum256(addressID)
 	return bucket.Get(addrHash[:]) != nil
 }
-// markAddressUsed flags the provided address id as used in the database.
-func markAddressUsed(ns walletdb.ReadWriteBucket, scope *KeyScope,
-	addressID []byte) error {
 
-	scopedBucket, err := fetchWriteScopeBucket(ns, scope)
-	if err != nil {
-		return err
-	}
-
-	bucket := scopedBucket.NestedReadWriteBucket(usedAddrBucketName)
-
-	addrHash := sha256.Sum256(addressID)
-	val := bucket.Get(addrHash[:])
-	if val != nil {
-		return nil
-	}
-
-	err = bucket.Put(addrHash[:], []byte{0})
-	if err != nil {
-		str := fmt.Sprintf("failed to mark address used %x", addressID)
-		return managerError(ErrDatabase, str, err)
-	}
-
-	return nil
-}
-// forEachActiveAddress calls the given function with each active address
-// stored in the manager, breaking early on error.
-func forEachActiveAddress(ns walletdb.ReadBucket, scope *KeyScope,
-	fn func(rowInterface interface{}) error) error {
-
-	scopedBucket, err := fetchReadScopeBucket(ns, scope)
-	if err != nil {
-		return err
-	}
-
-	bucket := scopedBucket.NestedReadBucket(addrBucketName)
-
-	err = bucket.ForEach(func(k, v []byte) error {
-		// Skip buckets.
-		if v == nil {
-			return nil
-		}
-
-		// Deserialize the address row first to determine the field
-		// values.
-		addrRow, err := fetchAddressByHash(ns, scope, k)
-		if merr, ok := err.(*ManagerError); ok {
-			desc := fmt.Sprintf("failed to fetch address hash '%s': %v",
-				k, merr.Description)
-			merr.Description = desc
-			return merr
-		}
-		if err != nil {
-			return err
-		}
-
-		return fn(addrRow)
-	})
-	if err != nil {
-		return maybeConvertDbError(err)
-	}
-	return nil
-}
 
 // fetchLastAccount retrieves the last account from the database.
 func fetchLastAccount(ns walletdb.ReadBucket, scope *KeyScope) (uint32, error) {

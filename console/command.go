@@ -53,6 +53,8 @@ func BindFlags() {
 	Command.PersistentFlags().Int64Var(&preCfg.MinTxFee, "mintxfee", fileCfg.MinTxFee, "The minimum transaction fee in AtomMEER/kB default 20000 (aka. 0.0002 Qitmeer/kB)")
 }
 
+
+
 // LoadConfig config file and flags
 func LoadConfig(cmd *cobra.Command, args []string) {
 	// load configfile ane merge command ,but don't udpate configfile
@@ -65,8 +67,6 @@ func LoadConfig(cmd *cobra.Command, args []string) {
 			}
 			return
 		}
-		// log.Error(fmt.Sprintf("config file err: %s", err))
-		// return
 	}
 
 	fileCfg.ConfigFile = preCfg.ConfigFile
@@ -186,7 +186,7 @@ var createNewAccountCmd = &cobra.Command{
 			fmt.Println(err.Error())
 			return
 		}
-		createNewAccount(args[0])
+		_ = createNewAccount(args[0])
 	},
 }
 var getnewaddressCmd = &cobra.Command{
@@ -204,7 +204,7 @@ var getnewaddressCmd = &cobra.Command{
 	},
 }
 
-var getbalanceCmd = &cobra.Command{
+var getBalanceCmd = &cobra.Command{
 	Use:   "getbalance {address} {string ,company : i(int64),f(float),default i } {bool ,detail : true,false,default false }",
 	Short: "getbalance",
 	Example: `
@@ -220,7 +220,7 @@ var getbalanceCmd = &cobra.Command{
 		}
 		company := "i"
 		detail := "false"
-		b, err := getbalance(Default_minconf, args[0])
+		b, err := getBalance( args[0])
 		if err != nil {
 			fmt.Println(err.Error())
 			return
@@ -242,7 +242,6 @@ var getbalanceCmd = &cobra.Command{
 			} else {
 				fmt.Printf("%s\n", b.UnspendAmount.String())
 			}
-			//fmt.Printf("confirm:%s\n",b.ConfirmAmount.String())
 		} else {
 			if detail == "true" {
 				fmt.Printf("unspend:%f\n", b.UnspendAmount.ToCoin())
@@ -252,11 +251,61 @@ var getbalanceCmd = &cobra.Command{
 			} else {
 				fmt.Printf("%f\n", b.UnspendAmount.ToCoin())
 			}
-			//fmt.Printf("confirm:%f\n",b.UnspendAmount.ToCoin())
 		}
 
 	},
 }
+
+var getTxSpendInfoCmd = &cobra.Command{
+	Use:   "gettxspendinfo {txId} {index}",
+	Short: "gettxspendinfo",
+	Example: `
+		gettxspendinfo 10c710ffcdf3bea9a21656c26fc0dd5796cb3d0b60aafb2ede49ca1248e9aa0d
+		gettxspendinfo 10c710ffcdf3bea9a21656c26fc0dd5796cb3d0b60aafb2ede49ca1248e9aa0d	0
+		`,
+	Args: cobra.MinimumNArgs(1),
+	Run: func(cmd *cobra.Command, args []string) {
+		err := OpenWallet()
+		if err != nil {
+			fmt.Println(err.Error())
+			return
+		}
+		b, err := GetTxSpendInfo( args[0])
+		if err != nil {
+			fmt.Println(err.Error())
+			return
+		}
+		if len(args) > 1 {
+			index, err :=  strconv.ParseInt(args[1], 10, 64)
+			if err != nil {
+				log.Error("Argument is not of type int")
+				return
+			}
+			if len(b)<int(index+1){
+				log.Error("Index out of array range")
+				return
+			}else{
+				if b[index].SpendTo == nil{
+					fmt.Printf("addr:%v,txid:%v,index:%v,unspend\n",b[index].Address,b[index].TxId,b[index].Index)
+				}else{
+					fmt.Printf("addr:%v,txid:%v,index:%v,spend to: txid:%v,index:%v\n",b[index].Address,b[index].TxId,b[index].Index,b[index].SpendTo.TxHash,b[index].SpendTo.Index)
+				}
+				return
+			}
+		}else{
+			for _, output := range b {
+				if output.SpendTo == nil{
+					fmt.Printf("addr:%v,txid:%v,index:%v,unspend\n",output.Address,output.TxId,output.Index)
+				}else{
+					fmt.Printf("addr:%v,txid:%v,index:%v,spendto: txid:%v,index:%v\n",output.Address,output.TxId,output.Index,output.SpendTo.TxHash,output.SpendTo.Index)
+				}
+				return
+			}
+		}
+
+	},
+}
+
 var sendToAddressCmd = &cobra.Command{
 	Use:   "sendtoaddress {address} {amount} {pripassword} ",
 	Short: "send transaction ",
@@ -319,10 +368,10 @@ var getAddressesByAccountCmd=&cobra.Command{
 	},
 }
 var importPriKeyCmd = &cobra.Command{
-	Use:   "importprivkey {prikey} {pripassword}",
-	Short: "import prikey ",
+	Use:   "importprivkey {priKey} {pripassword}",
+	Short: "import priKey ",
 	Example: `
-		importprivkey prikey pripassword
+		importprivkey priKey pripassword
 		`,
 	Args: cobra.MinimumNArgs(2),
 	Run: func(cmd *cobra.Command, args []string) {
@@ -352,7 +401,7 @@ var listAccountsBalanceCmd = &cobra.Command{
 			fmt.Println(err.Error())
 			return
 		}
-		listAccountsBalance(Default_minconf)
+		listAccountsBalance()
 	},
 }
 var getlisttxbyaddrCmd = &cobra.Command{
@@ -380,7 +429,7 @@ var getlisttxbyaddrCmd = &cobra.Command{
 				stype = int32(2)
 			}
 		}
-		getlisttxbyaddr(args[0], int32(-1), int32(100), stype)
+		getListTxByAddr(args[0], int32(-1), int32(100), stype)
 	},
 }
 var updateblockCmd = &cobra.Command{
@@ -454,11 +503,6 @@ var webCmd = &cobra.Command{
 		`,
 	Args: cobra.NoArgs,
 	Run: func(cmd *cobra.Command, args []string) {
-		// b:=checkWalletIeExist(config.Cfg)
-		// if b ==false{
-		// 	fmt.Println("Please create a wallet first,[qitmeer-wallet qc create ]")
-		// 	return
-		// }
 		fmt.Println("web model")
 		qitmeerMain(fileCfg)
 	},
@@ -492,7 +536,7 @@ func init() {
 	Command.AddCommand(createWalletCmd)
 	Command.AddCommand(createNewAccountCmd)
 	Command.AddCommand(getnewaddressCmd)
-	Command.AddCommand(getbalanceCmd)
+	Command.AddCommand(getBalanceCmd)
 	Command.AddCommand(getlisttxbyaddrCmd)
 	Command.AddCommand(updateblockCmd)
 	Command.AddCommand(syncheightCmd)
@@ -502,6 +546,7 @@ func init() {
 	Command.AddCommand(listAccountsBalanceCmd)
 	Command.AddCommand(consoleCmd)
 	Command.AddCommand(getTxByTxIdCmd)
+	Command.AddCommand(getTxSpendInfoCmd)
 	Command.AddCommand(webCmd)
 	Command.AddCommand(QxCmd)
 

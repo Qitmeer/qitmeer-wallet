@@ -8,8 +8,8 @@ package txrules
 
 import (
 	"errors"
-	"github.com/Qitmeer/qitmeer/core/types"
 	"github.com/Qitmeer/qitmeer/core/serialization"
+	"github.com/Qitmeer/qitmeer/core/types"
 	"github.com/Qitmeer/qitmeer/engine/txscript"
 )
 
@@ -65,9 +65,6 @@ var (
 	ErrOutputIsDust     = errors.New("transaction output is dust")
 )
 const (
-	// SatoshiPerBitcent is the number of satoshi in one bitcoin cent.
-	SatoshiPerBitcent = 1e6
-
 	// SatoshiPerBitcoin is the number of satoshi in one bitcoin (1 BTC).
 	SatoshiPerBitcoin = 1e8
 

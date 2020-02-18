@@ -1,23 +1,20 @@
-// Copyright (c) 2016 The btcsuite developers
-// Use of this source code is governed by an ISC
-// license that can be found in the LICENSE file.
 
 package wtxmgr
 
 import (
+	"github.com/Qitmeer/qitmeer/common/hash"
 	"github.com/Qitmeer/qitmeer/core/types"
-	chainhash "github.com/Qitmeer/qitmeer/common/hash"
 )
 
 type graphNode struct {
 	value    *types.Transaction
-	outEdges []*chainhash.Hash
+	outEdges []*hash.Hash
 	inDegree int
 }
 
-type hashGraph map[chainhash.Hash]graphNode
+type hashGraph map[hash.Hash]graphNode
 
-func makeGraph(set map[chainhash.Hash]*types.Transaction) hashGraph {
+func makeGraph(set map[hash.Hash]*types.Transaction) hashGraph {
 	graph := make(hashGraph)
 
 	for _, tx := range set {
@@ -83,9 +80,7 @@ func graphRoots(graph hashGraph) []*types.Transaction {
 	return roots
 }
 
-// DependencySort topologically sorts a set of transactions by their dependency
-// order. It is implemented using Kahn's algorithm.
-func DependencySort(txs map[chainhash.Hash]*types.Transaction) []*types.Transaction {
+func DependencySort(txs map[hash.Hash]*types.Transaction) []*types.Transaction {
 	graph := makeGraph(txs)
 	s := graphRoots(graph)
 

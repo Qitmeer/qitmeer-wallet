@@ -3,11 +3,11 @@ package waddrmgr
 import (
 	"errors"
 	"fmt"
-	chaincfg "github.com/Qitmeer/qitmeer/params"
-	"time"
-	"github.com/Qitmeer/qitmeer/log"
 	"github.com/Qitmeer/qitmeer-wallet/walletdb"
 	"github.com/Qitmeer/qitmeer-wallet/walletdb/migration"
+	"github.com/Qitmeer/qitmeer/log"
+	chaincfg "github.com/Qitmeer/qitmeer/params"
+	"time"
 )
 
 // versions is a list of the different database versions. The last entry should
@@ -44,13 +44,6 @@ type MigrationManager struct {
 // A compile-time assertion to ensure that MigrationManager implements the
 // migration.Manager interface.
 var _ migration.Manager = (*MigrationManager)(nil)
-
-// NewMigrationManager creates a new migration manager for the address manager.
-// The given bucket should reflect the top-level bucket in which all of the
-// address manager's data is contained within.
-func NewMigrationManager(ns walletdb.ReadWriteBucket) *MigrationManager {
-	return &MigrationManager{ns: ns}
-}
 
 // Name returns the name of the service we'll be attempting to upgrade.
 //
@@ -111,38 +104,6 @@ func upgradeToVersion2(ns walletdb.ReadWriteBucket) error {
 }
 
 
-// migrateRecursively moves a nested bucket from one bucket to another,
-// recursing into nested buckets as required.
-func migrateRecursively(src, dst walletdb.ReadWriteBucket,
-	bucketKey []byte) error {
-	// Within this bucket key, we'll migrate over, then delete each key.
-	bucketToMigrate := src.NestedReadWriteBucket(bucketKey)
-	newBucket, err := dst.CreateBucketIfNotExists(bucketKey)
-	if err != nil {
-		return err
-	}
-	err = bucketToMigrate.ForEach(func(k, v []byte) error {
-		if nestedBucket := bucketToMigrate.
-			NestedReadBucket(k); nestedBucket != nil {
-			// We have a nested bucket, so recurse into it.
-			return migrateRecursively(bucketToMigrate, newBucket, k)
-		}
-
-		if err := newBucket.Put(k, v); err != nil {
-			return err
-		}
-
-		return bucketToMigrate.Delete(k)
-	})
-	if err != nil {
-		return err
-	}
-	// Finally, we'll delete the bucket itself.
-	if err := src.DeleteNestedBucket(bucketKey); err != nil {
-		return err
-	}
-	return nil
-}
 
 // populateBirthdayBlock is a migration that attempts to populate the birthday
 // block of the wallet. This is needed so that in the event that we need to
@@ -199,7 +160,7 @@ func populateBirthdayBlock(ns walletdb.ReadWriteBucket) error {
 	// With the timestamps retrieved, we can estimate a block height by
 	// taking the difference between them and dividing by the average block
 	// time (10 minutes).
-	birthdayHeight := int32((birthdayTimestamp.Sub(genesisTimestamp).Seconds() / 600))
+	birthdayHeight := int32(birthdayTimestamp.Sub(genesisTimestamp).Seconds() / 600)
 
 	// Now that we have the height estimate, we can fetch the corresponding
 	// block and set it as our birthday block.

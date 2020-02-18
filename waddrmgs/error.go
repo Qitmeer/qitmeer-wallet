@@ -15,11 +15,6 @@ var (
 	// ErrAlreadyExists error code.
 	errAlreadyExists = "the specified address manager already exists"
 
-	// errCoinTypeTooHigh is the common error description used for the
-	// ErrCoinTypeTooHigh error code.
-	errCoinTypeTooHigh = "coin type may not exceed " +
-		strconv.FormatUint(1, 10)
-
 	// errAcctTooHigh is the common error description used for the
 	// ErrAccountNumTooHigh error code.
 	errAcctTooHigh = "account number may not exceed " +
@@ -205,10 +200,6 @@ func (e ManagerError) Error() string {
 func managerError(c ErrorCode, desc string, err error) ManagerError {
 	return ManagerError{ErrorCode: c, Description: desc, Err: err}
 }
-
-// Break is a global err used to signal a break from the callback
-// function by returning an error with the code ErrCallBackBreak
-var Break = managerError(ErrCallBackBreak, "callback break", nil)
 
 // IsError returns whether the error is a ManagerError with a matching error
 // code.

@@ -6,9 +6,11 @@ import (
 	"crypto/x509"
 	"encoding/json"
 	"fmt"
+	"github.com/Qitmeer/qitmeer/log"
 	"io/ioutil"
 	"net"
 	"net/http"
+	"strconv"
 	"strings"
 
 	qJson "github.com/Qitmeer/qitmeer/core/json"
@@ -19,7 +21,9 @@ import (
 	"github.com/samuel/go-socks/socks"
 )
 
-type htpc struct {
+
+
+type httpConfig struct {
 	RPCUser       string
 	RPCPassword   string
 	RPCServer     string
@@ -30,11 +34,19 @@ type htpc struct {
 	Proxy      string
 	ProxyUser  string
 	ProxyPass  string
-	httpclient *http.Client
+	httpClient *http.Client
 }
 
+const (
+	strIntBase           = 10
+	strIntBitSize32        =32
+	syncDiffNum          = 200
+)
+
+
+
 // NewHtpc make qitmeerd http client
-func NewHtpc() (*htpc, error) {
+func NewHtpc() (*httpConfig, error) {
 
 	if config.Cfg.QitmeerdSelect != "" {
 		var qitmeerd *client.Config
@@ -48,7 +60,7 @@ func NewHtpc() (*htpc, error) {
 		}
 	}
 
-	h := &htpc{
+	h := &httpConfig{
 		RPCUser:       config.Cfg.QUser,
 		RPCPassword:   config.Cfg.QPass,
 		RPCServer:     config.Cfg.QServer,
@@ -63,13 +75,13 @@ func NewHtpc() (*htpc, error) {
 	if err != nil {
 		return nil, err
 	}
-	h.httpclient = c
+	h.httpClient = c
 	return h, nil
 }
 
-// NewHtpcByCfg new htpc by cfg
-func NewHtpcByCfg(cfg *client.Config) (*htpc, error) {
-	h := &htpc{
+// NewHtpcByCfg new httpConfig by cfg
+func NewHtpcByCfg(cfg *client.Config) (*httpConfig, error) {
+	h := &httpConfig{
 		RPCUser:       cfg.RPCUser,
 		RPCPassword:   cfg.RPCPassword,
 		RPCServer:     cfg.RPCServer,
@@ -84,13 +96,13 @@ func NewHtpcByCfg(cfg *client.Config) (*htpc, error) {
 	if err != nil {
 		return nil, err
 	}
-	h.httpclient = c
+	h.httpClient = c
 	return h, nil
 }
 
 // newHTTPClient returns a new HTTP client that is configured according to the
 // proxy and TLS settings in the associated connection configuration.
-func newHTTPClient(cfg *htpc) (*http.Client, error) {
+func newHTTPClient(cfg *httpConfig) (*http.Client, error) {
 	// Configure proxy if needed.
 	var dial func(network, addr string) (net.Conn, error)
 	if cfg.Proxy != "" {
@@ -131,47 +143,69 @@ func newHTTPClient(cfg *htpc) (*http.Client, error) {
 
 	// Create and return the new HTTP client potentially configured with a
 	// proxy and TLS.
-	client := http.Client{
+	c := http.Client{
 		Transport: &http.Transport{
 			Dial:            dial,
 			TLSClientConfig: tlsConfig,
 		},
 	}
-	return &client, nil
+	return &c, nil
 }
 
-func (cfg *htpc) getblockCount() (string, error) {
-	params := []interface{}{}
+func (cfg *httpConfig) CheckSyncUpdate(localheight int64) (bool, error) {
+	var params []interface{}
+	str,err:=cfg.getResString("getBlockCount", params)
+	if err!=nil{
+		return false,err
+	}
+	blockHeight, err := strconv.ParseInt(str, strIntBase, strIntBitSize32)
+	if err != nil {
+		return false,err
+	}
+	log.Trace(fmt.Sprintf("blockheight:%v,localheight:%v",blockHeight,localheight))
+	if (blockHeight-localheight) < (config.Cfg.Confirmations+syncDiffNum){
+		return true, nil
+	}else{
+		return false,fmt.Errorf("db Update incomplete")
+	}
+}
+
+func (cfg *httpConfig) getblockCount() (string, error) {
+	var params []interface{}
 	return cfg.getResString("getBlockCount", params)
 }
-func (cfg *htpc) getMempool() (string, error) {
+func (cfg *httpConfig) getMempool() (string, error) {
 	params := []interface{}{"", false}
 	return cfg.getResString("getMempool", params)
 }
-func (cfg *htpc) getRawTransaction(txhash string) (string, error) {
+func (cfg *httpConfig) getRawTransaction(txhash string) (string, error) {
 	params := []interface{}{txhash, true}
 	return cfg.getResString("getRawTransaction", params)
 }
-func (cfg *htpc) getBlockhash(i int64) (string, error) {
+func (cfg *httpConfig) getBlockhash(i int64) (string, error) {
 	params := []interface{}{i}
 	str, err := cfg.getResString("getBlockhash", params)
 	return strings.Replace(str, "\"", "", -1), err
 }
-func (cfg *htpc) getBlock(hash string, isDetail bool) (string, error) {
+func (cfg *httpConfig) getBlock(hash string, isDetail bool) (string, error) {
 	params := []interface{}{hash, isDetail}
 	return cfg.getResString("getBlock", params)
 }
-func (cfg *htpc) getBlockByOrder(i int64) ([]byte, error) {
+func (cfg *httpConfig) getBlockByOrder(i int64) ([]byte, error) {
 	params := []interface{}{i, true}
 	return cfg.getResByte("getBlockByOrder", params)
 }
-func (cfg *htpc) SendRawTransaction(tx string, allowHighFees bool) (string, error) {
+func (cfg *httpConfig) isBlue(blockHash string) (string, error) {
+	params := []interface{}{blockHash}
+	return cfg.getResString("isBlue", params)
+}
+func (cfg *httpConfig) SendRawTransaction(tx string, allowHighFees bool) (string, error) {
 	params := []interface{}{tx, allowHighFees}
 	return cfg.getResString("sendRawTransaction", params)
 }
 
-func (cfg *htpc) GetNodeInfo() (*qJson.InfoNodeResult, error) {
-	params := []interface{}{}
+func (cfg *httpConfig) GetNodeInfo() (*qJson.InfoNodeResult, error) {
+	var params []interface{}
 	buf, err := cfg.getResByte("getNodeInfo", params)
 	if err != nil {
 		return nil, err
@@ -189,7 +223,7 @@ func (cfg *htpc) GetNodeInfo() (*qJson.InfoNodeResult, error) {
 // to the server described in the passed config struct.  It also attempts to
 // unmarshal the response as a JSON-RPC response and returns either the result
 // field or the error field depending on whether or not there is an error.
-func (cfg *htpc) sendPostRequest(marshalledJSON []byte) ([]byte, error) {
+func (cfg *httpConfig) sendPostRequest(marshalledJSON []byte) ([]byte, error) {
 	// Generate a request to the configured RPC server.
 	protocol := "http"
 	if !cfg.NoTLS {
@@ -210,19 +244,15 @@ func (cfg *htpc) sendPostRequest(marshalledJSON []byte) ([]byte, error) {
 	// Configure basic access authorization.
 	httpRequest.SetBasicAuth(cfg.RPCUser, cfg.RPCPassword)
 
-	// Create the new HTTP client that is configured according to the user-
-	// specified options and submit the request.
-	if err != nil {
-		return nil, fmt.Errorf("sendPostRequest: newHTTPClient err: %s", err)
-	}
-	httpResponse, err := cfg.httpclient.Do(httpRequest)
+
+	httpResponse, err := cfg.httpClient.Do(httpRequest)
 	if err != nil {
 		return nil, fmt.Errorf("sendPostRequest: httpClient.Do err: %s", err)
 	}
 
 	// Read the raw bytes and close the response.
 	respBytes, err := ioutil.ReadAll(httpResponse.Body)
-	httpResponse.Body.Close()
+	_ = httpResponse.Body.Close()
 	if err != nil {
 		return nil, fmt.Errorf("sendPostRequest: reading json reply: err: %v", err)
 	}
@@ -337,7 +367,7 @@ func IsValidIDType(id interface{}) bool {
 
 var rpcVersion string = "1.0"
 
-func (cfg *htpc) getResString(method string, args []interface{}) (rs string, err error) {
+func (cfg *httpConfig) getResString(method string, args []interface{}) (rs string, err error) {
 	reqData, err := makeRequestData(rpcVersion, 1, method, args)
 	if err != nil {
 		err = fmt.Errorf("getResString [%s]: %s", method, err)
@@ -354,7 +384,7 @@ func (cfg *htpc) getResString(method string, args []interface{}) (rs string, err
 	//log.Info("rs:",rs)
 	return rs, err
 }
-func (cfg *htpc) getResByte(method string, args []interface{}) (rs []byte, err error) {
+func (cfg *httpConfig) getResByte(method string, args []interface{}) (rs []byte, err error) {
 	reqData, err := makeRequestData(rpcVersion, 1, method, args)
 	if err != nil {
 		err = fmt.Errorf("getResString [%s]: %s", method, err)

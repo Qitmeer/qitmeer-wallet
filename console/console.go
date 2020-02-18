@@ -4,16 +4,15 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	waddrmgr "github.com/Qitmeer/qitmeer-wallet/waddrmgs"
-	"github.com/Qitmeer/qitmeer/crypto/bip39"
-	"github.com/Qitmeer/qitmeer/crypto/ecc/secp256k1"
-
 	"github.com/Qitmeer/qitmeer-wallet/config"
 	"github.com/Qitmeer/qitmeer-wallet/json/qitmeerjson"
 	"github.com/Qitmeer/qitmeer-wallet/rpc/walletrpc"
 	"github.com/Qitmeer/qitmeer-wallet/util"
-	qjson "github.com/Qitmeer/qitmeer-wallet/json"
+	waddrmgr "github.com/Qitmeer/qitmeer-wallet/waddrmgs"
 	"github.com/Qitmeer/qitmeer-wallet/wallet"
+	"github.com/Qitmeer/qitmeer-wallet/wtxmgr"
+	"github.com/Qitmeer/qitmeer/crypto/bip39"
+	"github.com/Qitmeer/qitmeer/crypto/ecc/secp256k1"
 	"github.com/Qitmeer/qitmeer/qx"
 	"path/filepath"
 	"runtime"
@@ -21,7 +20,6 @@ import (
 
 const (
 	Name     = "wallet-cli:"
-	Default_minconf =16
 )
 var w *wallet.Wallet
 var isWin = runtime.GOOS == "windows"
@@ -99,14 +97,14 @@ func printHelp() {
 	fmt.Println("\t<command> [arguments]")
 	fmt.Println("\tThe commands are:")
 	fmt.Println("\t<createNewAccount> : Create a new account. Parameter: [account]")
-	fmt.Println("\t<getbalance> : Query the specified address balance. Parameter: [address]")
+	fmt.Println("\t<getBalance> : Query the specified address balance. Parameter: [address]")
 	//fmt.Println("\t<listAccountsBalance> : Obtain all account balances. Parameter: []")
-	fmt.Println("\t<getlisttxbyaddr> : Gets all transaction records at the specified address. Parameter: [address] [stype:in,out,all]")
+	fmt.Println("\t<getListTxByAddr> : Gets all transaction records at the specified address. Parameter: [address] [stype:in,out,all]")
 	fmt.Println("\t<getNewAddress> : Create a new address under the account. Parameter: [account]")
 	fmt.Println("\t<getAddressesByAccount> : Check all addresses under the account. Parameter: [account]")
 	fmt.Println("\t<getAccountByAddress> : Inquire about the account number of the address. Parameter: [address]")
-	fmt.Println("\t<importPrivKey> : Import private key. Parameter: [prikey]")
-	fmt.Println("\t<importWifPrivKey> : Import wif format private key. Parameter: [prikey]")
+	fmt.Println("\t<importPrivKey> : Import private key. Parameter: [priKey]")
+	fmt.Println("\t<importWifPrivKey> : Import wif format private key. Parameter: [priKey]")
 	fmt.Println("\t<dumpPrivKey> : Export wif format private key by address. Parameter: [address]")
 	fmt.Println("\t<getAccountAndAddress> : Check all accounts and addresses. Parameter: []")
 	fmt.Println("\t<sendToAddress> : Transfer transaction. Parameter: [address] [num]")
@@ -146,24 +144,32 @@ func createNewAccount(arg string) error {
 	fmt.Printf("%s",msg)
 	return nil
 }
-func getbalance(minconf int ,addr string) ( *wallet.Balance, error){
+func getBalance(addr string) ( *wallet.Balance, error){
 	cmd:=&qitmeerjson.GetBalanceByAddressCmd{
 		Address:addr,
-		MinConf:minconf,
 	}
-	b,err:=walletrpc.Getbalance(cmd,w)
-	if(err!=nil){
-		fmt.Println("getbalance","err",err.Error())
+	b,err:=walletrpc.GetBalance(cmd,w)
+	if err!=nil {
+		fmt.Println("getBalance","err",err.Error())
 		return nil,err
 	}
 	r:=b.(*wallet.Balance)
 	return r, nil
 }
-func  listAccountsBalance(min int)( interface{}, error){
-	cmd:=&qitmeerjson.ListAccountsCmd{
-		MinConf:&min,
+
+func GetTxSpendInfo(txId string) ( []*wtxmgr.AddrTxOutput, error){
+	b,err:=walletrpc.GetTxSpendInfo(txId,w)
+	if err!=nil {
+		fmt.Println("GetTxSpendInfo","err",err.Error())
+		return nil,err
 	}
-	msg, err := walletrpc.ListAccounts(cmd, w)
+	r:=b.([]*wtxmgr.AddrTxOutput)
+	return r, nil
+}
+
+
+func  listAccountsBalance()( interface{}, error){
+	msg, err := walletrpc.ListAccounts( w)
 	if err != nil {
 		fmt.Println("listAccountsBalance","err", err.Error())
 		return nil, err
@@ -174,28 +180,16 @@ func  listAccountsBalance(min int)( interface{}, error){
 	return msg, nil
 }
 
-func getlisttxbyaddr(addr string,page int32,pageSize int32,stype int32)( interface{}, error){
+func getListTxByAddr(addr string,page int32,pageSize int32, sType int32)( interface{}, error){
 	cmd:=&qitmeerjson.GetListTxByAddrCmd{
-		Address:addr,
-		Stype:stype,
-		Page:page,
-		PageSize:pageSize,
+		Address:  addr,
+		Stype:    sType,
+		Page:     page,
+		PageSize: pageSize,
 	}
-	result, err := walletrpc.Getlisttxbyaddr(cmd, w)
+	result, err := walletrpc.GetListTxByAddr(cmd, w)
 	if err != nil {
-		fmt.Println("getlisttxbyaddr","err", err.Error())
 		return nil, err
-	}else{
-		a:=result.(*qjson.PageTxRawResult)
-		fmt.Printf("total:%v\n",a.Total)
-		for _, t := range a.Transactions {
-			b,err:=json.Marshal(t)
-			if err!=nil{
-				fmt.Println("getlisttxbyaddr err:",err.Error())
-				return nil, err
-			}
-			fmt.Printf("%s\n",string(b),)
-		}
 	}
 	return result, nil
 }
@@ -203,7 +197,7 @@ func getlisttxbyaddr(addr string,page int32,pageSize int32,stype int32)( interfa
 func getNewAddress(account string) (interface{}, error) {
 	if account == waddrmgr.ImportedAddrAccountName{
 		fmt.Sprintf("Imported account cannot generate address")
-		return nil,fmt.Errorf("Imported account cannot generate address")
+		return nil,fmt.Errorf("imported account cannot generate address")
 	}
 	if account==""{
 		account = "default"
@@ -263,13 +257,13 @@ func getTx(txid string) (interface{}, error) {
 	return msg, nil
 }
 
-func importPrivKey(privKey string) (interface{}, error) {
+func importPrivKey(priKey string) (interface{}, error) {
 	v := false
 	cmd := &qitmeerjson.ImportPrivKeyCmd{
-		PrivKey: privKey,
+		PrivKey: priKey,
 		Rescan:  &v,
 	}
-	msg, err := walletrpc.ImportPrivKey(cmd, w)
+	msg, err := walletrpc.ImportPrimKey(cmd, w)
 	if err != nil {
 		fmt.Println("importPrivKey","err", err.Error())
 		return nil, err
@@ -277,10 +271,10 @@ func importPrivKey(privKey string) (interface{}, error) {
 	fmt.Printf("%s\n",msg)
 	return msg, nil
 }
-func importWifPrivKey(wifprivKey string) (interface{}, error) {
+func importWifPrivKey(wifPriKey string) (interface{}, error) {
 	v := false
 	cmd := &qitmeerjson.ImportPrivKeyCmd{
-		PrivKey: wifprivKey,
+		PrivKey: wifPriKey,
 		Rescan:  &v,
 	}
 	msg, err := walletrpc.ImportWifPrivKey(cmd, w)
@@ -303,8 +297,8 @@ func dumpPrivKey(address string) (interface{}, error) {
 	fmt.Printf("%s\n",msg)
 	return msg, nil
 }
-func getAccountAndAddress(minconf int32) (interface{}, error) {
-	msg, err := walletrpc.GetAccountAndAddress(w, minconf)
+func getAccountAndAddress() (interface{}, error) {
+	msg, err := walletrpc.GetAccountAndAddress(w)
 	if err != nil {
 		fmt.Println("err:", err.Error())
 		return nil, err
@@ -334,7 +328,7 @@ func updateblock(height int64)(  error){
 	cmd:=&qitmeerjson.UpdateBlockToCmd{
 		Toheight:height,
 	}
-	err := walletrpc.Updateblock(cmd, w)
+	err := walletrpc.UpdateBlock(cmd, w)
 	if err != nil {
 		fmt.Println("updateblock:","error", err.Error())
 		return err

@@ -1,6 +1,3 @@
-// Copyright (c) 2015-2016 The btcsuite developers
-// Use of this source code is governed by an ISC
-// license that can be found in the LICENSE file.
 
 package wallet
 
@@ -98,7 +95,7 @@ func (l *Loader) RunAfterLoad(fn func(*Wallet)) {
 	}
 }
 
-func (l *Loader) OpenWallet(bday time.Time) (*Wallet, error) {
+func (l *Loader) OpenWallet() (*Wallet, error) {
 	b, err := l.WalletExists()
 	if err != nil {
 		return nil, err
@@ -221,7 +218,7 @@ func (l *Loader) OpenExistingWallet(pubPassphrase []byte, canConsolePrompt bool)
 		return nil, err
 	}
 	log.Trace("OpenExistingWallet", "open ok", true)
-	w.Httpclient, err = NewHtpc()
+	w.HttpClient, err = NewHtpc()
 	if err != nil {
 		log.Error(fmt.Sprintf("wallet start, NewHtpc err: %s", err))
 		return nil, err

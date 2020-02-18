@@ -1,13 +1,3 @@
-// Copyright (c) 2013-2014 The qitmeer developers
-// Use of this source code is governed by an ISC
-// license that can be found in the LICENSE file.
-
-//
-// qitmeer-wallet RPC or UI model
-//
-// 1. RPC, walllet should be create firest by command and start wallet with wallet pass
-// 2. UI, UI should open wallet self.
-
 package wserver
 
 import (
@@ -79,8 +69,6 @@ func NewWalletServer(cfg *config.Config) (wSvr *WalletServer, err error) {
 		cfg: cfg,
 
 		WtLoader: wtLoader,
-		// wt:     &wallet.Wallet{},
-
 		exitCh: make(chan bool),
 	}
 
@@ -112,7 +100,6 @@ func NewWalletServer(cfg *config.Config) (wSvr *WalletServer, err error) {
 	return
 }
 
-//
 func (wSvr *WalletServer) run() {
 	defer func() {
 		if rev := recover(); rev != nil {
@@ -165,13 +152,11 @@ func (wSvr *WalletServer) run() {
 
 		//ajx post options
 		router.OPTIONS("/api", func(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
-			//log.Trace("api OPTIONS")
 			if r.Header.Get("Origin") == "http://127.0.0.1:8080" {
 				w.Header().Set("Access-Control-Allow-Origin", "http://127.0.0.1:8080")
 			} else {
 				w.Header().Set("Access-Control-Allow-Origin", "http://localhost:8080")
 			}
-			//w.Header().Set("Access-Control-Allow-Origin", "http://127.0.0.1:8080")
 			w.Header().Set("Access-Control-Allow-Credentials", "true")
 			w.Header().Set("Access-Control-Allow-Methods", "GET,HEAD,OPTIONS,POST,PUT")
 			w.Header().Set("Access-Control-Allow-Headers", "Access-Control-Allow-Headers, Origin, Accept, X-Requested-With, Content-Type, Access-Control-Request-Method, Access-Control-Request-Headers, Authorization")
@@ -193,7 +178,6 @@ func (wSvr *WalletServer) run() {
 		}()
 	}
 
-	// ``go wSvr.GetQitmeerdStatus()``
 }
 
 // HandleAPI RPC Method

@@ -10,8 +10,7 @@ import (
 	"os"
 	"time"
 
-	//"github.com/coreos/bbolt"
-	bbolt "go.etcd.io/bbolt"
+	"go.etcd.io/bbolt"
 
 	"github.com/Qitmeer/qitmeer-wallet/walletdb"
 )
@@ -350,7 +349,7 @@ func openDB(dbPath string, create bool) (walletdb.DB, error) {
 
 	boltDB, err := bbolt.Open(dbPath, 0600, &bbolt.Options{Timeout:10*time.Second})
 	if err!=nil && err.Error()=="timeout"{
-		return (*db)(boltDB), fmt.Errorf("DB is already in use, please check if other modes are running.")
+		return (*db)(boltDB), fmt.Errorf("db is already in use, please check if other modes are running.")
 	}
 	return (*db)(boltDB), convertErr(err)
 }

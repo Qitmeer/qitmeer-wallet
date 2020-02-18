@@ -10,57 +10,23 @@ import (
 	"github.com/Qitmeer/qitmeer/core/address"
 	"github.com/Qitmeer/qitmeer/crypto/ecc/secp256k1"
 	"github.com/Qitmeer/qitmeer/log"
-	"github.com/Qitmeer/qitmeer/params"
 
-	//"github.com/Qitmeer/qitmeer-wallet/wallet/txrules"
-
-	//"bytes"
-	//"encoding/base64"
-	//"encoding/hex"
-	//"encoding/json"
-	//"errors"
-	//"fmt"
 	"github.com/Qitmeer/qitmeer-wallet/json/qitmeerjson"
 	waddrmgr "github.com/Qitmeer/qitmeer-wallet/waddrmgs"
 	"github.com/Qitmeer/qitmeer/core/types"
-	"github.com/Qitmeer/qitmeer/engine/txscript"
-
-	//"sync"
-	//"time"
 
 	"github.com/Qitmeer/qitmeer-wallet/wallet"
 )
 
-// confirmed checks whether a transaction at height txHeight has met minconf
-// confirmations for a blockchain at height curHeight.
-func Confirmed(minconf, txHeight, curHeight int32) bool {
-	return Confirms(txHeight, curHeight) >= minconf
-}
 
-// confirms returns the number of confirmations for a transaction in a block at
-// height txHeight (or -1 for an unconfirmed tx) given the chain height
-// curHeight.
-func Confirms(txHeight, curHeight int32) int32 {
-	switch {
-	case txHeight == -1, txHeight > curHeight:
-		return 0
-	default:
-		return curHeight - txHeight + 1
-	}
-}
 
-// requestHandler is a handler function to handle an unmarshaled and parsed
-// request into a marshalable response.  If the error is a *btcjson.RPCError
-// or any of the above special error classes, the server will respond with
-// the JSON-RPC appropiate error code.  All other errors use the wallet
-// catch-all error code, btcjson.ErrRPCWallet.
-type requestHandler func(interface{}, *wallet.Wallet) (interface{}, error)
+
 
 // createNewAccount handles a createnewaccount request by creating and
 // returning a new account. If the last account has no transaction history
 // as per BIP 0044 a new account cannot be created so an error will be returned.
-func CreateNewAccount(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
-	cmd := icmd.(*qitmeerjson.CreateNewAccountCmd)
+func CreateNewAccount(iCmd interface{}, w *wallet.Wallet) (interface{}, error) {
+	cmd := iCmd.(*qitmeerjson.CreateNewAccountCmd)
 
 	// The wildcard * is reserved by the rpc server with the special meaning
 	// of "all accounts", so disallow naming accounts to this string.
@@ -81,11 +47,9 @@ func CreateNewAccount(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
 
 // listAccounts handles a listaccounts request by returning a map of account
 // names to their balances.
-func ListAccounts(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
-	cmd := icmd.(*qitmeerjson.ListAccountsCmd)
-
+func ListAccounts(w *wallet.Wallet) (interface{}, error) {
 	accountBalances := map[string]float64{}
-	results, err := w.AccountBalances(waddrmgr.KeyScopeBIP0044, int32(*cmd.MinConf))
+	results, err := w.AccountBalances(waddrmgr.KeyScopeBIP0044)
 	if err != nil {
 		return nil, err
 	}
@@ -97,13 +61,12 @@ func ListAccounts(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
 	return accountBalances, nil
 }
 
-// getNewAddress handles a getnewaddress request by returning a new
+// getNewAddress handles a GetNewAddress request by returning a new
 // address for an account.  If the account does not exist an appropiate
 // error is returned.
-// TODO: Follow BIP 0044 and warn if number of unused addresses exceeds
 // the gap limit.
-func GetNewAddress(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
-	cmd := icmd.(*qitmeerjson.GetNewAddressCmd)
+func GetNewAddress(iCmd interface{}, w *wallet.Wallet) (interface{}, error) {
+	cmd := iCmd.(*qitmeerjson.GetNewAddressCmd)
 
 	acctName := "default"
 	if cmd.Account != nil {
@@ -127,8 +90,8 @@ func GetNewAddress(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
 // getAddressesByAccount handles a getaddressesbyaccount request by returning
 // all addresses for an account, or an error if the requested account does
 // not exist.
-func GetAddressesByAccount(icmd interface{}, w *wallet.Wallet) ([]string, error) {
-	cmd := icmd.(*qitmeerjson.GetAddressesByAccountCmd)
+func GetAddressesByAccount(iCmd interface{}, w *wallet.Wallet) ([]string, error) {
+	cmd := iCmd.(*qitmeerjson.GetAddressesByAccountCmd)
 
 	account, err := w.AccountNumber(waddrmgr.KeyScopeBIP0044, cmd.Account)
 	if err != nil {
@@ -147,9 +110,8 @@ func GetAddressesByAccount(icmd interface{}, w *wallet.Wallet) ([]string, error)
 	return addrStrs, nil
 }
 
-func GetAccountAndAddress(w *wallet.Wallet,
-	minconf int32) (interface{}, error) {
-	a, err := w.GetAccountAndAddress(waddrmgr.KeyScopeBIP0044, minconf)
+func GetAccountAndAddress(w *wallet.Wallet) (interface{}, error) {
+	a, err := w.GetAccountAndAddress(waddrmgr.KeyScopeBIP0044)
 	if err != nil {
 		return nil, err
 	}
@@ -158,8 +120,8 @@ func GetAccountAndAddress(w *wallet.Wallet,
 
 // getAccount handles a getaccount request by returning the account name
 // associated with a single address.
-func GetAccountByAddress(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
-	cmd := icmd.(*qitmeerjson.GetAccountCmd)
+func GetAccountByAddress(iCmd interface{}, w *wallet.Wallet) (interface{}, error) {
+	cmd := iCmd.(*qitmeerjson.GetAccountCmd)
 
 	addr, err := address.DecodeAddress(cmd.Address)
 	if err != nil {
@@ -179,11 +141,9 @@ func GetAccountByAddress(icmd interface{}, w *wallet.Wallet) (interface{}, error
 	return acctName, nil
 }
 
-// dumpPrivKey handles a dumpprivkey request with the private key
-// for a single address, or an appropiate error if the wallet
-// is locked.
-func DumpPrivKey(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
-	cmd := icmd.(*qitmeerjson.DumpPrivKeyCmd)
+// DumpPrivKey
+func DumpPrivKey(iCmd interface{}, w *wallet.Wallet) (interface{}, error) {
+	cmd := iCmd.(*qitmeerjson.DumpPrivKeyCmd)
 
 	addr, err := address.DecodeAddress(cmd.Address)
 	if err != nil {
@@ -199,10 +159,9 @@ func DumpPrivKey(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
 	return key, err
 }
 
-// importPrivKey handles an importprivkey request by parsing
-// a WIF-encoded private key and adding it to an account.
-func ImportWifPrivKey(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
-	cmd := icmd.(*qitmeerjson.ImportPrivKeyCmd)
+// ImportWifPrivKey
+func ImportWifPrivKey(iCmd interface{}, w *wallet.Wallet) (interface{}, error) {
+	cmd := iCmd.(*qitmeerjson.ImportPrivKeyCmd)
 
 	// Ensure that private keys are only imported to the correct account.
 	//
@@ -226,7 +185,7 @@ func ImportWifPrivKey(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
 	}
 
 	// Import the private key, handling any errors.
-	_, err = w.ImportPrivateKey(waddrmgr.KeyScopeBIP0044, wif, nil, *cmd.Rescan)
+	_, err = w.ImportPrivateKey(waddrmgr.KeyScopeBIP0044, wif)
 	switch {
 	case waddrmgr.IsError(err, waddrmgr.ErrDuplicateAddress):
 		// Do not return duplicate key errors to the client.
@@ -237,8 +196,8 @@ func ImportWifPrivKey(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
 
 	return nil, err
 }
-func ImportPrivKey(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
-	cmd := icmd.(*qitmeerjson.ImportPrivKeyCmd)
+func ImportPrimKey(iCmd interface{}, w *wallet.Wallet) (interface{}, error) {
+	cmd := iCmd.(*qitmeerjson.ImportPrivKeyCmd)
 	// Ensure that private keys are only imported to the correct account.
 	//
 	// Yes, Label is the account name.
@@ -266,7 +225,7 @@ func ImportPrivKey(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
 	}
 
 	// Import the private key, handling any errors.
-	_, err = w.ImportPrivateKey(waddrmgr.KeyScopeBIP0044, wif, nil, *cmd.Rescan)
+	_, err = w.ImportPrivateKey(waddrmgr.KeyScopeBIP0044, wif)
 	switch {
 	case waddrmgr.IsError(err, waddrmgr.ErrDuplicateAddress):
 		// Do not return duplicate key errors to the client.
@@ -283,8 +242,8 @@ func ImportPrivKey(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
 //payment address.  Leftover inputs not sent to the payment address or a fee
 //for the miner are sent back to a new address in the wallet.  Upon success,
 //the TxID for the created transaction is returned.
-func SendToAddress(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
-	cmd := icmd.(*qitmeerjson.SendToAddressCmd)
+func SendToAddress(iCmd interface{}, w *wallet.Wallet) (interface{}, error) {
+	cmd := iCmd.(*qitmeerjson.SendToAddressCmd)
 
 	// Transaction comments are not yet supported.  Error instead of
 	// pretending to save them.
@@ -310,101 +269,66 @@ func SendToAddress(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
 		cmd.Address: amt,
 	}
 
-	// sendtoaddress always spends from the default account, this matches bitcoind
-	return sendPairs(w, pairs, int64(waddrmgr.AccountMergePayNum), 1, txrules.DefaultRelayFeePerKb)
+	return w.SendPairs(pairs, int64(waddrmgr.AccountMergePayNum),  txrules.DefaultRelayFeePerKb)
 }
 
-func Updateblock(icmd interface{}, w *wallet.Wallet) error {
-	cmd := icmd.(*qitmeerjson.UpdateBlockToCmd)
-	err := w.Updateblock(cmd.Toheight)
+func UpdateBlock(iCmd interface{}, w *wallet.Wallet) error {
+	cmd := iCmd.(*qitmeerjson.UpdateBlockToCmd)
+	err := w.UpdateBlock(cmd.Toheight)
 	if err != nil {
 		return err
 	}
 	return nil
 }
-func GetTx(txid string, w *wallet.Wallet) (interface{}, error) {
-	tx, err := w.GetTx(txid)
+func GetTx(txId string, w *wallet.Wallet) (interface{}, error) {
+	tx, err := w.GetTx(txId)
 	if err != nil {
 		return "", err
 	}
 	return tx, nil
 }
-func Getbalance(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
-	cmd := icmd.(*qitmeerjson.GetBalanceByAddressCmd)
-	m, err := w.GetBalance(cmd.Address, int32(cmd.MinConf))
+func GetBalance(iCmd interface{}, w *wallet.Wallet) (interface{}, error) {
+	cmd := iCmd.(*qitmeerjson.GetBalanceByAddressCmd)
+	m, err := w.GetBalance(cmd.Address)
 	if err != nil {
-		log.Error("getbalance ", "err ", err.Error())
+		log.Error("GetBalance ", "err ", err.Error())
 		return nil, err
 	}
 	return m, nil
+}
+
+func SetSynceToNum(order int64,w *wallet.Wallet) error {
+	err:=w.SetSynceToNum(order)
+	if err != nil {
+		log.Error("GetBalance ", "err ", err.Error())
+		return err
+	}
+	return nil
+}
+
+func GetTxSpendInfo(txId string ,w *wallet.Wallet)(interface{}, error){
+	info,err:=w.GetTxSpendInfo(txId)
+	if err != nil {
+		log.Error("GetTxSpendInfo ", "err ", err.Error())
+		return nil, err
+	}
+	return info, nil
 }
 
 func Unlock(password string, w *wallet.Wallet) error {
 	return w.Unlock([]byte(password), time.After(10*time.Minute))
 }
 
-func Getlisttxbyaddr(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
+func GetListTxByAddr(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
 	cmd := icmd.(*qitmeerjson.GetListTxByAddrCmd)
 	m, err := w.GetListTxByAddr(cmd.Address, cmd.Stype, cmd.Page, cmd.PageSize)
 	if err != nil {
-		log.Error("getListTxByAddr ", " err", err.Error())
+		log.Error("GetListTxByAddr ", " err", err.Error())
 		return nil, err
 	}
 	return m, nil
 }
 
-//sendPairs creates and sends payment transactions.
-//It returns the transaction hash in string format upon success
-//All errors are returned in btcjson.RPCError format
-func sendPairs(w *wallet.Wallet, amounts map[string]types.Amount,
-	account int64 /*uint32*/, minconf int32, feeSatPerKb types.Amount) (string, error) {
-
-	outputs, err := makeOutputs(amounts, w.ChainParams())
-	if err != nil {
-		return "", err
-	}
-	tx, err := w.SendOutputs(outputs, account, minconf, feeSatPerKb)
-	if err != nil {
-		if err == txrules.ErrAmountNegative {
-			return "", qitmeerjson.ErrNeedPositiveAmount
-		}
-		if waddrmgr.IsError(err, waddrmgr.ErrLocked) {
-			return "", &qitmeerjson.ErrWalletUnlockNeeded
-		}
-		switch err.(type) {
-		case qitmeerjson.RPCError:
-			return "", err
-		}
-
-		return "", &qitmeerjson.RPCError{
-			Code:    qitmeerjson.ErrRPCInternal.Code,
-			Message: err.Error(),
-		}
-	}
-	return *tx, nil
-}
-
-// makeOutputs creates a slice of transaction outputs from a pair of address
-// strings to amounts.  This is used to create the outputs to include in newly
-// created transactions from a JSON object describing the output destinations
-// and amounts.
-func makeOutputs(pairs map[string]types.Amount, chainParams *params.Params) ([]*types.TxOutput, error) {
-	outputs := make([]*types.TxOutput, 0, len(pairs))
-	for addrStr, amt := range pairs {
-		addr, err := address.DecodeAddress(addrStr)
-		if err != nil {
-			return nil, fmt.Errorf("cannot decode address: %s", err)
-		}
-
-		pkScript, err := txscript.PayToAddrScript(addr)
-		if err != nil {
-			return nil, fmt.Errorf("cannot create txout script: %s", err)
-		}
-
-		outputs = append(outputs, types.NewTxOutput(uint64(amt), pkScript))
-	}
-	return outputs, nil
-}
 
 func isNilOrEmpty(s *string) bool {
 	return s == nil || *s == ""

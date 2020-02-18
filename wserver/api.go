@@ -8,7 +8,7 @@ import (
 
 	"github.com/Qitmeer/qitmeer-wallet/config"
 	"github.com/Qitmeer/qitmeer-wallet/utils"
-	waddrmgr "github.com/Qitmeer/qitmeer-wallet/waddrmgs"
+	waddrmgs "github.com/Qitmeer/qitmeer-wallet/waddrmgs"
 	"github.com/Qitmeer/qitmeer-wallet/wallet"
 	"github.com/Qitmeer/qitmeer/crypto/bip32"
 	"github.com/Qitmeer/qitmeer/crypto/bip39"
@@ -112,7 +112,6 @@ func (api *API) createWallet(seed []byte, walletPass string, unlockPass string) 
 		return &crateError{Code: -100, Msg: "wallet exist"}
 	}
 
-	//wt, err := loader.CreateNewWallet([]byte(wallet.InsecurePubPassphrase), []byte(walletPass), seed, time.Now())
 	wt, err := loader.CreateNewWallet([]byte(walletPass), []byte(unlockPass), seed, time.Now())
 	if err != nil {
 		log.Error("createWallet loader CreateNewWallet ", "err", err)
@@ -142,20 +141,19 @@ func (api *API) createWallet(seed []byte, walletPass string, unlockPass string) 
 		log.Error("createWallet UnLockManager error", "err", err)
 	}
 
-	_, err = wt.ImportPrivateKey(waddrmgr.KeyScopeBIP0044, wif, nil, false)
+	_, err = wt.ImportPrivateKey(waddrmgs.KeyScopeBIP0044, wif)
 	if err != nil {
 		log.Error("createWallet ImportPrivateKey", " err", err)
 		return &crateError{Code: -1, Msg: fmt.Sprintf("createWallet ImportPrivateKey err: %s", err)}
 	}
 
 	wt.Manager.Close()
-	//todo,not close,reopen slow
 	wt.Database().Close()
 
 	return nil
 }
 
-//ResStatus statusinfo
+//ResStatus
 type ResStatus struct {
 	Stats string `json:"stats"` //err,nil,closed,lock,unlock
 }

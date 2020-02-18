@@ -94,6 +94,14 @@ var Cfg = NewDefaultConfig()
 var ActiveNet = &params.MainNetParams
 var once sync.Once
 
+func LoadConfig(path string) error {
+	_, err := toml.DecodeFile(path, Cfg)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 // Check config rule
 func (cfg *Config) Check() error {
 
@@ -127,6 +135,7 @@ func NewDefaultConfig() (cfg *Config) {
 		AppDataDir: defaultAppDataDir,
 		DebugLevel: defaultLogLevel,
 		LogDir:     defaultLogDir,
+		ConfigFile:"config.toml",
 
 		Network: "testnet",
 

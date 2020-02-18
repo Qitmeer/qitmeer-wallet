@@ -5,9 +5,9 @@
 package waddrmgr
 
 import (
-	"time"
-	chainhash "github.com/Qitmeer/qitmeer/common/hash"
 	"github.com/Qitmeer/qitmeer-wallet/walletdb"
+	"github.com/Qitmeer/qitmeer/common/hash"
+	"time"
 )
 
 // BlockStamp defines a block (by height and a unique hash) and is used to mark
@@ -15,7 +15,7 @@ import (
 // synced to.
 type BlockStamp struct {
 	Height    int32
-	Hash      chainhash.Hash
+	Hash      hash.Hash
 	Timestamp time.Time
 }
 
@@ -83,7 +83,7 @@ func (m *Manager) SyncedTo() BlockStamp {
 // information is useful for comparing against the chain back-end to see if a
 // reorg is taking place and how far back it goes.
 func (m *Manager) BlockHash(ns walletdb.ReadBucket, height int32) (
-	*chainhash.Hash, error) {
+	*hash.Hash, error) {
 	m.mtx.Lock()
 	defer m.mtx.Unlock()
 

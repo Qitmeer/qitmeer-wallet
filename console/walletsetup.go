@@ -201,7 +201,7 @@ func createWallet() (*wallet.Wallet,error) {
 		return nil,err
 	}
 	w.UnLockManager(privPass)
-	_, err = w.ImportPrivateKey(waddrmgr.KeyScopeBIP0044, wif, nil, false)
+	_, err = w.ImportPrivateKey(waddrmgr.KeyScopeBIP0044, wif)
 	if err != nil {
 		fmt.Println("ImportPrivateKey err:", err.Error())
 		return nil,err

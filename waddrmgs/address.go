@@ -1,6 +1,3 @@
-// Copyright (c) 2014 The btcsuite developers
-// Use of this source code is governed by an ISC
-// license that can be found in the LICENSE file.
 
 package waddrmgr
 
@@ -9,14 +6,14 @@ import (
 	"fmt"
 	"sync"
 
+	"github.com/Qitmeer/qitmeer-wallet/internal/zero"
+	"github.com/Qitmeer/qitmeer-wallet/utils"
+	"github.com/Qitmeer/qitmeer-wallet/walletdb"
 	"github.com/Qitmeer/qitmeer/common/hash"
 	addr "github.com/Qitmeer/qitmeer/core/address"
 	"github.com/Qitmeer/qitmeer/core/types"
 	"github.com/Qitmeer/qitmeer/crypto/bip32"
 	ecc "github.com/Qitmeer/qitmeer/crypto/ecc/secp256k1"
-	"github.com/Qitmeer/qitmeer-wallet/internal/zero"
-	"github.com/Qitmeer/qitmeer-wallet/utils"
-	"github.com/Qitmeer/qitmeer-wallet/walletdb"
 )
 
 // AddressType represents the various address types waddrmgr is currently able
@@ -32,11 +29,6 @@ const (
 
 	// Script reprints a raw script address.
 	Script
-
-	// RawPubKey is just raw public key to be used within scripts, This
-	// type indicates that a scoped manager with this address type
-	// shouldn't be consulted during historical rescans.
-	RawPubKey
 
 	// NestedWitnessPubKey represents a p2wkh output nested within a p2sh
 	// output. Using this address type, the wallet can receive funds from

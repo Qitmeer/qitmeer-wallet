@@ -196,21 +196,6 @@ type EncryptorDecryptor interface {
 // crypto keys.
 type CryptoKeyType byte
 
-// Crypto key types.
-const (
-	// CKTPrivate specifies the key that is used for encryption of private
-	// key material such as derived extended private keys and imported
-	// private keys.
-	CKTPrivate CryptoKeyType = iota
-
-	// CKTScript specifies the key that is used for encryption of scripts.
-	CKTScript
-
-	// CKTPublic specifies the key that is used for encryption of public
-	// key material such as dervied extended public keys and imported public
-	// keys.
-	CKTPublic
-)
 
 // newCryptoKey is used as a way to replace the new crypto key generation
 // function used so tests can provide a version that fails for testing error

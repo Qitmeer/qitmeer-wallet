@@ -1,14 +1,11 @@
-// Copyright (c) 2014-2017 The btcsuite developers
-// Use of this source code is governed by an ISC
-// license that can be found in the LICENSE file.
 
 package walletdbtest
 
 import (
 	"fmt"
+	"github.com/Qitmeer/qitmeer-wallet/walletdb"
 	"os"
 	"reflect"
-	"github.com/Qitmeer/qitmeer-wallet/walletdb"
 )
 
 // errSubTestFail is used to signal that a sub test returned false.
@@ -636,7 +633,7 @@ func testAdditionalErrors(tc *testContext) bool {
 		// specified.
 		wantErr = walletdb.ErrKeyRequired
 		if err := rootBucket.Put(nil, nil); err != wantErr {
-			return fmt.Errorf("Put: unexpected error - got %v, "+
+			return fmt.Errorf("put: unexpected error - got %v, "+
 				"want %v", err, wantErr)
 		}
 
