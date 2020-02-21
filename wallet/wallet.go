@@ -345,6 +345,13 @@ func (wt *Wallet) GetAccountAndAddress(scope waddrmgr.KeyScope) ([]AccountAndAdd
 	return results, err
 }
 
+
+func reverse(s []wtxmgr.AddrTxOutput) []wtxmgr.AddrTxOutput {
+	for i, j := 0, len(s)-1; i < j; i, j = i+1, j-1 {
+		s[i], s[j] = s[j], s[i]
+	}
+	return s
+}
 func (wt *Wallet) getAddrAndAddrTxOutputByAddr(addr string) (*AddrAndAddrTxOutput, error) {
 
 	ato := AddrAndAddrTxOutput{}
@@ -375,6 +382,7 @@ func (wt *Wallet) getAddrAndAddrTxOutputByAddr(addr string) (*AddrAndAddrTxOutpu
 	if err != nil {
 		return nil, err
 	}
+	txOuts=reverse(txOuts)
 
 	var spendAmount types.Amount
 	var unspentAmount types.Amount

@@ -157,13 +157,13 @@ func (s *Store) UpdateAddrTxIn(ns walletdb.ReadWriteBucket,addr string,outPoint 
 		return err
 	}
 }
-func (s *Store) UpdateAddrTxOut(ns walletdb.ReadWriteBucket,txout *AddrTxOutput) error{
-	outRw,err:=ns.CreateBucketIfNotExists([]byte(txout.Address))
+func (s *Store) UpdateAddrTxOut(ns walletdb.ReadWriteBucket, txOut *AddrTxOutput) error{
+	outRw,err:=ns.CreateBucketIfNotExists([]byte(txOut.Address))
 	if err!=nil {
 		return err
 	}else{
-		k:=canonicalOutPoint(&txout.TxId,txout.Index)
-		v:=ValueAddrTxOutput(txout)
+		k:=canonicalOutPoint(&txOut.TxId, txOut.Index)
+		v:=ValueAddrTxOutput(txOut)
 		err:= outRw.Put(k,v)
 		return err
 	}
