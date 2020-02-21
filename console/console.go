@@ -213,6 +213,12 @@ func getNewAddress(account string) (interface{}, error) {
 	fmt.Printf("%s\n",msg)
 	return msg, nil
 }
+
+func SetSynceToNum(order int64) error{
+	return walletrpc.SetSynceToNum(order,w)
+}
+
+
 func getAddressesByAccount(account string) (interface{}, error) {
 	if account==""{
 		account = "default"

@@ -23,6 +23,7 @@ type BlockHttpResult struct {
 	Children       []string     `json:"children"`
 
 	Txsvalid      bool          `json:"txsvalid"`
+	IsBlue		  bool			`json:"isblue"`
 }
 type PageTxRawResult struct {
 	Total int32

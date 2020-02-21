@@ -614,7 +614,7 @@ func (wt *Wallet) insertTx(txins []wtxmgr.TxInputPoint, txouts []wtxmgr.AddrTxOu
 			}
 		}
 		for _, txo := range txouts {
-			err := wt.TxStore.UpdateAddrTxOut(outNs, &txo)
+			err := wt.TxStore.InsertAddrTxOut(outNs, &txo)
 			if err != nil {
 				return err
 			}
@@ -638,7 +638,6 @@ func (wt *Wallet) insertTx(txins []wtxmgr.TxInputPoint, txouts []wtxmgr.AddrTxOu
 			spendOut.Spend = wtxmgr.SpendStatusSpend
 			spendOut.Address = addr
 			spendOut.SpendTo = &txi.SpendTo
-
 			err = wt.TxStore.UpdateAddrTxOut(outNs, spendOut)
 			if err != nil {
 				return err
@@ -665,10 +664,13 @@ func (wt *Wallet) SyncTx(order int64) (clijson.BlockHttpResult, error) {
 			return block, err
 		}else{
 			if isBlue != "1"{
-				log.Trace(fmt.Sprintf("block:%v err,is not blue", block.Hash))
-				return block, nil
+				block.IsBlue=false
+				log.Trace(fmt.Sprintf("block:%v is not blue", block.Hash))
+			}else{
+				block.IsBlue=true
 			}
 		}
+
 		txIns, txOuts, trRs, err := parseBlockTxs(block)
 		if err != nil {
 			return block, err
@@ -685,7 +687,7 @@ func (wt *Wallet) SyncTx(order int64) (clijson.BlockHttpResult, error) {
 	return block, nil
 }
 
-func parseTx(tr corejson.TxRawResult, height int32) ([]wtxmgr.TxInputPoint, []wtxmgr.AddrTxOutput, error) {
+func parseTx(tr corejson.TxRawResult, height int32,isBlue bool) ([]wtxmgr.TxInputPoint, []wtxmgr.AddrTxOutput, error) {
 	var txins []wtxmgr.TxInputPoint
 	var txouts []wtxmgr.AddrTxOutput
 	blockhash, err := hash.NewHashFromStr(tr.BlockHash)
@@ -742,6 +744,7 @@ func parseTx(tr corejson.TxRawResult, height int32) ([]wtxmgr.TxInputPoint, []wt
 				Amount:  types.Amount(vo.Amount),
 				Block:   block,
 				Spend:   spend,
+				IsBlue:  isBlue,
 			}
 			txouts = append(txouts, txOut)
 		}
@@ -750,13 +753,13 @@ func parseTx(tr corejson.TxRawResult, height int32) ([]wtxmgr.TxInputPoint, []wt
 	return txins, txouts, nil
 }
 
-func parseBlockTxs(block clijson.BlockHttpResult) ([]wtxmgr.TxInputPoint, []wtxmgr.AddrTxOutput, []corejson.TxRawResult, error) {
+func parseBlockTxs(block clijson.BlockHttpResult ) ([]wtxmgr.TxInputPoint, []wtxmgr.AddrTxOutput, []corejson.TxRawResult, error) {
 	var txIns []wtxmgr.TxInputPoint
 	var txOuts []wtxmgr.AddrTxOutput
 	var tx []corejson.TxRawResult
 	for _, tr := range block.Transactions {
 		tx = append(tx, tr)
-		tin, tout, err := parseTx(tr, block.Order)
+		tin, tout, err := parseTx(tr, block.Order,block.IsBlue)
 		if err != nil {
 			return nil, nil, nil, err
 		} else {

@@ -53,6 +53,7 @@ type AddrTxOutput struct {
 	Block   Block
 	Spend   SpendStatus
 	SpendTo *SpendTo
+	IsBlue  bool
 }
 
 type SpendStatus int32
@@ -155,6 +156,37 @@ func (s *Store) UpdateAddrTxIn(ns walletdb.ReadWriteBucket,addr string,outPoint 
 		v:=canonicalOutPoint(&outPoint.Hash,outPoint.OutIndex)
 		err:= inRw.Put(v,v)
 		return err
+	}
+}
+
+func (s *Store) InsertAddrTxOut(ns walletdb.ReadWriteBucket, txOut *AddrTxOutput) error{
+	outRw,err:=ns.CreateBucketIfNotExists([]byte(txOut.Address))
+	if err!=nil {
+		return err
+	}else{
+		k:=canonicalOutPoint(&txOut.TxId, txOut.Index)
+		if !txOut.IsBlue{
+			return outRw.Delete(k)
+		}
+		v:=ValueAddrTxOutput(txOut)
+
+		txOut := outRw.Get(k)
+		if txOut == nil || len(txOut) == 0{
+			err:= outRw.Put(k,v)
+			return err
+		}else{
+			addTxOutPut:=AddrTxOutput{}
+			err:=ReadAddrTxOutput(txOut,&addTxOutPut)
+			if err!=nil{
+				return err
+			}
+			if addTxOutPut.Spend!=SpendStatusSpend{
+				err:= outRw.Put(k,v)
+				return err
+			}else{
+				return nil
+			}
+		}
 	}
 }
 func (s *Store) UpdateAddrTxOut(ns walletdb.ReadWriteBucket, txOut *AddrTxOutput) error{
