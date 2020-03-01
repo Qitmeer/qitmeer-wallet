@@ -1399,7 +1399,7 @@ func makeOutputs(pairs map[string]types.Amount) ([]*types.TxOutput, error) {
 	for addrStr, amt := range pairs {
 		addr, err := address.DecodeAddress(addrStr)
 		if err != nil {
-			return nil, fmt.Errorf("cannot decode address: %s", err)
+			return nil, fmt.Errorf("cannot decode address: %s,address:%s", err,addrStr)
 		}
 
 		pkScript, err := txscript.PayToAddrScript(addr)
