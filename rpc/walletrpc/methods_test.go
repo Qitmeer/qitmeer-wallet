@@ -95,7 +95,7 @@ func test_wallet_getBalance(w *wallet.Wallet) (*wallet.Balance, error){
 		//Address:"TmbsdsjwzuGboFQ9GcKg6EUmrr3tokzozyF",
 	}
 	b,err:= GetBalance(cmd,w)
-	if(err!=nil){
+	if err!=nil {
 		log.Info("errr:",err.Error())
 		return nil,err
 	}

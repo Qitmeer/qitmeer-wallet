@@ -730,6 +730,7 @@ func parseTx(tr corejson.TxRawResult, height int32,isBlue bool) ([]wtxmgr.TxInpu
 					SpendTo:    spendTo,
 				}
 				txins = append(txins, txIn)
+				spend=wtxmgr.SpendStatusUnspent
 			}
 		}
 	}
