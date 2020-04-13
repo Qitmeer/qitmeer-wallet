@@ -1,11 +1,13 @@
 package wallet
 
 import (
-	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"github.com/Qitmeer/qitmeer-wallet/json/qitmeerjson"
+	"github.com/Qitmeer/qitmeer/common/marshal"
+	"github.com/Qitmeer/qitmeer/core/message"
+	"github.com/Qitmeer/qitmeer/crypto/ecc"
 	"os"
 	"strconv"
 	"strings"
@@ -21,7 +23,6 @@ import (
 	"github.com/Qitmeer/qitmeer/engine/txscript"
 	"github.com/Qitmeer/qitmeer/log"
 	chaincfg "github.com/Qitmeer/qitmeer/params"
-	"github.com/Qitmeer/qitmeer/qx"
 
 	"github.com/Qitmeer/qitmeer-wallet/config"
 	clijson "github.com/Qitmeer/qitmeer-wallet/json"
@@ -1227,7 +1228,7 @@ func (wt *Wallet) SendOutputs(outputs []*types.TxOutput, account int64,  satPerK
 	}
 
 	var sendAddrTxOutput []wtxmgr.AddrTxOutput
-	var prk string
+	//var prk string
 b:
 	for _, aaar := range aaars {
 
@@ -1237,7 +1238,7 @@ b:
 
 		for _, addroutput := range aaar.AddrsOutput {
 			log.Trace(fmt.Sprintf("addr:%s,unspend:%v",addroutput.Addr,addroutput.balance.UnspendAmount))
-			if addroutput.balance.UnspendAmount > payAmout {
+			if addroutput.balance.UnspendAmount>0 {
 				addr, err := address.DecodeAddress(addroutput.Addr)
 				if err != nil {
 					return nil, err
@@ -1254,59 +1255,63 @@ b:
 				if err != nil {
 					return nil, err
 				}
-				prk = hex.EncodeToString(priKey.SerializeSecret())
-				for _, output:= range addroutput.Txoutput {
+				//prk = hex.EncodeToString(priKey.SerializeSecret())
+				for _, output := range addroutput.Txoutput {
 					output.Address = addroutput.Addr
 					if output.Spend == wtxmgr.SpendStatusUnspent {
-						if payAmout > 0 && feeAmout==0{
+						if payAmout > 0 && feeAmout == 0 {
 							if output.Amount > payAmout {
 								input := types.NewOutPoint(&output.TxId, output.Index)
-								tx.AddTxIn(types.NewTxInput(input, nil))
+								tx.AddTxIn(types.NewTxInput(input, priKey.SerializeSecret()))
 								selfTxOut := types.NewTxOutput(uint64(output.Amount-payAmout), frompkscipt)
 								feeAmout = util.CalcMinRequiredTxRelayFee(int64(tx.SerializeSize()+selfTxOut.SerializeSize()), types.Amount(config.Cfg.MinTxFee))
 								sendAddrTxOutput = append(sendAddrTxOutput, output)
-								if (output.Amount-payAmout-types.Amount(feeAmout)) >= 0{
-									selfTxOut.Amount = uint64(output.Amount-payAmout-types.Amount(feeAmout))
-									if selfTxOut.Amount >0 {
+								if (output.Amount - payAmout - types.Amount(feeAmout)) >= 0 {
+									selfTxOut.Amount = uint64(output.Amount - payAmout - types.Amount(feeAmout))
+									if selfTxOut.Amount > 0 {
 										tx.AddTxOut(selfTxOut)
 									}
 									payAmout = 0
 									feeAmout = 0
 									break b
-								}else{
-									selfTxOut.Amount = uint64(output.Amount-payAmout)
+								} else {
+									selfTxOut.Amount = uint64(output.Amount - payAmout)
 									payAmout = 0
 									tx.AddTxOut(selfTxOut)
 								}
 
-							}else{
+							} else {
 								input := types.NewOutPoint(&output.TxId, output.Index)
-								tx.AddTxIn(types.NewTxInput(input, nil))
+								tx.AddTxIn(types.NewTxInput(input, priKey.SerializeSecret()))
 								sendAddrTxOutput = append(sendAddrTxOutput, output)
-								payAmout = payAmout- output.Amount
+								payAmout = payAmout - output.Amount
+								if payAmout == 0 {
+									feeAmout = util.CalcMinRequiredTxRelayFee(int64(tx.SerializeSize()), types.Amount(config.Cfg.MinTxFee))
+								}
 							}
-						}else if payAmout == 0 && feeAmout >0{
-							if output.Amount >= types.Amount(feeAmout){
+						} else if payAmout == 0 && feeAmout > 0 {
+							if output.Amount >= types.Amount(feeAmout) {
 								input := types.NewOutPoint(&output.TxId, output.Index)
-								tx.AddTxIn(types.NewTxInput(input, nil))
+								tx.AddTxIn(types.NewTxInput(input, priKey.SerializeSecret()))
 								selfTxOut := types.NewTxOutput(uint64(output.Amount-types.Amount(feeAmout)), frompkscipt)
-								if selfTxOut.Amount >0{
+								if selfTxOut.Amount > 0 {
 									tx.AddTxOut(selfTxOut)
 								}
 								sendAddrTxOutput = append(sendAddrTxOutput, output)
 								feeAmout = 0
 								break b
-							}else{
+							} else {
 								log.Trace("utxo < feeAmout")
 							}
 
-						}else{
-							log.Trace(fmt.Sprintf("system err payAmout :%v ,feeAmout :%v\n",payAmout,feeAmout))
-							return nil,fmt.Errorf("system err payAmout :%v ,feeAmout :%v\n",payAmout,feeAmout)
+						} else {
+							log.Trace(fmt.Sprintf("system err payAmout :%v ,feeAmout :%v\n", payAmout, feeAmout))
+							return nil, fmt.Errorf("system err payAmout :%v ,feeAmout :%v\n", payAmout, feeAmout)
 						}
 					}
 				}
 			}
+			//}
 		}
 	}
 	if payAmout.ToCoin() != types.Amount(0).ToCoin() || feeAmout!=0{
@@ -1315,11 +1320,8 @@ b:
 		return nil, fmt.Errorf("balance is not enough")
 	}
 
-	b, err := tx.Serialize()
-	if err != nil {
-		return nil, err
-	}
-	signTx, err := qx.TxSign(prk, hex.EncodeToString(b), wt.chainParams.Name)
+
+	signTx, err := txMultiSign(*tx, wt.chainParams.Name)
 	if err != nil {
 		return nil, err
 	}
@@ -1353,6 +1355,62 @@ b:
 	}
 
 	return &msg, nil
+}
+
+func txMultiSign(redeemTx types.Transaction, network string) (string, error) {
+
+
+	var param *chaincfg.Params
+	switch network {
+	case "mainnet":
+		param = &chaincfg.MainNetParams
+	case "testnet":
+		param = &chaincfg.TestNetParams
+	case "privnet":
+		param = &chaincfg.PrivNetParams
+	case "mixnet":
+		param = &chaincfg.MixNetParams
+	}
+
+
+
+	var sigScripts [][]byte
+	for i := range redeemTx.TxIn {
+		privkeyByte := redeemTx.TxIn[i].SignScript
+
+		if len(privkeyByte) != 32 {
+			return "", fmt.Errorf("invaid ec private key bytes: %d", len(privkeyByte))
+		}
+		privateKey, pubKey := ecc.Secp256k1.PrivKeyFromBytes(privkeyByte)
+		h160 := hash.Hash160(pubKey.SerializeCompressed())
+		addr, err := address.NewPubKeyHashAddress(h160, param, ecc.ECDSA_Secp256k1)
+		if err != nil {
+			return "", err
+		}
+		// Create a new script which pays to the provided address.
+		pkScript, err := txscript.PayToAddrScript(addr)
+		if err != nil {
+			return "", err
+		}
+		var kdb txscript.KeyClosure = func(types.Address) (ecc.PrivateKey, bool, error) {
+			return privateKey, true, nil // compressed is true
+		}
+		sigScript, err := txscript.SignTxOutput(param, &redeemTx, i, pkScript, txscript.SigHashAll, kdb, nil, nil, ecc.ECDSA_Secp256k1)
+		if err != nil {
+			return "", err
+		}
+		sigScripts = append(sigScripts, sigScript)
+	}
+
+	for i2 := range sigScripts {
+		redeemTx.TxIn[i2].SignScript = sigScripts[i2]
+	}
+
+	mtxHex, err := marshal.MessageToHex(&message.MsgTx{Tx: &redeemTx})
+	if err != nil {
+		return "", err
+	}
+	return mtxHex, nil
 }
 
 
