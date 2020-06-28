@@ -1,7 +1,6 @@
 package wallet
 
 import (
-	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -1233,7 +1232,7 @@ b:
 				if err != nil {
 					return nil, err
 				}
-				addrByte, err := hex.DecodeString(addroutput.Addr)
+				addrByte := []byte(addroutput.Addr)
 				if err != nil {
 					return nil, err
 				}
@@ -1356,7 +1355,7 @@ func (wt *Wallet) multiAddressMergeSign(redeemTx types.Transaction, network stri
 	var sigScripts [][]byte
 	for i := range redeemTx.TxIn {
 		addrByte := redeemTx.TxIn[i].SignScript
-		addr, err := address.DecodeAddress(hex.EncodeToString(addrByte))
+		addr, err := address.DecodeAddress(string(addrByte))
 		if err != nil {
 			return "", err
 		}
