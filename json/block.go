@@ -6,27 +6,28 @@ import (
 )
 
 type BlockHttpResult struct {
-	Hash          string        `json:"hash"`
-	Confirmations int64         `json:"confirmations"`
-	Version       int32         `json:"version"`
+	Hash          string `json:"hash"`
+	Confirmations int64  `json:"confirmations"`
+	Version       int32  `json:"version"`
 	//Height		  int32			`json:"height"`
-	Weight       int64         `json:"weight"`
-	Order       int32         `json:"order"`
-	TxRoot        string        `json:"txRoot"`
-	Transactions  []json.TxRawResult `json:"transactions,omitempty"`
-	StateRoot     string         `json:"stateRoot"`
-	Bits          string        `json:"bits"`
-	Difficulty    float64       `json:"difficulty"`
-	Nonce         uint64        `json:"nonce"`
-	Timestamp     time.Time     `json:"timestamp"`
-	Parents       []string     `json:"parents"`
-	Children       []string     `json:"children"`
+	Weight       int64              `json:"weight"`
+	Order        int32              `json:"order"`
+	TxRoot       string             `json:"txRoot"`
+	Transactions []json.TxRawResult `json:"transactions,omitempty"`
+	StateRoot    string             `json:"stateRoot"`
+	Bits         string             `json:"bits"`
+	Difficulty   float64            `json:"difficulty"`
+	Nonce        uint64             `json:"nonce"`
+	Timestamp    time.Time          `json:"timestamp"`
+	Parents      []string           `json:"parents"`
+	Children     []string           `json:"children"`
 
-	Txsvalid      bool          `json:"txsvalid"`
+	Txsvalid bool `json:"txsvalid"`
+	IsBlue   bool `json:"isblue"`
 }
 type PageTxRawResult struct {
-	Total int32
-	Page  int32
-	PageSize int32
-	Transactions  []json.TxRawResult `json:"transactions,omitempty"`
+	Total        int32
+	Page         int32
+	PageSize     int32
+	Transactions []json.TxRawResult `json:"transactions,omitempty"`
 }

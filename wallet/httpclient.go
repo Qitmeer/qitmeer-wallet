@@ -21,8 +21,6 @@ import (
 	"github.com/samuel/go-socks/socks"
 )
 
-
-
 type httpConfig struct {
 	RPCUser       string
 	RPCPassword   string
@@ -38,12 +36,10 @@ type httpConfig struct {
 }
 
 const (
-	strIntBase           = 10
-	strIntBitSize32        =32
-	syncDiffNum          = 200
+	strIntBase      = 10
+	strIntBitSize32 = 32
+	syncDiffNum     = 200
 )
-
-
 
 // NewHtpc make qitmeerd http client
 func NewHtpc() (*httpConfig, error) {
@@ -154,19 +150,19 @@ func newHTTPClient(cfg *httpConfig) (*http.Client, error) {
 
 func (cfg *httpConfig) CheckSyncUpdate(localheight int64) (bool, error) {
 	var params []interface{}
-	str,err:=cfg.getResString("getBlockCount", params)
-	if err!=nil{
-		return false,err
+	str, err := cfg.getResString("getBlockCount", params)
+	if err != nil {
+		return false, err
 	}
 	blockHeight, err := strconv.ParseInt(str, strIntBase, strIntBitSize32)
 	if err != nil {
-		return false,err
+		return false, err
 	}
-	log.Trace(fmt.Sprintf("blockheight:%v,localheight:%v",blockHeight,localheight))
-	if (blockHeight-localheight) < (config.Cfg.Confirmations+syncDiffNum){
+	log.Trace(fmt.Sprintf("blockheight:%v,localheight:%v", blockHeight, localheight))
+	if (blockHeight - localheight) < (config.Cfg.Confirmations + syncDiffNum) {
 		return true, nil
-	}else{
-		return false,fmt.Errorf("db Update incomplete")
+	} else {
+		return false, fmt.Errorf("db Update incomplete")
 	}
 }
 
@@ -195,9 +191,17 @@ func (cfg *httpConfig) getBlockByOrder(i int64) ([]byte, error) {
 	params := []interface{}{i, true}
 	return cfg.getResByte("getBlockByOrder", params)
 }
-func (cfg *httpConfig) isBlue(blockHash string) (string, error) {
+func (cfg *httpConfig) isBlue(blockHash string) (bool, error) {
 	params := []interface{}{blockHash}
-	return cfg.getResString("isBlue", params)
+	isBlue, err := cfg.getResString("isBlue", params)
+	if err == nil {
+		if isBlue != "1" {
+			return false, nil
+		} else {
+			return true, nil
+		}
+	}
+	return false, err
 }
 func (cfg *httpConfig) SendRawTransaction(tx string, allowHighFees bool) (string, error) {
 	params := []interface{}{tx, allowHighFees}
@@ -243,7 +247,6 @@ func (cfg *httpConfig) sendPostRequest(marshalledJSON []byte) ([]byte, error) {
 
 	// Configure basic access authorization.
 	httpRequest.SetBasicAuth(cfg.RPCUser, cfg.RPCPassword)
-
 
 	httpResponse, err := cfg.httpClient.Do(httpRequest)
 	if err != nil {

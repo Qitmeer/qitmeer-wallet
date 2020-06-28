@@ -6,7 +6,11 @@ import (
 	"errors"
 	"fmt"
 	"github.com/Qitmeer/qitmeer-wallet/json/qitmeerjson"
+	"github.com/Qitmeer/qitmeer/common/marshal"
+	"github.com/Qitmeer/qitmeer/core/message"
+	"github.com/Qitmeer/qitmeer/crypto/ecc"
 	"os"
+	"sort"
 	"strconv"
 	"strings"
 	"sync"
@@ -21,7 +25,6 @@ import (
 	"github.com/Qitmeer/qitmeer/engine/txscript"
 	"github.com/Qitmeer/qitmeer/log"
 	chaincfg "github.com/Qitmeer/qitmeer/params"
-	"github.com/Qitmeer/qitmeer/qx"
 
 	"github.com/Qitmeer/qitmeer-wallet/config"
 	clijson "github.com/Qitmeer/qitmeer-wallet/json"
@@ -33,8 +36,8 @@ import (
 )
 
 const (
-	InsecurePubPassphrase = "public"
-	webUpdateBlockTicker  = 30
+	InsecurePubPassphrase   = "public"
+	webUpdateBlockTicker    = 30
 	defaultNewAddressNumber = 1
 )
 
@@ -141,7 +144,6 @@ type AddrAndAddrTxOutput struct {
 var (
 	waddrmgrNamespaceKey = []byte("waddrmgr")
 	wtxmgrNamespaceKey   = []byte("wtxmgr")
-
 )
 
 // ImportPrivateKey imports a private key to the wallet and writes the new
@@ -259,13 +261,12 @@ func Open(db walletdb.DB, pubPass []byte, _ *waddrmgr.OpenCallbacks,
 	log.Trace("Opened wallet")
 
 	w := &Wallet{
-		cfg: cfg,
-		db:      db,
-		Manager: addrMgr,
+		cfg:            cfg,
+		db:             db,
+		Manager:        addrMgr,
 		unlockRequests: make(chan unlockRequest),
-		lockState: make(chan bool),
-		chainParams: params,
-
+		lockState:      make(chan bool),
+		chainParams:    params,
 	}
 
 	return w, nil
@@ -349,7 +350,7 @@ func (wt *Wallet) getAddrAndAddrTxOutputByAddr(addr string) (*AddrAndAddrTxOutpu
 
 	ato := AddrAndAddrTxOutput{}
 	b := Balance{}
-	var txOuts []wtxmgr.AddrTxOutput
+	var txOuts wtxmgr.AddrTxOutputs
 	err := walletdb.View(wt.db, func(tx walletdb.ReadTx) error {
 		hs := []byte(addr)
 		ns := tx.ReadBucket(wtxmgrNamespaceKey)
@@ -366,7 +367,7 @@ func (wt *Wallet) getAddrAndAddrTxOutputByAddr(addr string) (*AddrAndAddrTxOutpu
 
 				return nil
 			})
-			if err!=nil{
+			if err != nil {
 				return err
 			}
 		}
@@ -375,6 +376,7 @@ func (wt *Wallet) getAddrAndAddrTxOutputByAddr(addr string) (*AddrAndAddrTxOutpu
 	if err != nil {
 		return nil, err
 	}
+	sort.Sort(sort.Reverse(txOuts))
 
 	var spendAmount types.Amount
 	var unspentAmount types.Amount
@@ -384,11 +386,11 @@ func (wt *Wallet) getAddrAndAddrTxOutputByAddr(addr string) (*AddrAndAddrTxOutpu
 		if txOut.Spend == wtxmgr.SpendStatusSpend {
 			spendAmount += txOut.Amount
 		} else if txOut.Spend == wtxmgr.SpendStatusUnconfirmed {
-				totalAmount += txOut.Amount
-				confirmAmount += txOut.Amount
+			totalAmount += txOut.Amount
+			confirmAmount += txOut.Amount
 		} else {
-				totalAmount += txOut.Amount
-				unspentAmount += txOut.Amount
+			totalAmount += txOut.Amount
+			unspentAmount += txOut.Amount
 		}
 	}
 
@@ -404,12 +406,13 @@ func (wt *Wallet) getAddrAndAddrTxOutputByAddr(addr string) (*AddrAndAddrTxOutpu
 
 const (
 	defaultPage              = 1
-	defaultPageSize          =10
-	defaultMaxPageSize       =1000000000
-	sTypeIn            int32 =0
-	sTypeOut           int32 =1
-	sTypeAll           int32 =2
+	defaultPageSize          = 10
+	defaultMaxPageSize       = 1000000000
+	sTypeIn            int32 = 0
+	sTypeOut           int32 = 1
+	sTypeAll           int32 = 2
 )
+
 /**
 sType 0 Turn in 1 Turn out 2 all no page
 */
@@ -482,7 +485,7 @@ func (wt *Wallet) GetListTxByAddr(addr string, sType int32, page int32, pageSize
 	case sTypeAll:
 		for _, txPut := range at.Txoutput {
 			txHss = append(txHss, txPut.TxId)
-			if txPut.Spend ==wtxmgr.SpendStatusSpend && txPut.SpendTo != nil {
+			if txPut.Spend == wtxmgr.SpendStatusSpend && txPut.SpendTo != nil {
 				txHss = append(txHss, txPut.SpendTo.TxHash)
 			}
 		}
@@ -505,7 +508,7 @@ func (wt *Wallet) GetListTxByAddr(addr string, sType int32, page int32, pageSize
 			}
 		}
 	default:
-		return nil,fmt.Errorf("err stype")
+		return nil, fmt.Errorf("err stype")
 	}
 	result.Page = page
 	result.PageSize = pageSize
@@ -545,18 +548,18 @@ func (wt *Wallet) GetBalance(addr string) (*Balance, error) {
 	}
 	return &res.balance, nil
 }
-func (wt *Wallet) GetTxSpendInfo(txId string)  ([]*wtxmgr.AddrTxOutput,error){
+func (wt *Wallet) GetTxSpendInfo(txId string) ([]*wtxmgr.AddrTxOutput, error) {
 	var atos []*wtxmgr.AddrTxOutput
-	txHash,err:=hash.NewHashFromStr(txId)
-	if err!=nil{
-		return nil,err
+	txHash, err := hash.NewHashFromStr(txId)
+	if err != nil {
+		return nil, err
 	}
-	err=walletdb.Update(wt.db, func(tx walletdb.ReadWriteTx) error {
+	err = walletdb.Update(wt.db, func(tx walletdb.ReadWriteTx) error {
 		rb := tx.ReadWriteBucket(wtxmgrNamespaceKey)
 		txNrb := rb.NestedReadWriteBucket(wtxmgr.BucketTxJson)
 		outNrb := rb.NestedReadWriteBucket(wtxmgr.BucketAddrtxout)
 		v := txNrb.Get(txHash.Bytes())
-		if v == nil{
+		if v == nil {
 			return fmt.Errorf("txid does not exist")
 		}
 		var txr corejson.TxRawResult
@@ -574,15 +577,15 @@ func (wt *Wallet) GetTxSpendInfo(txId string)  ([]*wtxmgr.AddrTxOutput,error){
 			if err != nil {
 				return err
 			}
-			ato.Address=addr
+			ato.Address = addr
 			atos = append(atos, ato)
 		}
 		return err
 	})
-	if err!=nil{
-		return nil,err
+	if err != nil {
+		return nil, err
 	}
-	return atos,nil
+	return atos, nil
 }
 
 func (wt *Wallet) insertTx(txins []wtxmgr.TxInputPoint, txouts []wtxmgr.AddrTxOutput, trrs []corejson.TxRawResult) error {
@@ -606,7 +609,7 @@ func (wt *Wallet) insertTx(txins []wtxmgr.TxInputPoint, txouts []wtxmgr.AddrTxOu
 			}
 		}
 		for _, txo := range txouts {
-			err := wt.TxStore.UpdateAddrTxOut(outNs, &txo)
+			err := wt.TxStore.InsertAddrTxOut(outNs, &txo)
 			if err != nil {
 				return err
 			}
@@ -630,7 +633,6 @@ func (wt *Wallet) insertTx(txins []wtxmgr.TxInputPoint, txouts []wtxmgr.AddrTxOu
 			spendOut.Spend = wtxmgr.SpendStatusSpend
 			spendOut.Address = addr
 			spendOut.SpendTo = &txi.SpendTo
-
 			err = wt.TxStore.UpdateAddrTxOut(outNs, spendOut)
 			if err != nil {
 				return err
@@ -652,14 +654,13 @@ func (wt *Wallet) SyncTx(order int64) (clijson.BlockHttpResult, error) {
 			log.Trace(fmt.Sprintf("block:%v err,txsvalid is false", block.Hash))
 			return block, nil
 		}
-		isBlue ,err:=wt.HttpClient.isBlue(block.Hash)
+		isBlue, err := wt.HttpClient.isBlue(block.Hash)
 		if err != nil {
 			return block, err
-		}else{
-			if isBlue != "1"{
-				log.Trace(fmt.Sprintf("block:%v err,is not blue", block.Hash))
-				return block, nil
-			}
+		}
+		block.IsBlue = isBlue
+		if !block.IsBlue {
+			log.Trace(fmt.Sprintf("block:%v is not blue", block.Hash))
 		}
 		txIns, txOuts, trRs, err := parseBlockTxs(block)
 		if err != nil {
@@ -677,7 +678,7 @@ func (wt *Wallet) SyncTx(order int64) (clijson.BlockHttpResult, error) {
 	return block, nil
 }
 
-func parseTx(tr corejson.TxRawResult, height int32) ([]wtxmgr.TxInputPoint, []wtxmgr.AddrTxOutput, error) {
+func parseTx(tr corejson.TxRawResult, height int32, isBlue bool) ([]wtxmgr.TxInputPoint, []wtxmgr.AddrTxOutput, error) {
 	var txins []wtxmgr.TxInputPoint
 	var txouts []wtxmgr.AddrTxOutput
 	blockhash, err := hash.NewHashFromStr(tr.BlockHash)
@@ -693,8 +694,8 @@ func parseTx(tr corejson.TxRawResult, height int32) ([]wtxmgr.TxInputPoint, []wt
 		return nil, nil, err
 	}
 	spend := wtxmgr.SpendStatusUnspent
-	if tr.Confirmations < config.Cfg.Confirmations{
-		spend=wtxmgr.SpendStatusUnconfirmed
+	if tr.Confirmations < config.Cfg.Confirmations {
+		spend = wtxmgr.SpendStatusUnconfirmed
 	}
 	for i, vi := range tr.Vin {
 		if vi.Coinbase != "" {
@@ -711,15 +712,16 @@ func parseTx(tr corejson.TxRawResult, height int32) ([]wtxmgr.TxInputPoint, []wt
 					Hash:     *hs,
 					OutIndex: vi.Vout,
 				}
-				spendTo :=wtxmgr.SpendTo{
+				spendTo := wtxmgr.SpendTo{
 					Index:  uint32(i),
 					TxHash: *txId,
 				}
-				txIn :=wtxmgr.TxInputPoint{
+				txIn := wtxmgr.TxInputPoint{
 					TxOutPoint: txOutPoint,
 					SpendTo:    spendTo,
 				}
 				txins = append(txins, txIn)
+				spend = wtxmgr.SpendStatusUnspent
 			}
 		}
 	}
@@ -734,6 +736,7 @@ func parseTx(tr corejson.TxRawResult, height int32) ([]wtxmgr.TxInputPoint, []wt
 				Amount:  types.Amount(vo.Amount),
 				Block:   block,
 				Spend:   spend,
+				IsBlue:  isBlue,
 			}
 			txouts = append(txouts, txOut)
 		}
@@ -748,7 +751,7 @@ func parseBlockTxs(block clijson.BlockHttpResult) ([]wtxmgr.TxInputPoint, []wtxm
 	var tx []corejson.TxRawResult
 	for _, tr := range block.Transactions {
 		tx = append(tx, tr)
-		tin, tout, err := parseTx(tr, block.Order)
+		tin, tout, err := parseTx(tr, block.Order, block.IsBlue)
 		if err != nil {
 			return nil, nil, nil, err
 		} else {
@@ -768,7 +771,7 @@ func (wt *Wallet) SetSynceToNum(order int64) error {
 	var block clijson.BlockHttpResult
 	blockByte, err := wt.HttpClient.getBlockByOrder(order)
 	if err != nil {
-		return  err
+		return err
 	}
 	if err := json.Unmarshal(blockByte, &block); err == nil {
 		if !block.Txsvalid {
@@ -794,10 +797,9 @@ func (wt *Wallet) SetSynceToNum(order int64) error {
 		return nil
 	} else {
 		log.Error(err.Error())
-		return  err
+		return err
 	}
 }
-
 
 func (wt *Wallet) handleBlockSynced(order int64) error {
 
@@ -860,7 +862,6 @@ func (wt *Wallet) UpdateBlock(toHeight int64) error {
 	}
 	return nil
 }
-
 
 // NextAccount creates the next account and returns its account number.  The
 // name must be unique to the account.  In order to support automatic seed
@@ -1092,8 +1093,6 @@ out:
 			req.err <- nil
 			continue
 
-
-
 		case wt.lockState <- wt.Manager.IsLocked():
 			continue
 
@@ -1190,10 +1189,10 @@ func (wt *Wallet) GetUtxo(addr string) ([]wtxmgr.UTxo, error) {
 
 // Sendoutputs can only be accessed by a single thread at the same time to prevent the referenced utxo from being referenced again under the concurrency
 var syncSendOutputs = new(sync.Mutex)
+
 // SendOutputs creates and sends payment transactions. It returns the
 // transaction upon success.
-func (wt *Wallet) SendOutputs(outputs []*types.TxOutput, account int64,  satPerKb types.Amount) (*string, error) {
-
+func (wt *Wallet) SendOutputs(outputs []*types.TxOutput, account int64, satPerKb types.Amount) (*string, error) {
 
 	// Ensure the outputs to be created adhere to the network's consensus
 	// rules.
@@ -1215,17 +1214,17 @@ func (wt *Wallet) SendOutputs(outputs []*types.TxOutput, account int64,  satPerK
 	}
 
 	var sendAddrTxOutput []wtxmgr.AddrTxOutput
-	var prk string
+	//var prk string
 b:
 	for _, aaar := range aaars {
 
-		if int64(aaar.AccountNumber) != account && account != waddrmgr.AccountMergePayNum{
+		if int64(aaar.AccountNumber) != account && account != waddrmgr.AccountMergePayNum {
 			continue
 		}
 
 		for _, addroutput := range aaar.AddrsOutput {
-			log.Trace(fmt.Sprintf("addr:%s,unspend:%v",addroutput.Addr,addroutput.balance.UnspendAmount))
-			if addroutput.balance.UnspendAmount > payAmout {
+			log.Trace(fmt.Sprintf("addr:%s,unspend:%v", addroutput.Addr, addroutput.balance.UnspendAmount))
+			if addroutput.balance.UnspendAmount > 0 {
 				addr, err := address.DecodeAddress(addroutput.Addr)
 				if err != nil {
 					return nil, err
@@ -1234,90 +1233,86 @@ b:
 				if err != nil {
 					return nil, err
 				}
-				pri, err := wt.getPrivateKey(addr)
+				addrByte, err := hex.DecodeString(addroutput.Addr)
 				if err != nil {
 					return nil, err
 				}
-				priKey, err := pri.PrivKey()
-				if err != nil {
-					return nil, err
-				}
-				prk = hex.EncodeToString(priKey.SerializeSecret())
-				for _, output:= range addroutput.Txoutput {
+
+				for _, output := range addroutput.Txoutput {
 					output.Address = addroutput.Addr
 					if output.Spend == wtxmgr.SpendStatusUnspent {
-						if payAmout > 0 && feeAmout==0{
+						if payAmout > 0 && feeAmout == 0 {
 							if output.Amount > payAmout {
 								input := types.NewOutPoint(&output.TxId, output.Index)
-								tx.AddTxIn(types.NewTxInput(input, nil))
+								tx.AddTxIn(types.NewTxInput(input, addrByte))
 								selfTxOut := types.NewTxOutput(uint64(output.Amount-payAmout), frompkscipt)
 								feeAmout = util.CalcMinRequiredTxRelayFee(int64(tx.SerializeSize()+selfTxOut.SerializeSize()), types.Amount(config.Cfg.MinTxFee))
 								sendAddrTxOutput = append(sendAddrTxOutput, output)
-								if (output.Amount-payAmout-types.Amount(feeAmout)) >= 0{
-									selfTxOut.Amount = uint64(output.Amount-payAmout-types.Amount(feeAmout))
-									if selfTxOut.Amount >0 {
+								if (output.Amount - payAmout - types.Amount(feeAmout)) >= 0 {
+									selfTxOut.Amount = uint64(output.Amount - payAmout - types.Amount(feeAmout))
+									if selfTxOut.Amount > 0 {
 										tx.AddTxOut(selfTxOut)
 									}
 									payAmout = 0
 									feeAmout = 0
 									break b
-								}else{
-									selfTxOut.Amount = uint64(output.Amount-payAmout)
+								} else {
+									selfTxOut.Amount = uint64(output.Amount - payAmout)
 									payAmout = 0
 									tx.AddTxOut(selfTxOut)
 								}
 
-							}else{
+							} else {
 								input := types.NewOutPoint(&output.TxId, output.Index)
-								tx.AddTxIn(types.NewTxInput(input, nil))
+								tx.AddTxIn(types.NewTxInput(input, addrByte))
 								sendAddrTxOutput = append(sendAddrTxOutput, output)
-								payAmout = payAmout- output.Amount
+								payAmout = payAmout - output.Amount
+								if payAmout == 0 {
+									feeAmout = util.CalcMinRequiredTxRelayFee(int64(tx.SerializeSize()), types.Amount(config.Cfg.MinTxFee))
+								}
 							}
-						}else if payAmout == 0 && feeAmout >0{
-							if output.Amount >= types.Amount(feeAmout){
+						} else if payAmout == 0 && feeAmout > 0 {
+							if output.Amount >= types.Amount(feeAmout) {
 								input := types.NewOutPoint(&output.TxId, output.Index)
-								tx.AddTxIn(types.NewTxInput(input, nil))
+								tx.AddTxIn(types.NewTxInput(input, addrByte))
 								selfTxOut := types.NewTxOutput(uint64(output.Amount-types.Amount(feeAmout)), frompkscipt)
-								if selfTxOut.Amount >0{
+								if selfTxOut.Amount > 0 {
 									tx.AddTxOut(selfTxOut)
 								}
 								sendAddrTxOutput = append(sendAddrTxOutput, output)
 								feeAmout = 0
 								break b
-							}else{
+							} else {
 								log.Trace("utxo < feeAmout")
 							}
 
-						}else{
-							log.Trace(fmt.Sprintf("system err payAmout :%v ,feeAmout :%v\n",payAmout,feeAmout))
-							return nil,fmt.Errorf("system err payAmout :%v ,feeAmout :%v\n",payAmout,feeAmout)
+						} else {
+							log.Trace(fmt.Sprintf("system err payAmout :%v ,feeAmout :%v\n", payAmout, feeAmout))
+							return nil, fmt.Errorf("system err payAmout :%v ,feeAmout :%v\n", payAmout, feeAmout)
 						}
 					}
 				}
 			}
+			//}
 		}
 	}
-	if payAmout.ToCoin() != types.Amount(0).ToCoin() || feeAmout!=0{
+	if payAmout.ToCoin() != types.Amount(0).ToCoin() || feeAmout != 0 {
 		log.Trace("payAmout", "payAmout", payAmout)
 		log.Trace("feeAmout", "feeAmout", feeAmout)
-		return nil, fmt.Errorf("balance is not enough")
+		return nil, fmt.Errorf("balance is not enough,please deduct the service charge:%v", types.Amount(feeAmout).ToCoin())
 	}
 
-	b, err := tx.Serialize()
-	if err != nil {
-		return nil, err
-	}
-	signTx, err := qx.TxSign(prk, hex.EncodeToString(b), wt.chainParams.Name)
+	signTx, err := wt.multiAddressMergeSign(*tx, wt.chainParams.Name)
 	if err != nil {
 		return nil, err
 	}
 	log.Trace(fmt.Sprintf("signTx size:%v", len(signTx)), "signTx", signTx)
 	msg, err := wt.HttpClient.SendRawTransaction(signTx, false)
-	if err != nil{
+	if err != nil {
 		log.Trace("SendRawTransaction txSign err ", "err", err.Error())
 		return nil, err
 	} else {
-		msg=strings.ReplaceAll(msg,"\"","")
+		msg = strings.ReplaceAll(msg, "\"", "")
 		log.Trace("SendRawTransaction txSign response msg", "msg", msg)
 	}
 
@@ -1343,16 +1338,71 @@ b:
 	return &msg, nil
 }
 
+// Multi address merge signature
+func (wt *Wallet) multiAddressMergeSign(redeemTx types.Transaction, network string) (string, error) {
+
+	var param *chaincfg.Params
+	switch network {
+	case "mainnet":
+		param = &chaincfg.MainNetParams
+	case "testnet":
+		param = &chaincfg.TestNetParams
+	case "privnet":
+		param = &chaincfg.PrivNetParams
+	case "mixnet":
+		param = &chaincfg.MixNetParams
+	}
+
+	var sigScripts [][]byte
+	for i := range redeemTx.TxIn {
+		addrByte := redeemTx.TxIn[i].SignScript
+		addr, err := address.DecodeAddress(hex.EncodeToString(addrByte))
+		if err != nil {
+			return "", err
+		}
+		pri, err := wt.getPrivateKey(addr)
+		if err != nil {
+			return "", err
+		}
+		priKey, err := pri.PrivKey()
+		if err != nil {
+			return "", err
+		}
+		// Create a new script which pays to the provided address.
+		pkScript, err := txscript.PayToAddrScript(addr)
+		if err != nil {
+			return "", err
+		}
+		var kdb txscript.KeyClosure = func(types.Address) (ecc.PrivateKey, bool, error) {
+			return priKey, true, nil // compressed is true
+		}
+		sigScript, err := txscript.SignTxOutput(param, &redeemTx, i, pkScript, txscript.SigHashAll, kdb, nil, nil, ecc.ECDSA_Secp256k1)
+		if err != nil {
+			return "", err
+		}
+		sigScripts = append(sigScripts, sigScript)
+	}
+
+	for i2 := range sigScripts {
+		redeemTx.TxIn[i2].SignScript = sigScripts[i2]
+	}
+
+	mtxHex, err := marshal.MessageToHex(&message.MsgTx{Tx: &redeemTx})
+	if err != nil {
+		return "", err
+	}
+	return mtxHex, nil
+}
 
 //sendPairs creates and sends payment transactions.
 //It returns the transaction hash in string format upon success
 //All errors are returned in btcjson.RPCError format
-func (wt *Wallet)  SendPairs( amounts map[string]types.Amount,
-	account int64,  feeSatPerKb types.Amount) (string, error) {
-	check,err := wt.HttpClient.CheckSyncUpdate(int64(wt.Manager.SyncedTo().Height))
+func (wt *Wallet) SendPairs(amounts map[string]types.Amount,
+	account int64, feeSatPerKb types.Amount) (string, error) {
+	check, err := wt.HttpClient.CheckSyncUpdate(int64(wt.Manager.SyncedTo().Height))
 
-	if check ==false{
-		return "",err
+	if check == false {
+		return "", err
 	}
 	outputs, err := makeOutputs(amounts)
 	if err != nil {
@@ -1388,7 +1438,7 @@ func makeOutputs(pairs map[string]types.Amount) ([]*types.TxOutput, error) {
 	for addrStr, amt := range pairs {
 		addr, err := address.DecodeAddress(addrStr)
 		if err != nil {
-			return nil, fmt.Errorf("cannot decode address: %s", err)
+			return nil, fmt.Errorf("cannot decode address: %s,address:%s", err, addrStr)
 		}
 
 		pkScript, err := txscript.PayToAddrScript(addr)
