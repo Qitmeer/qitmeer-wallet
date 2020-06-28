@@ -11,6 +11,7 @@ import (
 	"github.com/Qitmeer/qitmeer/log"
 	"github.com/Qitmeer/qitmeer/params"
 )
+
 // Block contains the minimum amount of data to uniquely identify any block on
 // either the best or side chain.
 type Block struct {
@@ -40,9 +41,9 @@ type SpendTo struct {
 	//Block  Block
 }
 
-type TxInputPoint struct{
+type TxInputPoint struct {
 	TxOutPoint types.TxOutPoint
-	SpendTo SpendTo
+	SpendTo    SpendTo
 }
 
 type AddrTxOutput struct {
@@ -56,13 +57,21 @@ type AddrTxOutput struct {
 	IsBlue  bool
 }
 
-type SpendStatus int32
-const (
-	SpendStatusUnspent     SpendStatus =0
-	SpendStatusSpend       SpendStatus =1
-	SpendStatusUnconfirmed SpendStatus =2
-)
+type AddrTxOutputs []AddrTxOutput
 
+func (s AddrTxOutputs) Len() int { return len(s) }
+
+func (s AddrTxOutputs) Swap(i, j int) { s[i], s[j] = s[j], s[i] }
+
+func (s AddrTxOutputs) Less(i, j int) bool { return i < j }
+
+type SpendStatus int32
+
+const (
+	SpendStatusUnspent     SpendStatus = 0
+	SpendStatusSpend       SpendStatus = 1
+	SpendStatusUnconfirmed SpendStatus = 2
+)
 
 type UTxo struct {
 	TxId   string
@@ -85,8 +94,6 @@ type indexedIncidence struct {
 	incidence
 	index uint32
 }
-
-
 
 // credit describes a transaction output which was or is spendable by wallet.
 type credit struct {
@@ -146,72 +153,69 @@ func Create(ns walletdb.ReadWriteBucket) error {
 	return createStore(ns)
 }
 
-
-
-func (s *Store) UpdateAddrTxIn(ns walletdb.ReadWriteBucket,addr string,outPoint *types.TxOutPoint) error{
-	inRw,err:=ns.CreateBucketIfNotExists([]byte(addr))
-	if err!=nil {
+func (s *Store) UpdateAddrTxIn(ns walletdb.ReadWriteBucket, addr string, outPoint *types.TxOutPoint) error {
+	inRw, err := ns.CreateBucketIfNotExists([]byte(addr))
+	if err != nil {
 		return err
-	}else{
-		v:=canonicalOutPoint(&outPoint.Hash,outPoint.OutIndex)
-		err:= inRw.Put(v,v)
+	} else {
+		v := canonicalOutPoint(&outPoint.Hash, outPoint.OutIndex)
+		err := inRw.Put(v, v)
 		return err
 	}
 }
 
-func (s *Store) InsertAddrTxOut(ns walletdb.ReadWriteBucket, txOut *AddrTxOutput) error{
-	outRw,err:=ns.CreateBucketIfNotExists([]byte(txOut.Address))
-	if err!=nil {
+func (s *Store) InsertAddrTxOut(ns walletdb.ReadWriteBucket, txOut *AddrTxOutput) error {
+	outRw, err := ns.CreateBucketIfNotExists([]byte(txOut.Address))
+	if err != nil {
 		return err
-	}else{
-		k:=canonicalOutPoint(&txOut.TxId, txOut.Index)
-		if !txOut.IsBlue{
+	} else {
+		k := canonicalOutPoint(&txOut.TxId, txOut.Index)
+		if !txOut.IsBlue {
 			return outRw.Delete(k)
 		}
-		v:=ValueAddrTxOutput(txOut)
+		v := ValueAddrTxOutput(txOut)
 
 		txOut := outRw.Get(k)
-		if txOut == nil || len(txOut) == 0{
-			err:= outRw.Put(k,v)
+		if txOut == nil || len(txOut) == 0 {
+			err := outRw.Put(k, v)
 			return err
-		}else{
-			addTxOutPut:=AddrTxOutput{}
-			err:=ReadAddrTxOutput(txOut,&addTxOutPut)
-			if err!=nil{
+		} else {
+			addTxOutPut := AddrTxOutput{}
+			err := ReadAddrTxOutput(txOut, &addTxOutPut)
+			if err != nil {
 				return err
 			}
-			if addTxOutPut.Spend!=SpendStatusSpend{
-				err:= outRw.Put(k,v)
+			if addTxOutPut.Spend != SpendStatusSpend {
+				err := outRw.Put(k, v)
 				return err
-			}else{
+			} else {
 				return nil
 			}
 		}
 	}
 }
-func (s *Store) UpdateAddrTxOut(ns walletdb.ReadWriteBucket, txOut *AddrTxOutput) error{
-	outRw,err:=ns.CreateBucketIfNotExists([]byte(txOut.Address))
-	if err!=nil {
+func (s *Store) UpdateAddrTxOut(ns walletdb.ReadWriteBucket, txOut *AddrTxOutput) error {
+	outRw, err := ns.CreateBucketIfNotExists([]byte(txOut.Address))
+	if err != nil {
 		return err
-	}else{
-		k:=canonicalOutPoint(&txOut.TxId, txOut.Index)
-		v:=ValueAddrTxOutput(txOut)
-		err:= outRw.Put(k,v)
+	} else {
+		k := canonicalOutPoint(&txOut.TxId, txOut.Index)
+		v := ValueAddrTxOutput(txOut)
+		err := outRw.Put(k, v)
 		return err
 	}
 }
-func (s *Store) GetAddrTxOut(ns walletdb.ReadWriteBucket,address string,point types.TxOutPoint) (*AddrTxOutput,error){
-	outRw :=ns.NestedReadWriteBucket([]byte(address))
-	k:=canonicalOutPoint(&point.Hash,point.OutIndex)
+func (s *Store) GetAddrTxOut(ns walletdb.ReadWriteBucket, address string, point types.TxOutPoint) (*AddrTxOutput, error) {
+	outRw := ns.NestedReadWriteBucket([]byte(address))
+	k := canonicalOutPoint(&point.Hash, point.OutIndex)
 	txOut := outRw.Get(k)
-	addTxOutPut:=AddrTxOutput{}
-	err:=ReadAddrTxOutput(txOut,&addTxOutPut)
-	if err!=nil{
-		return nil,err
+	addTxOutPut := AddrTxOutput{}
+	err := ReadAddrTxOutput(txOut, &addTxOutPut)
+	if err != nil {
+		return nil, err
 	}
-	return &addTxOutPut,nil
+	return &addTxOutPut, nil
 }
-
 
 // updateMinedBalance updates the mined balance within the store, if changed,
 // after processing the given transaction record.
@@ -453,7 +457,7 @@ func (s *Store) addCredit(ns walletdb.ReadWriteBucket, rec *TxRecord, block *Blo
 
 	cred := credit{
 		outPoint: types.TxOutPoint{
-			Hash:  rec.Hash,
+			Hash:     rec.Hash,
 			OutIndex: index,
 		},
 		block:   block.Block,
@@ -484,12 +488,14 @@ func (s *Store) addCredit(ns walletdb.ReadWriteBucket, rec *TxRecord, block *Blo
 func (s *Store) Rollback(ns walletdb.ReadWriteBucket, height int32) error {
 	return s.rollback(ns, height)
 }
+
 var (
 	// zeroHash is the zero value for a hash.Hash and is defined as a
 	// package level variable to avoid the need to create a new instance
 	// every time a check is needed.
 	zeroHash = &hash.ZeroHash
 )
+
 func IsCoinBaseTx(tx *types.Transaction) bool {
 	// A coin base must only have one transaction input.
 	if len(tx.TxIn) != 1 {
@@ -529,7 +535,7 @@ func (s *Store) rollback(ns walletdb.ReadWriteBucket, height int32) error {
 
 		heightsToRemove = append(heightsToRemove, it.elem.Height)
 
-		log.Info("Rolling back transactions","transactions" ,len(b.transactions),"block",b.Hash,"height",b.Height)
+		log.Info("Rolling back transactions", "transactions", len(b.transactions), "block", b.Hash, "height", b.Height)
 
 		for i := range b.transactions {
 			txHash := &b.transactions[i]
@@ -686,7 +692,6 @@ func (s *Store) rollback(ns walletdb.ReadWriteBucket, height int32) error {
 			}
 		}
 
-
 		it.reposition(it.elem.Height)
 
 	}
@@ -708,7 +713,6 @@ func (s *Store) rollback(ns walletdb.ReadWriteBucket, height int32) error {
 		unMinedSpendTxHashKeys := fetchUnMinedInputSpendTxHashes(ns, opKey)
 		for _, unMinedSpendTxHashKey := range unMinedSpendTxHashKeys {
 			unMinedVal := existsRawUnMined(ns, unMinedSpendTxHashKey[:])
-
 
 			if unMinedVal == nil {
 				continue

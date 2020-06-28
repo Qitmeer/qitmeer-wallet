@@ -1,4 +1,3 @@
-
 package wtxmgr
 
 import (
@@ -251,7 +250,6 @@ type blockIterator struct {
 	err  error
 }
 
-
 func makeReadBlockIterator(ns walletdb.ReadBucket, height int32) blockIterator {
 	seek := make([]byte, 4)
 	byteOrder.PutUint32(seek, uint32(height))
@@ -336,7 +334,6 @@ func (it *blockIterator) prev() bool {
 
 	return true
 }
-
 
 func (it *blockIterator) reposition(height int32) {
 	it.c.Seek(keyBlockRecord(height))
@@ -658,7 +655,6 @@ func deleteRawCredit(ns walletdb.ReadWriteBucket, k []byte) error {
 	return nil
 }
 
-
 type creditIterator struct {
 	c      walletdb.ReadWriteCursor // Set to nil after final iteration
 	prefix []byte
@@ -874,7 +870,6 @@ func deleteRawDebit(ns walletdb.ReadWriteBucket, k []byte) error {
 	return nil
 }
 
-
 type debitIterator struct {
 	c      walletdb.ReadWriteCursor // Set to nil after final iteration
 	prefix []byte
@@ -883,7 +878,6 @@ type debitIterator struct {
 	elem   DebitRecord
 	err    error
 }
-
 
 func makeReadDebitIterator(ns walletdb.ReadBucket, prefix []byte) debitIterator {
 	c := ns.NestedReadBucket(bucketDebits).ReadCursor()
@@ -1103,7 +1097,6 @@ func (it *unMinedCreditIterator) next() bool {
 	}
 	return true
 }
-
 
 func (it *unMinedCreditIterator) reposition(txHash *hash.Hash, index uint32) {
 	it.c.Seek(canonicalOutPoint(txHash, index))
