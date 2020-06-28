@@ -657,15 +657,11 @@ func (wt *Wallet) SyncTx(order int64) (clijson.BlockHttpResult, error) {
 		isBlue, err := wt.HttpClient.isBlue(block.Hash)
 		if err != nil {
 			return block, err
-		} else {
-			if isBlue == false {
-				block.IsBlue = false
-				log.Trace(fmt.Sprintf("block:%v is not blue", block.Hash))
-			} else {
-				block.IsBlue = true
-			}
 		}
-
+		block.IsBlue = isBlue
+		if !block.IsBlue {
+			log.Trace(fmt.Sprintf("block:%v is not blue", block.Hash))
+		}
 		txIns, txOuts, trRs, err := parseBlockTxs(block)
 		if err != nil {
 			return block, err
