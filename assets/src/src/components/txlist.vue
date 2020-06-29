@@ -40,7 +40,7 @@
 
     <el-main class="cmain">
       <el-table :data="txList">
-        <el-table-column prop="txHash" label="txHash" width="470"></el-table-column>
+        <el-table-column prop="txId" label="txId" width="470"></el-table-column>
         <el-table-column prop="type" label="in/out" width="60"></el-table-column>
         <el-table-column prop="amount" label="金额"></el-table-column>
       </el-table>
@@ -109,7 +109,7 @@ export default {
         tmpTable.push({
           date: "",
           type: inOut,
-          txHash: txlist[i].txhash,
+          txId: txlist[i].txid,
           amount: amount
         });
       }
