@@ -8,25 +8,27 @@ you can download from [release](https://github.com/Qitmeer/qitmeer-wallet/releas
 
 if you have golang environment, you can build it by yourself
 
-1. install node 
-[https://nodejs.org](https://nodejs.org)
+1. install node  
+    [https://nodejs.org](https://nodejs.org)
 
 2. install go  
-[https://golang.org/](https://golang.org/)
-
-make sure go env is ready
-```bash
-go env GOPATH
-```
-
+    [https://golang.org/](https://golang.org/)  
+    make sure go env is ready
+    ```bash
+    go env GOPATH
+    ```
 3. build
-```
-make
-```
+    ```bash
+    git clone https://github.com/Qitmeer/qitmeer-wallet ~/github.com/Qitmeer/qitmeer-wallet
+    cd ~/github.com/Qitmeer/qitmeer-wallet
+    make
+    ```
 
 ## Usage
 
 ```
+./qitmeer-wallet
+
 Usage:
   qitmeer-wallet [command]
 
