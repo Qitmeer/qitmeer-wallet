@@ -4,7 +4,7 @@ build: webui
 webui: statik npm
 	cd assets/src && npm run build
 	cd assets/statik && rm -fr statik.go
-	cd assets && statik -src ./src/dist/
+	cd assets && $$(go env GOPATH)/bin/statik -src ./src/dist/
 statik:
 	go get github.com/rakyll/statik
 npm:
