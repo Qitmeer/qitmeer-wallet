@@ -1,7 +1,9 @@
 package console
 
 import (
+	"encoding/hex"
 	"fmt"
+	"github.com/Qitmeer/qitmeer/qx"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -397,24 +399,31 @@ var getAddressesByAccountCmd = &cobra.Command{
 	},
 }
 var importPriKeyCmd = &cobra.Command{
-	Use:   "importprivkey {priKey} {pripassword}",
+	Use:   "importprivkey {priKey} {pripassword} {bool, if WIF format, default: false}",
 	Short: "import priKey ",
 	Example: `
 		importprivkey priKey pripassword
 		`,
 	Args: cobra.MinimumNArgs(2),
-	Run: func(cmd *cobra.Command, args []string) {
-		err := OpenWallet()
-		if err != nil {
-			fmt.Println(err.Error())
-			return
+	RunE: func(cmd *cobra.Command, args []string) error {
+
+		if err := OpenWallet(); err != nil {
+			return err
 		}
-		err = UnLock(args[1])
-		if err != nil {
-			fmt.Println(err.Error())
-			return
+		if err := UnLock(args[1]); err != nil {
+			return err
 		}
-		importPrivKey(args[0])
+		priv := args[0]
+		if len(args) >= 3 && args[2] == "true" {
+			if decoded, _, err := qx.DecodeWIF(priv); err != nil {
+				return err
+			} else {
+				priv = hex.EncodeToString(decoded)
+			}
+		}
+
+		_, err := importPrivKey(priv)
+		return err
 	},
 }
 var listAccountsBalanceCmd = &cobra.Command{
@@ -560,6 +569,7 @@ func init() {
 	QxCmd.AddCommand(seedtoaddrCmd)
 	QxCmd.AddCommand(pritoaddrCmd)
 	QxCmd.AddCommand(pubtoaddrCmd)
+	QxCmd.AddCommand(wifToPriCmd)
 
 	Command.AddCommand(createWalletCmd)
 	Command.AddCommand(setSynceToNumCmd)
