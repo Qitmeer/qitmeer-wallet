@@ -8,16 +8,27 @@ you can download from [release](https://github.com/Qitmeer/qitmeer-wallet/releas
 
 if you have golang environment, you can build it by yourself
 
-```
-git clone https://github.com/Qitmeer/qitmeer-wallet.git
+1. install node  
+    [https://nodejs.org](https://nodejs.org)
 
-go build
-
-```
+2. install go  
+    [https://golang.org/](https://golang.org/)  
+    make sure go env is ready
+    ```bash
+    go env GOPATH
+    ```
+3. build
+    ```bash
+    git clone https://github.com/Qitmeer/qitmeer-wallet ~/github.com/Qitmeer/qitmeer-wallet
+    cd ~/github.com/Qitmeer/qitmeer-wallet
+    make
+    ```
 
 ## Usage
 
 ```
+./qitmeer-wallet
+
 Usage:
   qitmeer-wallet [command]
 
@@ -177,3 +188,6 @@ Use "qitmeer-wallet qx [command] --help" for more information about a command.
     `0e441ecee44defe28711103eef0cc3d01c187c257738150869c032fbbf96d4c9`
 
     `./qitmeer-wallet qc updateback`
+
+## Web client
+![desktop wallet](assets/wallet-info.png)
