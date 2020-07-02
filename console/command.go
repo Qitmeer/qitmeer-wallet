@@ -41,19 +41,17 @@ func BindFlags() {
 	Command.PersistentFlags().StringVarP(&preCfg.QUser, "quser", "u", "admin", "qitmeer node user")
 	Command.PersistentFlags().StringVarP(&preCfg.QPass, "qpass", "p", "123456", "qitmeer node password")
 	Command.PersistentFlags().StringVarP(&preCfg.WalletPass, "pubwalletpass", "P", "public", "data encryption password")
-	Command.PersistentFlags().BoolVar(&preCfg.QNoTLS, "qnotls", fileCfg.QNoTLS, "tls")
+	Command.PersistentFlags().BoolVar(&preCfg.QNoTLS, "qnotls", fileCfg.QNoTLS, "disable TLS")
 	Command.PersistentFlags().StringVar(&preCfg.QCert, "qcert", fileCfg.QCert, "Certificate path")
-	Command.PersistentFlags().BoolVar(&preCfg.QTLSSkipVerify, "qtlsskipverify", fileCfg.QTLSSkipVerify, "tls skipverify")
+	Command.PersistentFlags().BoolVar(&preCfg.QTLSSkipVerify, "qtlsskipverify", fileCfg.QTLSSkipVerify, "skip TLS verification")
 
 	Command.PersistentFlags().Int64Var(&preCfg.Confirmations, "confirmations", 10, "Number of block confirmations ")
 	Command.PersistentFlags().BoolVar(&preCfg.UI, "ui", true, "Start Wallet with RPC and webUI interface")
 	Command.PersistentFlags().StringArrayVar(&preCfg.Listeners, "listeners", fileCfg.Listeners, "rpc listens")
 	Command.PersistentFlags().StringVar(&preCfg.RPCUser, "rpcUser", fileCfg.RPCUser, "rpc user,default by random")
 	Command.PersistentFlags().StringVar(&preCfg.RPCPass, "rpcPass", fileCfg.RPCPass, "rpc pass,default by random")
-	Command.PersistentFlags().Int64Var(&preCfg.MinTxFee, "mintxfee", fileCfg.MinTxFee, "The minimum transaction fee in AtomMEER/kB default 20000 (aka. 0.0002 Qitmeer/kB)")
+	Command.PersistentFlags().Int64Var(&preCfg.MinTxFee, "mintxfee", fileCfg.MinTxFee, "The minimum transaction fee in QIT/kB default 20000 (aka. 0.0002 MEER/KB)")
 }
-
-
 
 // LoadConfig config file and flags
 func LoadConfig(cmd *cobra.Command, args []string) {
@@ -220,7 +218,7 @@ var getBalanceCmd = &cobra.Command{
 		}
 		company := "i"
 		detail := "false"
-		b, err := getBalance( args[0])
+		b, err := getBalance(args[0])
 		if err != nil {
 			fmt.Println(err.Error())
 			return
@@ -270,17 +268,17 @@ var setSynceToNumCmd = &cobra.Command{
 			return
 		}
 
-		order, err := strconv.ParseInt(args[0],10,64)
+		order, err := strconv.ParseInt(args[0], 10, 64)
 		if err != nil {
 			log.Error("setsyncetonum ", "error", err.Error())
 			return
 		}
-		if order <0 {
+		if order < 0 {
 			log.Error("setsyncetonum ", "error", "The specified order cannot be less than 0")
 			return
 		}
 		err = SetSynceToNum(order)
-		if err==nil{
+		if err == nil {
 			fmt.Println("succ")
 			return
 		}
@@ -301,34 +299,34 @@ var getTxSpendInfoCmd = &cobra.Command{
 			fmt.Println(err.Error())
 			return
 		}
-		b, err := GetTxSpendInfo( args[0])
+		b, err := GetTxSpendInfo(args[0])
 		if err != nil {
 			fmt.Println(err.Error())
 			return
 		}
 		if len(args) > 1 {
-			index, err :=  strconv.ParseInt(args[1], 10, 64)
+			index, err := strconv.ParseInt(args[1], 10, 64)
 			if err != nil {
 				log.Error("Argument is not of type int")
 				return
 			}
-			if len(b)<int(index+1){
+			if len(b) < int(index+1) {
 				log.Error("Index out of array range")
 				return
-			}else{
-				if b[index].SpendTo == nil{
-					fmt.Printf("addr:%v,txid:%v,index:%v,unspend\n",b[index].Address,b[index].TxId,b[index].Index)
-				}else{
-					fmt.Printf("addr:%v,txid:%v,index:%v,spend to: txid:%v,index:%v\n",b[index].Address,b[index].TxId,b[index].Index,b[index].SpendTo.TxHash,b[index].SpendTo.Index)
+			} else {
+				if b[index].SpendTo == nil {
+					fmt.Printf("addr:%v,txid:%v,index:%v,unspend\n", b[index].Address, b[index].TxId, b[index].Index)
+				} else {
+					fmt.Printf("addr:%v,txid:%v,index:%v,spend to: txid:%v,index:%v\n", b[index].Address, b[index].TxId, b[index].Index, b[index].SpendTo.TxHash, b[index].SpendTo.Index)
 				}
 				return
 			}
-		}else{
+		} else {
 			for _, output := range b {
-				if output.SpendTo == nil{
-					fmt.Printf("addr:%v,txid:%v,index:%v,unspend\n",output.Address,output.TxId,output.Index)
-				}else{
-					fmt.Printf("addr:%v,txid:%v,index:%v,spendto: txid:%v,index:%v\n",output.Address,output.TxId,output.Index,output.SpendTo.TxHash,output.SpendTo.Index)
+				if output.SpendTo == nil {
+					fmt.Printf("addr:%v,txid:%v,index:%v,unspend\n", output.Address, output.TxId, output.Index)
+				} else {
+					fmt.Printf("addr:%v,txid:%v,index:%v,spendto: txid:%v,index:%v\n", output.Address, output.TxId, output.Index, output.SpendTo.TxHash, output.SpendTo.Index)
 				}
 				return
 			}
@@ -363,26 +361,26 @@ var sendToAddressCmd = &cobra.Command{
 		sendToAddress(args[0], float64(f32))
 	},
 }
-var getTxByTxIdCmd=&cobra.Command{
-	Use:"gettx {txid}",
-	Short:"Access to transaction information ",
-	Example:`
+var getTxByTxIdCmd = &cobra.Command{
+	Use:   "gettx {txid}",
+	Short: "Access to transaction information ",
+	Example: `
 		gettx 81278a6ba67d4ea2fc49fb469f2a45f6adb2306b82146747b9d5f3bd655e5030
 		`,
 	Args: cobra.MinimumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		err:=OpenWallet()
-		if err!=nil{
+		err := OpenWallet()
+		if err != nil {
 			fmt.Println(err.Error())
 			return
 		}
 		getTx(args[0])
 	},
 }
-var getAddressesByAccountCmd=&cobra.Command{
-	Use:"getaddressesbyaccount {string ,account,defalut imported} ",
-	Short:"get addresses by account ",
-	Example:`
+var getAddressesByAccountCmd = &cobra.Command{
+	Use:   "getaddressesbyaccount {string ,account,defalut imported} ",
+	Short: "get addresses by account ",
+	Example: `
 		getaddressesbyaccount imported
 		`,
 	Run: func(cmd *cobra.Command, args []string) {
@@ -444,11 +442,9 @@ var getlisttxbyaddrCmd = &cobra.Command{
 		getlisttxbyaddr Tmjc34zWMTAASHTwcNtPppPujFKVK5SeuaJ all
 		`,
 	Args: cobra.MinimumNArgs(1),
-	Run: func(cmd *cobra.Command, args []string) {
-		err := OpenWallet()
-		if err != nil {
-			fmt.Println(err.Error())
-			return
+	RunE: func(cmd *cobra.Command, args []string) error {
+		if err := OpenWallet(); err != nil {
+			return err
 		}
 		stype := int32(2)
 		if len(args) > 1 {
@@ -460,7 +456,8 @@ var getlisttxbyaddrCmd = &cobra.Command{
 				stype = int32(2)
 			}
 		}
-		getListTxByAddr(args[0], int32(-1), int32(100), stype)
+		_, err := getListTxByAddr(args[0], int32(-1), int32(100), stype)
+		return err
 	},
 }
 var updateblockCmd = &cobra.Command{

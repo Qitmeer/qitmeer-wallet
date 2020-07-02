@@ -116,7 +116,7 @@ Use "qitmeer-wallet qx [command] --help" for more information about a command.
        QTLSSkipVerify=true
        WalletPass="public" #Wallet encryption code default public
        
-       MinTxFee=200000   # The minimum transaction fee in AtomMEER/kB default 200000 (aka. 0.002 Qitmeer/kB)
+       MinTxFee=200000   # The minimum transaction fee in QIT/KB default 200000 (aka. 0.002 MEER/kB)
        
        #web model
        #listeners=["127.0.0.1:8130"]
@@ -190,4 +190,7 @@ Use "qitmeer-wallet qx [command] --help" for more information about a command.
     `./qitmeer-wallet qc updateback`
 
 ## Web client
+```shell script
+./qitmeer-wallet qc web
+```
 ![desktop wallet](assets/wallet-info.png)
