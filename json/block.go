@@ -26,8 +26,8 @@ type BlockHttpResult struct {
 	IsBlue   bool `json:"isblue"`
 }
 type PageTxRawResult struct {
-	Total        int32
-	Page         int32
-	PageSize     int32
+	Total        int32              `json:"total"`
+	Page         int32              `json:"page"`
+	PageSize     int32              `json:"page_size"`
 	Transactions []json.TxRawResult `json:"transactions,omitempty"`
 }
