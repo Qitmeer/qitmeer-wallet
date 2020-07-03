@@ -406,8 +406,8 @@ func newImportPriKeyCmd() *cobra.Command {
 		Use:   "importprivkey {priKey} {pripassword}",
 		Short: "import priKey ",
 		Example: `
-		importprivkey priKey pripassword ef235aacf90d9f4aadd8c92e4b2562e1d9eb97f0df9ba3b508258739cb013db2
-		importprivkey priKey pripassword 5HueCGU8rMjxEXxiPuD5BDku4MkFqeZyd4dZ1jvhTVqvbTLvyTJ --format=wif
+		importprivkey  ef235aacf90d9f4aadd8c92e4b2562e1d9eb97f0df9ba3b508258739cb013db2 pripassword 
+		importprivkey  5HueCGU8rMjxEXxiPuD5BDku4MkFqeZyd4dZ1jvhTVqvbTLvyTJ pripassword  --format=wif
 		`,
 		Args: cobra.MinimumNArgs(2),
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -418,7 +418,7 @@ func newImportPriKeyCmd() *cobra.Command {
 				return err
 			}
 			priv := args[0]
-			if len(args) >= 3 && args[2] == "wif" {
+			if format == "wif" {
 				if decoded, _, err := qx.DecodeWIF(priv); err != nil {
 					return err
 				} else {
@@ -431,7 +431,7 @@ func newImportPriKeyCmd() *cobra.Command {
 		},
 	}
 
-	importPriKeyCmd.LocalFlags().StringVarP(
+	importPriKeyCmd.Flags().StringVarP(
 		&format, "format", "f", "raw", "Private Key format. {raw, wif}")
 
 	return importPriKeyCmd
