@@ -587,6 +587,4 @@ func init() {
 	Command.AddCommand(getTxByTxIdCmd)
 	Command.AddCommand(getTxSpendInfoCmd)
 	Command.AddCommand(webCmd)
-	Command.AddCommand(QxCmd)
-
 }
