@@ -399,14 +399,14 @@ var getAddressesByAccountCmd = &cobra.Command{
 	},
 }
 var importPriKeyCmd = &cobra.Command{
-	Use:   "importprivkey {priKey} {pripassword} {bool, if WIF format, default: false}",
+	Use:   "importprivkey {priKey} {pripassword} {raw(hex), wif(Base58); Private Key format; default: raw}",
 	Short: "import priKey ",
 	Example: `
-		importprivkey priKey pripassword
+		importprivkey priKey pripassword ef235aacf90d9f4aadd8c92e4b2562e1d9eb97f0df9ba3b508258739cb013db2
+		importprivkey priKey pripassword 5HueCGU8rMjxEXxiPuD5BDku4MkFqeZyd4dZ1jvhTVqvbTLvyTJ wif
 		`,
 	Args: cobra.MinimumNArgs(2),
 	RunE: func(cmd *cobra.Command, args []string) error {
-
 		if err := OpenWallet(); err != nil {
 			return err
 		}
@@ -414,7 +414,7 @@ var importPriKeyCmd = &cobra.Command{
 			return err
 		}
 		priv := args[0]
-		if len(args) >= 3 && args[2] == "true" {
+		if len(args) >= 3 && args[2] == "wif" {
 			if decoded, _, err := qx.DecodeWIF(priv); err != nil {
 				return err
 			} else {
