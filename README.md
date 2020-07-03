@@ -40,53 +40,53 @@ if you have golang environment, you can build it by yourself
     ```shell script
     ./qitmeer-wallet qc
     
-    qitmeer wallet command
-    
-    Usage:
-      qitmeer-wallet qc [command]
-    
-    Available Commands:
+   qitmeer wallet command
+   
+   Usage:
+     qitmeer-wallet qc [command]
+   
+   Available Commands:
       console               console
-      create                create
-      createnewaccount      create new account
-      getaddressesbyaccount get addresses by account
-      getbalance            getbalance
-      getlisttxbyaddr       get all transactions for address
-      getnewaddress         create new address by account
-      gettx                 Access to transaction information
-      gettxspendinfo        gettxspendinfo
-      importprivkey         import priKey
-      listaccountsbalance   list Accounts Balance
-      qx                    qx util
-      sendtoaddress         send transaction
-      setsyncetonum         please use caution when specifying how many blocks to update from
-      syncheight            Get the number of local synchronization blocks
-      updateblock           Update local block data
+     create                create
+     createnewaccount      create new account
+     getaddressesbyaccount get addresses by account
+     getbalance            getbalance
+     getlisttxbyaddr       get all transactions for address
+     getnewaddress         create new address by account
+     gettx                 Access to transaction information
+     gettxspendinfo        gettxspendinfo
+     importprivkey         import priKey
+     listaccountsbalance   list Accounts Balance
+     sendtoaddress         send transaction
+     setsyncetonum         please use caution when specifying how many blocks to update from
+     syncheight            Get the number of local synchronization blocks
+     updateblock           Update local block data
       web                   web
    
-    Flags:
-      -a, --appdatadir string       wallet db path
-      -c, --configfile string       config file (default "config.toml")
-          --confirmations int       Number of block confirmations  (default 10)
-          --create                  Create a new wallet
-      -d, --debuglevel string       Logging level {trace, debug, info, warn, error, critical} (default "info")
-      -h, --help                    help for qc
-          --listeners stringArray   rpc listens (default [127.0.0.1:38130])
-      -l, --logdir string           log data path
-          --mintxfee int            The minimum transaction fee in QIT/kB default 20000 (aka. 0.0002 MEER/KB) (default 200000)
-      -n, --network string          network (default "testnet")
-      -P, --pubwalletpass string    data encryption password (default "public")
-          --qcert string            Certificate path
-          --qnotls                  disable TLS (default true)
-      -p, --qpass string            qitmeer node password (default "123456")
-      -s, --qserver string          qitmeer node server (default "127.0.0.1:8030")
-          --qtlsskipverify          skip TLS verification (default true)
-      -u, --quser string            qitmeer node user (default "admin")
+   Flags:
+     -a, --appdatadir string       wallet db path
+     -c, --configfile string       config file (default "config.toml")
+         --confirmations int       Number of block confirmations  (default 10)
+         --create                  Create a new wallet
+     -d, --debuglevel string       Logging level {trace, debug, info, warn, error, critical} (default "info")
+     -h, --help                    help for qc
+         --listeners stringArray   rpc listens (default [127.0.0.1:38130])
+     -l, --logdir string           log data path
+         --mintxfee int            The minimum transaction fee in QIT/kB default 20000 (aka. 0.0002 MEER/KB) (default 200000)
+     -n, --network string          network (default "testnet")
+     -P, --pubwalletpass string    data encryption password (default "public")
+         --qcert string            Certificate path
+         --qnotls                  disable TLS (default true)
+     -p, --qpass string            qitmeer node password (default "123456")
+     -s, --qserver string          qitmeer node server (default "127.0.0.1:8030")
+         --qtlsskipverify          skip TLS verification (default true)
+     -u, --quser string            qitmeer node user (default "admin")
           --rpcPass string          rpc pass,default by random (default "OkROTj7OdtUFm94DwAlzJ2Nm")
           --rpcUser string          rpc user,default by random (default "3tkpuiUE")
-          --ui                      Start Wallet with RPC and webUI interface (default true)
-    
-    Use "qitmeer-wallet qc [command] --help" for more information about a command.
+         --ui                      Start Wallet with RPC and webUI interface (default true)
+   
+   Use "qitmeer-wallet qc [command] --help" for more information about a command.
+
     ```
 
 2. qx
@@ -209,4 +209,33 @@ if you have golang environment, you can build it by yourself
 ./qitmeer-wallet qc web
 ```
 ![desktop wallet](assets/wallet-info.png)
+
+## interactive console
+```shell script
+./qitmeer-wallet qc console
+
+wallet-cli:help
+Usage:
+        <command> [arguments]
+        The commands are:
+        <createNewAccount> : Create a new account. Parameter: [account]
+        <getBalance> : Query the specified address balance. Parameter: [address]
+        <getListTxByAddr> : Gets all transaction records at the specified address. Parameter: [address] [stype:in,out,all]
+        <getNewAddress> : Create a new address under the account. Parameter: [account]
+        <getAddressesByAccount> : Check all addresses under the account. Parameter: [account]
+        <getAccountByAddress> : Inquire about the account number of the address. Parameter: [address]
+        <importPrivKey> : Import private key. Parameter: [priKey]
+        <importWifPrivKey> : Import wif format private key. Parameter: [priKey]
+        <dumpPrivKey> : Export wif format private key by address. Parameter: [address]
+        <getAccountAndAddress> : Check all accounts and addresses. Parameter: []
+        <sendToAddress> : Transfer transaction. Parameter: [address] [num]
+        <updateblock> : Update Wallet Block. Parameter: []
+        <syncheight> : Current Synchronized Data Height. Parameter: []
+        <unlock> : Unlock Wallet. Parameter: [password]
+        <help> : help
+        <exit> : Exit command mode
+
+wallet-cli:
+
+```
 
