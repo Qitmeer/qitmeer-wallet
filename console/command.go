@@ -1,7 +1,9 @@
 package console
 
 import (
+	"encoding/hex"
 	"fmt"
+	"github.com/Qitmeer/qitmeer/qx"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -168,6 +170,7 @@ var createWalletCmd = &cobra.Command{
 		CreatWallet()
 	},
 }
+
 var createNewAccountCmd = &cobra.Command{
 	Use:     "createnewaccount {account} {pripassword}",
 	Short:   "create new account",
@@ -396,27 +399,44 @@ var getAddressesByAccountCmd = &cobra.Command{
 		getAddressesByAccount(account)
 	},
 }
-var importPriKeyCmd = &cobra.Command{
-	Use:   "importprivkey {priKey} {pripassword}",
-	Short: "import priKey ",
-	Example: `
-		importprivkey priKey pripassword
+
+func newImportPriKeyCmd() *cobra.Command {
+	var format string
+	importPriKeyCmd := &cobra.Command{
+		Use:   "importprivkey {priKey} {pripassword}",
+		Short: "import priKey ",
+		Example: `
+		importprivkey  ef235aacf90d9f4aadd8c92e4b2562e1d9eb97f0df9ba3b508258739cb013db2 pripassword 
+		importprivkey  5HueCGU8rMjxEXxiPuD5BDku4MkFqeZyd4dZ1jvhTVqvbTLvyTJ pripassword  --format=wif
 		`,
-	Args: cobra.MinimumNArgs(2),
-	Run: func(cmd *cobra.Command, args []string) {
-		err := OpenWallet()
-		if err != nil {
-			fmt.Println(err.Error())
-			return
-		}
-		err = UnLock(args[1])
-		if err != nil {
-			fmt.Println(err.Error())
-			return
-		}
-		importPrivKey(args[0])
-	},
+		Args: cobra.MinimumNArgs(2),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			if err := OpenWallet(); err != nil {
+				return err
+			}
+			if err := UnLock(args[1]); err != nil {
+				return err
+			}
+			priv := args[0]
+			if format == "wif" {
+				if decoded, _, err := qx.DecodeWIF(priv); err != nil {
+					return err
+				} else {
+					priv = hex.EncodeToString(decoded)
+				}
+			}
+
+			_, err := importPrivKey(priv)
+			return err
+		},
+	}
+
+	importPriKeyCmd.Flags().StringVarP(
+		&format, "format", "f", "raw", "Private Key format. {raw, wif}")
+
+	return importPriKeyCmd
 }
+
 var listAccountsBalanceCmd = &cobra.Command{
 	Use:   "listaccountsbalance ",
 	Short: "list Accounts Balance",
@@ -506,7 +526,7 @@ var syncheightCmd = &cobra.Command{
 
 var consoleCmd = &cobra.Command{
 	Use:   "console",
-	Short: "console",
+	Short: "interactive mode",
 	Example: `
 		Enter console mode
 		`,
@@ -525,7 +545,7 @@ var consoleCmd = &cobra.Command{
 
 var webCmd = &cobra.Command{
 	Use:   "web",
-	Short: "web",
+	Short: "web administration UI",
 	Example: `
 		Enter web mode
 		`,
@@ -560,6 +580,7 @@ func init() {
 	QxCmd.AddCommand(seedtoaddrCmd)
 	QxCmd.AddCommand(pritoaddrCmd)
 	QxCmd.AddCommand(pubtoaddrCmd)
+	QxCmd.AddCommand(wifToPriCmd)
 
 	Command.AddCommand(createWalletCmd)
 	Command.AddCommand(setSynceToNumCmd)
@@ -570,13 +591,11 @@ func init() {
 	Command.AddCommand(updateblockCmd)
 	Command.AddCommand(syncheightCmd)
 	Command.AddCommand(sendToAddressCmd)
-	Command.AddCommand(importPriKeyCmd)
+	Command.AddCommand(newImportPriKeyCmd())
 	Command.AddCommand(getAddressesByAccountCmd)
 	Command.AddCommand(listAccountsBalanceCmd)
 	Command.AddCommand(consoleCmd)
 	Command.AddCommand(getTxByTxIdCmd)
 	Command.AddCommand(getTxSpendInfoCmd)
 	Command.AddCommand(webCmd)
-	Command.AddCommand(QxCmd)
-
 }
