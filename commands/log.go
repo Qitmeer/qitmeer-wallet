@@ -1,6 +1,6 @@
 // Copyright (c) 2017-2018 The qitmeer developers
 
-package console
+package commands
 
 import (
 	"fmt"
