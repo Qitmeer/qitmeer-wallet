@@ -1,4 +1,4 @@
-package console
+package commands
 
 import (
 	"fmt"
@@ -10,6 +10,18 @@ var QxCmd = &cobra.Command{
 	Use:   "qx",
 	Short: "qx util",
 	Long:  `qitmeer wallet qx util`,
+}
+
+func AddQxCommand()  {
+	QxCmd.AddCommand(generatemnemonicCmd)
+	QxCmd.AddCommand(mnemonictoseedCmd)
+	QxCmd.AddCommand(seedtopriCmd)
+	QxCmd.AddCommand(pritopubCmd)
+	QxCmd.AddCommand(mnemonictoaddrCmd)
+	QxCmd.AddCommand(seedtoaddrCmd)
+	QxCmd.AddCommand(pritoaddrCmd)
+	QxCmd.AddCommand(pubtoaddrCmd)
+	QxCmd.AddCommand(wifToPriCmd)
 }
 
 var generatemnemonicCmd = &cobra.Command{

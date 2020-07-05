@@ -1,4 +1,4 @@
-package console
+package commands
 
 import (
 	"encoding/hex"
@@ -14,6 +14,7 @@ import (
 	"github.com/Qitmeer/qitmeer/crypto/bip39"
 	"github.com/Qitmeer/qitmeer/crypto/ecc/secp256k1"
 	"github.com/Qitmeer/qitmeer/qx"
+	"github.com/spf13/cobra"
 	"path/filepath"
 	"runtime"
 )
@@ -22,27 +23,32 @@ const (
 	Name = "wallet-cli:"
 )
 
-type JsonCmdHelper struct {
-	JsonCmd interface{}
-	Run     func(interface{}, *wallet.Wallet) (interface{}, error)
-}
-
-func (h *JsonCmdHelper) Call() (interface{}, error) {
-	var err error
-	var res interface{}
-	if res, err = h.Run(h.JsonCmd, w); err == nil {
-		if res, err = json.MarshalIndent(res, "", " "); err == nil {
-			fmt.Printf("%s\n", res)
-			return res, nil
-		}
-	}
-	return nil, err
-}
-
-var helper *JsonCmdHelper
-
 var w *wallet.Wallet
 var isWin = runtime.GOOS == "windows"
+
+// interactive mode
+
+var ConsoleCmd = &cobra.Command{
+	Use:   "console",
+	Short: "interactive mode",
+	Example: `
+		Enter console mode
+		`,
+	Args:             cobra.NoArgs,
+	PersistentPreRun: LoadConfig,
+	Run: func(cmd *cobra.Command, args []string) {
+		b := checkWalletIeExist(config.Cfg)
+		if b == false {
+			fmt.Println("Please create a wallet first,[qitmeer-wallet qc create ]")
+			return
+		}
+		startConsole()
+	},
+}
+
+func AddConsoleCommand() {
+
+}
 
 func CreatWallet() {
 	b := checkWalletIeExist(config.Cfg)
@@ -197,7 +203,6 @@ func listAccountsBalance() (interface{}, error) {
 	}
 	return msg, nil
 }
-
 
 func getListTxByAddr(addr string, page int32, pageSize int32, sType int32) (interface{}, error) {
 	helper = &JsonCmdHelper{

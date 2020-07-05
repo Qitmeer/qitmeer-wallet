@@ -1,170 +1,42 @@
-package console
+package commands
 
 import (
 	"encoding/hex"
 	"fmt"
-	"github.com/Qitmeer/qitmeer/qx"
-	"os"
-	"path/filepath"
-	"strconv"
-	"strings"
-
-	"github.com/BurntSushi/toml"
-	"github.com/Qitmeer/qitmeer-wallet/config"
-	"github.com/Qitmeer/qitmeer-wallet/utils"
-	"github.com/Qitmeer/qitmeer-wallet/wserver"
 	"github.com/Qitmeer/qitmeer/log"
+	"github.com/Qitmeer/qitmeer/qx"
 	"github.com/spf13/cobra"
+	"strconv"
 )
 
-var RootCmd = &cobra.Command{
-	Use: "qitmeer-wallet",
-}
-
-var Command = &cobra.Command{
+var QcCmd = &cobra.Command{
 	Use:              "qc",
 	Short:            "qitmeer wallet command",
 	Long:             `qitmeer wallet command`,
 	PersistentPreRun: LoadConfig,
 }
 
-var preCfg *config.Config
-var fileCfg = config.Cfg
-
-func BindFlags() {
-	preCfg = &config.Config{}
-	Command.PersistentFlags().StringVarP(&preCfg.ConfigFile, "configfile", "c", "config.toml", "config file")
-	Command.PersistentFlags().StringVarP(&preCfg.DebugLevel, "debuglevel", "d", "info", "Logging level {trace, debug, info, warn, error, critical}")
-	Command.PersistentFlags().StringVarP(&preCfg.AppDataDir, "appdatadir", "a", "", "wallet db path")
-	Command.PersistentFlags().StringVarP(&preCfg.LogDir, "logdir", "l", "", "log data path")
-	Command.PersistentFlags().StringVarP(&preCfg.Network, "network", "n", "testnet", "network")
-	Command.PersistentFlags().BoolVar(&preCfg.Create, "create", false, "Create a new wallet")
-	Command.PersistentFlags().StringVarP(&preCfg.QServer, "qserver", "s", "127.0.0.1:8030", "qitmeer node server")
-	Command.PersistentFlags().StringVarP(&preCfg.QUser, "quser", "u", "admin", "qitmeer node user")
-	Command.PersistentFlags().StringVarP(&preCfg.QPass, "qpass", "p", "123456", "qitmeer node password")
-	Command.PersistentFlags().StringVarP(&preCfg.WalletPass, "pubwalletpass", "P", "public", "data encryption password")
-	Command.PersistentFlags().BoolVar(&preCfg.QNoTLS, "qnotls", fileCfg.QNoTLS, "disable TLS")
-	Command.PersistentFlags().StringVar(&preCfg.QCert, "qcert", fileCfg.QCert, "Certificate path")
-	Command.PersistentFlags().BoolVar(&preCfg.QTLSSkipVerify, "qtlsskipverify", fileCfg.QTLSSkipVerify, "skip TLS verification")
-
-	Command.PersistentFlags().Int64Var(&preCfg.Confirmations, "confirmations", 10, "Number of block confirmations ")
-	Command.PersistentFlags().BoolVar(&preCfg.UI, "ui", true, "Start Wallet with RPC and webUI interface")
-	Command.PersistentFlags().StringArrayVar(&preCfg.Listeners, "listeners", fileCfg.Listeners, "rpc listens")
-	Command.PersistentFlags().StringVar(&preCfg.RPCUser, "rpcUser", fileCfg.RPCUser, "rpc user,default by random")
-	Command.PersistentFlags().StringVar(&preCfg.RPCPass, "rpcPass", fileCfg.RPCPass, "rpc pass,default by random")
-	Command.PersistentFlags().Int64Var(&preCfg.MinTxFee, "mintxfee", fileCfg.MinTxFee, "The minimum transaction fee in QIT/kB default 20000 (aka. 0.0002 MEER/KB)")
-}
-
-// LoadConfig config file and flags
-func LoadConfig(cmd *cobra.Command, args []string) {
-	// load configfile ane merge command ,but don't udpate configfile
-	_, err := toml.DecodeFile(preCfg.ConfigFile, fileCfg)
-	if err != nil {
-		if cmd.Flag("configfile").Changed {
-			if fExit, _ := utils.FileExists(preCfg.ConfigFile); fExit {
-				log.Error(fmt.Sprintf("config file err: %s", err))
-				return
-			}
-			return
-		}
-	}
-
-	fileCfg.ConfigFile = preCfg.ConfigFile
-
-	if cmd.Flag("debuglevel").Changed {
-		fileCfg.DebugLevel = preCfg.DebugLevel
-	}
-	if cmd.Flag("appdatadir").Changed {
-		fileCfg.AppDataDir = preCfg.AppDataDir
-	}
-	if cmd.Flag("logdir").Changed {
-		fileCfg.LogDir = preCfg.LogDir
-	}
-	if cmd.Flag("network").Changed {
-		fileCfg.Network = preCfg.Network
-	}
-	if cmd.Flag("create").Changed {
-		fileCfg.Create = preCfg.Create
-	}
-	if cmd.Flag("listeners").Changed {
-		fileCfg.Listeners = preCfg.Listeners
-	}
-	if cmd.Flag("rpcUser").Changed {
-		fileCfg.RPCUser = preCfg.RPCUser
-	}
-	if cmd.Flag("rpcPass").Changed {
-		fileCfg.RPCPass = preCfg.RPCPass
-	}
-	if cmd.Flag("ui").Changed {
-		fileCfg.UI = preCfg.UI
-	}
-	if cmd.Flag("qserver").Changed {
-		fileCfg.QServer = preCfg.QServer
-	}
-	if cmd.Flag("quser").Changed {
-		fileCfg.QUser = preCfg.QUser
-	}
-	if cmd.Flag("qpass").Changed {
-		fileCfg.QPass = preCfg.QPass
-	}
-	if cmd.Flag("pubwalletpass").Changed {
-		fileCfg.WalletPass = preCfg.WalletPass
-	}
-	if cmd.Flag("qnotls").Changed {
-		fileCfg.QNoTLS = preCfg.QNoTLS
-	}
-	if cmd.Flag("qcert").Changed {
-		fileCfg.QCert = preCfg.QCert
-	}
-	if cmd.Flag("mintxfee").Changed {
-		fileCfg.MinTxFee = preCfg.MinTxFee
-	}
-	if cmd.Flag("confirmations").Changed {
-		fileCfg.Confirmations = preCfg.Confirmations
-	}
-	if cmd.Flag("qtlsskipverify").Changed {
-		fileCfg.QTLSSkipVerify = preCfg.QTLSSkipVerify
-	}
-	config.ActiveNet = utils.GetNetParams(fileCfg.Network)
-	funcName := "LoadConfig"
-	// Parse, validate, and set debug log level(s).
-	if err := parseAndSetDebugLevels(fileCfg.DebugLevel); err != nil {
-		err := fmt.Errorf("%s: %v", funcName, err.Error())
-		fmt.Fprintln(os.Stderr, err)
-		return
-	}
-	InitLogRotator(filepath.Join(fileCfg.LogDir, "wallet.log"))
-
-	if fileCfg.MinTxFee < config.DefaultMinRelayTxFee {
-		fileCfg.MinTxFee = config.DefaultMinRelayTxFee
-	}
-
-	return
-
-}
-
-func parseAndSetDebugLevels(debugLevel string) error {
-	// When the specified string doesn't have any delimters, treat it as
-	// the log level for all subsystems.
-	if !strings.Contains(debugLevel, ",") && !strings.Contains(debugLevel, "=") {
-		// Validate debug log level.
-		lvl, err := log.LvlFromString(debugLevel)
-		if err != nil {
-			str := "the specified debug level [%v] is invalid"
-			return fmt.Errorf(str, debugLevel)
-		}
-		// Change the logging level for all subsystems.
-		Glogger().Verbosity(lvl)
-		return nil
-	}
-	// TODO support log for subsystem
-	return nil
+func AddQcCommand()  {
+	QcCmd.AddCommand(createWalletCmd)
+	QcCmd.AddCommand(setSynceToNumCmd)
+	QcCmd.AddCommand(createNewAccountCmd)
+	QcCmd.AddCommand(getnewaddressCmd)
+	QcCmd.AddCommand(getBalanceCmd)
+	QcCmd.AddCommand(getlisttxbyaddrCmd)
+	QcCmd.AddCommand(updateblockCmd)
+	QcCmd.AddCommand(syncheightCmd)
+	QcCmd.AddCommand(sendToAddressCmd)
+	QcCmd.AddCommand(newImportPriKeyCmd())
+	QcCmd.AddCommand(getAddressesByAccountCmd)
+	QcCmd.AddCommand(listAccountsBalanceCmd)
+	QcCmd.AddCommand(getTxByTxIdCmd)
+	QcCmd.AddCommand(getTxSpendInfoCmd)
 }
 
 var createWalletCmd = &cobra.Command{
 	Use:     "create",
-	Short:   "create",
-	Example: "create wallte",
+	Short:   "create wallet",
+	Example: "create",
 	Args:    cobra.NoArgs,
 	Run: func(cmd *cobra.Command, args []string) {
 		CreatWallet()
@@ -520,82 +392,4 @@ var syncheightCmd = &cobra.Command{
 		}
 		syncheight()
 	},
-}
-
-// interactive mode
-
-var consoleCmd = &cobra.Command{
-	Use:   "console",
-	Short: "interactive mode",
-	Example: `
-		Enter console mode
-		`,
-	Args: cobra.NoArgs,
-	Run: func(cmd *cobra.Command, args []string) {
-		b := checkWalletIeExist(config.Cfg)
-		if b == false {
-			fmt.Println("Please create a wallet first,[qitmeer-wallet qc create ]")
-			return
-		}
-		startConsole()
-	},
-}
-
-// web mode
-
-var webCmd = &cobra.Command{
-	Use:   "web",
-	Short: "web administration UI",
-	Example: `
-		Enter web mode
-		`,
-	Args: cobra.NoArgs,
-	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("web model")
-		qitmeerMain(fileCfg)
-	},
-}
-
-func qitmeerMain(cfg *config.Config) {
-	log.Trace("Qitmeer Main")
-	wsvr, err := wserver.NewWalletServer(cfg)
-	if err != nil {
-		log.Error(fmt.Sprintf("NewWalletServer err: %s", err))
-		return
-	}
-	wsvr.Start()
-
-	exitCh := make(chan int)
-	<-exitCh
-}
-
-func init() {
-	RootCmd.AddCommand(Command)
-	RootCmd.AddCommand(QxCmd)
-	QxCmd.AddCommand(generatemnemonicCmd)
-	QxCmd.AddCommand(mnemonictoseedCmd)
-	QxCmd.AddCommand(seedtopriCmd)
-	QxCmd.AddCommand(pritopubCmd)
-	QxCmd.AddCommand(mnemonictoaddrCmd)
-	QxCmd.AddCommand(seedtoaddrCmd)
-	QxCmd.AddCommand(pritoaddrCmd)
-	QxCmd.AddCommand(pubtoaddrCmd)
-	QxCmd.AddCommand(wifToPriCmd)
-
-	Command.AddCommand(createWalletCmd)
-	Command.AddCommand(setSynceToNumCmd)
-	Command.AddCommand(createNewAccountCmd)
-	Command.AddCommand(getnewaddressCmd)
-	Command.AddCommand(getBalanceCmd)
-	Command.AddCommand(getlisttxbyaddrCmd)
-	Command.AddCommand(updateblockCmd)
-	Command.AddCommand(syncheightCmd)
-	Command.AddCommand(sendToAddressCmd)
-	Command.AddCommand(newImportPriKeyCmd())
-	Command.AddCommand(getAddressesByAccountCmd)
-	Command.AddCommand(listAccountsBalanceCmd)
-	Command.AddCommand(consoleCmd)
-	Command.AddCommand(getTxByTxIdCmd)
-	Command.AddCommand(getTxSpendInfoCmd)
-	Command.AddCommand(webCmd)
 }
