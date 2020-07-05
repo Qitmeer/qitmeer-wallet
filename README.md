@@ -46,7 +46,6 @@ if you have golang environment, you can build it by yourself
      qitmeer-wallet qc [command]
    
    Available Commands:
-      console               console
      create                create
      createnewaccount      create new account
      getaddressesbyaccount get addresses by account
@@ -61,7 +60,6 @@ if you have golang environment, you can build it by yourself
      setsyncetonum         please use caution when specifying how many blocks to update from
      syncheight            Get the number of local synchronization blocks
      updateblock           Update local block data
-      web                   web
    
    Flags:
      -a, --appdatadir string       wallet db path
@@ -206,13 +204,13 @@ if you have golang environment, you can build it by yourself
 
 ## Web client
 ```shell script
-./qitmeer-wallet qc web
+./qitmeer-wallet web
 ```
 ![desktop wallet](assets/wallet-info.png)
 
-## interactive console
+## Interactive console
 ```shell script
-./qitmeer-wallet qc console
+./qitmeer-wallet console
 
 wallet-cli:help
 Usage:
