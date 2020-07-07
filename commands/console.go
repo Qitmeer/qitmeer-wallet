@@ -293,7 +293,7 @@ func importPrivKey(priKey string) (interface{}, error) {
 		PrivKey: priKey,
 		Rescan:  &v,
 	}
-	msg, err := walletrpc.ImportPrimKey(cmd, w)
+	msg, err := walletrpc.ImportPrivKey(cmd, w)
 	if err != nil {
 		fmt.Println("importPrivKey", "err", err.Error())
 		return nil, err

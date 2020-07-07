@@ -196,7 +196,7 @@ func ImportWifPrivKey(iCmd interface{}, w *wallet.Wallet) (interface{}, error) {
 
 	return nil, err
 }
-func ImportPrimKey(iCmd interface{}, w *wallet.Wallet) (interface{}, error) {
+func ImportPrivKey(iCmd interface{}, w *wallet.Wallet) (interface{}, error) {
 	cmd := iCmd.(*qitmeerjson.ImportPrivKeyCmd)
 	// Ensure that private keys are only imported to the correct account.
 	//
