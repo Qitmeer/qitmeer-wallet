@@ -216,9 +216,9 @@ func (api *API) DumpPrivKey(addrStr string) (string, error) {
 	return key, err
 }
 
-// ImportWifPrvKey import a WIF-encoded private key and adding it to an account
+// ImportWifPrivKey import a WIF-encoded private key and adding it to an account
 // a WIF-encoded private key and adding it to an account.
-func (api *API) ImportWifPrvKey(accountName string, key string) error {
+func (api *API) ImportWifPrivKey(accountName string, key string) error {
 	// Ensure that private keys are only imported to the correct account.
 	if accountName != "" && accountName != waddrmgr.ImportedAddrAccountName {
 		return &qitmeerjson.ErrNotImportedAccount
@@ -251,8 +251,8 @@ func (api *API) ImportWifPrvKey(accountName string, key string) error {
 	return err
 }
 
-// ImportPriKey import pri key
-func (api *API) ImportPriKey(accountName string, key string) error {
+// ImportPrivKey import pri key
+func (api *API) ImportPrivKey(accountName string, key string) error {
 	// Ensure that private keys are only imported to the correct account.
 	//
 	// Yes, Label is the account name.

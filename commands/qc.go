@@ -25,7 +25,7 @@ func AddQcCommand()  {
 	QcCmd.AddCommand(updateblockCmd)
 	QcCmd.AddCommand(syncheightCmd)
 	QcCmd.AddCommand(sendToAddressCmd)
-	QcCmd.AddCommand(newImportPriKeyCmd())
+	QcCmd.AddCommand(newImportPrivKeyCmd())
 	QcCmd.AddCommand(getAddressesByAccountCmd)
 	QcCmd.AddCommand(listAccountsBalanceCmd)
 	QcCmd.AddCommand(getTxByTxIdCmd)
@@ -271,9 +271,9 @@ var getAddressesByAccountCmd = &cobra.Command{
 	},
 }
 
-func newImportPriKeyCmd() *cobra.Command {
+func newImportPrivKeyCmd() *cobra.Command {
 	var format string
-	importPriKeyCmd := &cobra.Command{
+	importPrivKeyCmd := &cobra.Command{
 		Use:   "importprivkey {priKey} {pripassword}",
 		Short: "import priKey ",
 		Example: `
@@ -302,10 +302,10 @@ func newImportPriKeyCmd() *cobra.Command {
 		},
 	}
 
-	importPriKeyCmd.Flags().StringVarP(
+	importPrivKeyCmd.Flags().StringVarP(
 		&format, "format", "f", "raw", "Private Key format. {raw, wif}")
 
-	return importPriKeyCmd
+	return importPrivKeyCmd
 }
 
 var listAccountsBalanceCmd = &cobra.Command{
