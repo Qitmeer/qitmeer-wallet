@@ -1,7 +1,9 @@
 package commands
 
 import (
+	"bufio"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"github.com/Qitmeer/qitmeer-wallet/config"
 	"github.com/Qitmeer/qitmeer-wallet/utils"
@@ -39,15 +41,33 @@ var helper *JsonCmdHelper
 var userConf = config.Cfg
 var defaultConf = config.NewDefaultConfig()
 
+func checkDefaultConf() error {
+	dcf := config.DefaultConfigFile
+	if exists, _ := utils.FileExists(dcf); !exists {
+		fmt.Printf("Required to create default config %s, continue? [y/n]\n", dcf)
+
+		reader := bufio.NewReader(os.Stdin)
+		if answer, err := reader.ReadByte(); answer == 'y' || answer == 'Y' && err == nil {
+			if _, err := utils.FileCopy(config.SampleConfigFile, dcf); err != nil {
+				fmt.Fprintln(os.Stderr, err)
+				return err
+			}
+		} else {
+			err := errors.New(fmt.Sprintf("Denied to create %s", dcf))
+			fmt.Fprintln(os.Stderr, err)
+			return err
+		}
+	}
+
+	return nil
+}
+
 func bindFlags() error {
 	cobra.OnInitialize(initConfig)
 
 	dcf := config.DefaultConfigFile
-	if exists, _ := utils.FileExists(dcf); !exists {
-		if _, err := utils.FileCopy(config.SampleConfigFile, dcf); err != nil {
-			fmt.Fprintln(os.Stderr, err)
-			return err
-		}
+	if err := checkDefaultConf(); err != nil {
+		return err
 	}
 
 	viper.SetConfigFile(dcf)
@@ -195,7 +215,9 @@ func initConfig() {
 }
 
 func init() {
-	bindFlags()
+	if err := bindFlags(); err != nil {
+		os.Exit(-1)
+	}
 
 	RootCmd.AddCommand(QcCmd)
 	RootCmd.AddCommand(QxCmd)
