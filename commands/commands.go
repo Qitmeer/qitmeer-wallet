@@ -47,7 +47,7 @@ func checkDefaultConf() error {
 		fmt.Printf("Required to create default config %s, continue? [y/n]\n", dcf)
 
 		reader := bufio.NewReader(os.Stdin)
-		if answer, err := reader.ReadByte(); answer == 'y' || answer == 'Y' && err == nil {
+		if answer, err := reader.ReadByte(); (answer == 'y' || answer == 'Y') && err == nil {
 			if _, err := utils.FileCopy(config.SampleConfigFile, dcf); err != nil {
 				fmt.Fprintln(os.Stderr, err)
 				return err
