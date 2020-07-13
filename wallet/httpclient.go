@@ -49,6 +49,7 @@ func NewHtpc() (*httpConfig, error) {
 		for _, item := range config.Cfg.Qitmeerds {
 			if item.Name == config.Cfg.QitmeerdSelect {
 				qitmeerd = item
+				break
 			}
 		}
 		if qitmeerd != nil {

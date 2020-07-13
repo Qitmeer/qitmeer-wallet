@@ -12,12 +12,14 @@ require (
 	github.com/jrick/logrotate v1.0.0
 	github.com/julienschmidt/httprouter v1.2.0
 	github.com/mattn/go-colorable v0.1.2
+	github.com/mitchellh/go-homedir v1.1.0
 	github.com/peterh/liner v1.1.0
 	github.com/qianlnk/pgbar v0.0.0-20190929032005-46c23acad4ed
 	github.com/qianlnk/to v0.0.0-20180426070425-a52c7fda1751 // indirect
 	github.com/rakyll/statik v0.1.7
 	github.com/samuel/go-socks v0.0.0-20130725190102-f6c5f6a06ef6
 	github.com/spf13/cobra v0.0.5
+	github.com/spf13/viper v1.3.2
 	go.etcd.io/bbolt v1.3.3
 	golang.org/x/crypto v0.0.0-20190701094942-4def268fd1a4
 	golang.org/x/net v0.0.0-20190620200207-3b0461eec859

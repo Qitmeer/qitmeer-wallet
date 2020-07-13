@@ -35,7 +35,6 @@ var ConsoleCmd = &cobra.Command{
 		Enter console mode
 		`,
 	Args:             cobra.NoArgs,
-	PersistentPreRun: LoadConfig,
 	Run: func(cmd *cobra.Command, args []string) {
 		b := checkWalletIeExist(config.Cfg)
 		if b == false {

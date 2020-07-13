@@ -17,10 +17,9 @@ var WebCmd = &cobra.Command{
 		Enter web mode
 		`,
 	Args: cobra.NoArgs,
-	PersistentPreRun: LoadConfig,
 	Run: func(cmd *cobra.Command, args []string) {
 		fmt.Println("web model")
-		qitmeerMain(fileCfg)
+		qitmeerMain(userConf)
 	},
 }
 

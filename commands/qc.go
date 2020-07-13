@@ -13,7 +13,6 @@ var QcCmd = &cobra.Command{
 	Use:              "qc",
 	Short:            "qitmeer wallet command",
 	Long:             `qitmeer wallet command`,
-	PersistentPreRun: LoadConfig,
 }
 
 func AddQcCommand()  {

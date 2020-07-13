@@ -23,6 +23,7 @@ import (
 
 const (
 	defaultConfigFilename = "config.toml"
+	sampleConfigFilename = "sample-config.toml"
 	defaultLogLevel       = "info"
 	defaultLogDirname     = "logs"
 	defaultRPCMaxClients  = 10
@@ -33,7 +34,8 @@ const (
 
 var (
 	defaultAppDataDir  = utils.AppDataDir("qitwallet", false)
-	DefaultConfigFile  = filepath.Join(defaultAppDataDir, defaultConfigFilename)
+	DefaultConfigFile  = filepath.Join("./", defaultConfigFilename)
+	SampleConfigFile  = filepath.Join("./", sampleConfigFilename)
 	defaultRPCKeyFile  = filepath.Join(defaultAppDataDir, "rpc.key")
 	defaultRPCCertFile = filepath.Join(defaultAppDataDir, "rpc.cert")
 	defaultLogDir      = filepath.Join(defaultAppDataDir, defaultLogDirname)
