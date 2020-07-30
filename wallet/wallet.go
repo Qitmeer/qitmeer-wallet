@@ -431,84 +431,54 @@ func (wt *Wallet) GetListTxByAddr(addr string, sType int32, page int32, pageSize
 	var endIndex int32
 	var txHss []hash.Hash
 	var txHssIn []hash.Hash
+	var txHssOut []hash.Hash
 	var dataLen int32
+
+	allMap := make(map[hash.Hash]types.Amount)
+
+	for _, out := range at.Txoutput {
+		allMap[out.TxId] += out.Amount
+		if out.SpendTo != nil {
+			allMap[out.SpendTo.TxHash] -= out.Amount
+		}
+	}
+
+	for tx, amount := range allMap {
+		if amount > 0 {
+			txHssIn = append(txHssIn, tx)
+		} else {
+			txHssOut = append(txHssOut, tx)
+		}
+	}
+
 	switch sType {
 	case sTypeIn:
-		dataLen = int32(len(at.Txoutput))
-		if page < 0 {
-			for _, txPut := range at.Txoutput {
-				txHss = append(txHss, txPut.TxId)
-			}
-			dataLen = int32(len(txHss))
-			page = defaultPage
-			pageSize = defaultMaxPageSize
-		} else {
-			if startIndex > dataLen {
-				return nil, fmt.Errorf("no data")
-			} else {
-				if (startIndex + pageSize) > dataLen {
-					endIndex = dataLen
-				} else {
-					endIndex = startIndex + pageSize
-				}
-				for s := startIndex; s < endIndex; s++ {
-					txHss = append(txHss, at.Txoutput[s].TxId)
-				}
-			}
-		}
+		txHss = txHssIn
 	case sTypeOut:
-		for _, txPut := range at.Txoutput {
-			if txPut.Spend == wtxmgr.SpendStatusSpend && txPut.SpendTo != nil {
-				txHssIn = append(txHssIn, txPut.SpendTo.TxHash)
-			}
-		}
-		dataLen = int32(len(txHssIn))
-		if page < 0 {
-			txHss = append(txHss, txHssIn...)
-			page = defaultPage
-			pageSize = defaultMaxPageSize
-		} else {
-			if startIndex > dataLen {
-				return nil, fmt.Errorf("no data")
-			} else {
-				if (startIndex + pageSize) > dataLen {
-					endIndex = dataLen
-				} else {
-					endIndex = startIndex + pageSize
-				}
-				for s := startIndex; s < endIndex; s++ {
-					txHss = append(txHss, txHssIn[s])
-				}
-			}
-		}
+		txHss = txHssOut
 	case sTypeAll:
-		for _, txPut := range at.Txoutput {
-			txHss = append(txHss, txPut.TxId)
-			if txPut.Spend == wtxmgr.SpendStatusSpend && txPut.SpendTo != nil {
-				txHss = append(txHss, txPut.SpendTo.TxHash)
-			}
-		}
-		dataLen = int32(len(txHss))
-		if page < 0 {
-			page = defaultPage
-			pageSize = defaultMaxPageSize
-		} else {
-			if startIndex > dataLen {
-				return nil, fmt.Errorf("no data")
-			} else {
-				if (startIndex + pageSize) > dataLen {
-					endIndex = dataLen
-				} else {
-					endIndex = startIndex + pageSize
-				}
-				for s := startIndex; s < endIndex; s++ {
-					txHss = append(txHss, txHssIn[s])
-				}
-			}
-		}
+		txHss = append(txHssIn, txHssOut...)
 	default:
 		return nil, fmt.Errorf("err stype")
 	}
+
+	dataLen = int32(len(txHss))
+	if page < 0 {
+		page = defaultPage
+		pageSize = defaultMaxPageSize
+	} else {
+		if startIndex > dataLen {
+			return nil, fmt.Errorf("no data")
+		} else {
+			if (startIndex + pageSize) > dataLen {
+				endIndex = dataLen
+			} else {
+				endIndex = startIndex + pageSize
+			}
+			txHss= txHss[startIndex:endIndex]
+		}
+	}
+
 	result.Page = page
 	result.PageSize = pageSize
 	result.Total = dataLen
@@ -534,8 +504,10 @@ func (wt *Wallet) GetListTxByAddr(addr string, sType int32, page int32, pageSize
 		return nil, err
 	}
 	result.Transactions = transactions
+
 	return &result, nil
 }
+
 
 func (wt *Wallet) GetBalance(addr string) (*Balance, error) {
 	if addr == "" {
