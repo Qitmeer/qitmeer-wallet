@@ -76,6 +76,12 @@ type GetListTxByAddrCmd struct {
 	Stype int32
 }
 
+type GetBillsByAddrCmd struct {
+	Address  string
+	Filter   int32
+	PageNo   int32
+	PageSize int32
+}
 
 // GetNewAddressCmd defines the getnewaddress JSON-RPC command.
 type GetNewAddressCmd struct {

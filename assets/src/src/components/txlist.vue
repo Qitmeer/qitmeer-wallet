@@ -13,10 +13,10 @@
             <el-col :span="4">
               <el-select v-model="currentAccount" placeholder="账号" size="small">
                 <el-option
-                  v-for="item in accounts"
-                  :key="item.account"
-                  :label="item.account"
-                  :value="item.account"
+                    v-for="item in accounts"
+                    :key="item.account"
+                    :label="item.account"
+                    :value="item.account"
                 ></el-option>
               </el-select>
             </el-col>
@@ -26,10 +26,10 @@
             <el-col :span="14">
               <el-select v-model="currentAddress" style="width:100%">
                 <el-option
-                  v-for="item in addresses"
-                  :key="item.addr"
-                  :label="item.addr"
-                  :value="item.addr"
+                    v-for="item in addresses"
+                    :key="item.addr"
+                    :label="item.addr"
+                    :value="item.addr"
                 ></el-option>
               </el-select>
             </el-col>
@@ -80,43 +80,24 @@ export default {
     this.currentAccount = this.$store.state.Accounts[0].account;
   },
   methods: {
-    txlist2table(txlist) {
+    bills2table(bills) {
       let _this = this;
       let tmpTable = [];
-      for (let i = 0; i < txlist.length; i++) {
-        let inOut = "in";
-
-        let amount = 0;
-
-        let findAddr = false;
-        for (let j = 0; j < txlist[i].vout.length; j++) {
-          if (txlist[i].vout[j].scriptPubKey.addresses) {
-            let addrs = txlist[i].vout[j].scriptPubKey.addresses;
-            for (let k = 0; k < addrs.length; k++) {
-              if (addrs[k] == this.currentAddress) {
-                amount = amount + txlist[i].vout[j].amount;
-                findAddr = true;
-                break;
-              }
-            }
-            if (findAddr) {
-              break;
-            }
-          }
-        }
-        console.log(findAddr);
+      for (let i = 0; i < bills.length; i++) {
+        let bill = bills[i]
+        let amount = bill.amount / Math.pow(10.0, 8);
+        let inOut = amount <= 0 ? "OUT" : "IN";
 
         tmpTable.push({
           date: "",
           type: inOut,
-          txId: txlist[i].txid,
+          txId: bill.tx_id,
           amount: amount
         });
       }
-      console.log(tmpTable);
       _this.txList = tmpTable;
     },
-    getTxList(addr) {
+    getBills(addr) {
       if (addr == "*") {
         //todo all account addresses
         return;
@@ -126,58 +107,51 @@ export default {
 
       _this.$emit("setLoading", true, "");
 
-      _this
-        .$axios({
-          method: "post",
-          data: JSON.stringify({
-            id: new Date().getTime(),
-            method: "wallet_getTxListByAddr",
-            params: [addr, 2, -1, 100]
-          })
+      _this.$axios({
+        method: "post",
+        data: JSON.stringify({
+          id: new Date().getTime(),
+          method: "wallet_getBillsByAddr",
+          params: [addr, 2, -1, 100]
         })
-        .then(response => {
-          _this.$emit("setLoading", false, "");
-          if (typeof response.data.error != "undefined") {
-            _this.$emit("alertResError", response.data.error, () => {});
-            return;
-          }
+      }).then(resp => {
+        _this.$emit("setLoading", false, "");
+        if (typeof resp.data.error != "undefined") {
+          _this.$emit("alertResError", resp.data.error, () => {
+          });
+          return;
+        }
 
-          // let tmpTable = [];
-          // for (let i = 0; i < response.data.result.length; i++) {
-          //   tmpTable.push({ addr: response.data.result[i] });
-          // }
-          // _this.txList = tmpTable;
-
-          _this.txlist2table(response.data.result.transactions);
-        })
-        .catch(() => {
-          _this.$emit("setLoading", false, "");
-        });
+        _this.bills2table(resp.data.result.bills);
+      }).catch(() => {
+        _this.$emit("setLoading", false, "");
+      });
     },
     getAddressList(account) {
       let _this = this;
       _this
-        .$axios({
-          method: "post",
-          data: JSON.stringify({
-            id: new Date().getTime(),
-            method: "wallet_getAddressesByAccount",
-            params: [account]
+          .$axios({
+            method: "post",
+            data: JSON.stringify({
+              id: new Date().getTime(),
+              method: "wallet_getAddressesByAccount",
+              params: [account]
+            })
           })
-        })
-        .then(response => {
-          if (typeof response.data.error != "undefined") {
-            _this.$emit("alertResError", response.data.error, () => {});
-            return;
-          }
+          .then(response => {
+            if (typeof response.data.error != "undefined") {
+              _this.$emit("alertResError", response.data.error, () => {
+              });
+              return;
+            }
 
-          let tmpTable = [];
-          for (let i = 0; i < response.data.result.length; i++) {
-            tmpTable.push({ addr: response.data.result[i] });
-          }
-          _this.addresses = tmpTable;
-          _this.currentAddress = _this.addresses[0].addr;
-        });
+            let tmpTable = [];
+            for (let i = 0; i < response.data.result.length; i++) {
+              tmpTable.push({addr: response.data.result[i]});
+            }
+            _this.addresses = tmpTable;
+            _this.currentAddress = _this.addresses[0].addr;
+          });
     }
   },
   watch: {
@@ -186,7 +160,7 @@ export default {
     },
     currentAddress() {
       this.txList = [];
-      this.getTxList(this.currentAddress);
+      this.getBills(this.currentAddress);
     }
   }
 };

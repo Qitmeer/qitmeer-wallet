@@ -373,8 +373,13 @@ func (api *API) GetBalanceByAddr(addrStr string) (*Balance, error) {
 }
 
 //GetTxListByAddr get addr tx list
-func (api *API) GetTxListByAddr(addr string, sType int32, page int32, pageSize int32) (clijson.PageTxRawResult, error) {
+func (api *API) GetTxListByAddr(addr string, sType int32, page int32, pageSize int32) (*clijson.PageTxRawResult, error) {
 	rs, err := api.wt.GetListTxByAddr(addr, sType, page, pageSize)
-	return *rs, err
+	return rs, err
 }
 
+//GetBillsByAddr get bill list
+func (api *API) GetBillsByAddr(addr string, filter int, page int, pageSize int) (*clijson.PagedBillsResult, error) {
+	rs, err := api.wt.GetBillsByAddr(addr, filter, page, pageSize)
+	return rs, err
+}

@@ -1,8 +1,8 @@
 package commands
 
-
 import (
 	"fmt"
+	"github.com/Qitmeer/qitmeer-wallet/wallet"
 	"github.com/peterh/liner"
 	"io"
 	"io/ioutil"
@@ -129,8 +129,8 @@ func (c *Console) AutoCompleteInput(line string, pos int) (string, []string, str
 		start++
 		break
 	}
-	s:=[]string{}
-	return line[:start],s, line[pos:]
+	s := []string{}
+	return line[:start], s, line[pos:]
 }
 
 // Interactive starts an interactive user session, where input is propted from
@@ -194,7 +194,7 @@ func (c *Console) Interactive() {
 			}
 			// If all the needed lines are present, save the command and run
 			if indents <= 0 {
-				if len(input) > 0 && input[0] != ' '  {
+				if len(input) > 0 && input[0] != ' ' {
 					if command := strings.TrimSpace(input); len(c.history) == 0 || command != c.history[len(c.history)-1] {
 						c.history = append(c.history, command)
 						if c.prompter != nil {
@@ -202,17 +202,17 @@ func (c *Console) Interactive() {
 						}
 					}
 				}
-				var cmd ,arg1,arg2,arg3 string
-				is:=strings.Fields(input)
-				for i,str:= range is{
-					if i == 0{
+				var cmd, arg1, arg2, arg3 string
+				is := strings.Fields(input)
+				for i, str := range is {
+					if i == 0 {
 						cmd = str
-					}else if i == 1{
-						arg1 =str
-					}else if i==2{
+					} else if i == 1 {
+						arg1 = str
+					} else if i == 2 {
 						arg2 = str
-					}else if i==3{
-						arg3=str
+					} else if i == 3 {
+						arg3 = str
 					}
 				}
 				if cmd == "exit" {
@@ -226,40 +226,40 @@ func (c *Console) Interactive() {
 					createNewAccount(arg1)
 					break
 				case "getBalance":
-					if arg1==""{
+					if arg1 == "" {
 						fmt.Println("Please enter your address.")
 						break
 					}
-					company:="i"
-					detail:="false"
-					b,err:=getBalance(arg1)
-					if err!=nil{
+					company := "i"
+					detail := "false"
+					b, err := getBalance(arg1)
+					if err != nil {
 						fmt.Println(err.Error())
 						return
 					}
-					if arg2!="" &&  arg2 !="i"{
-						company="f"
+					if arg2 != "" && arg2 != "i" {
+						company = "f"
 					}
-					if arg3!="" &&  arg3 !="false"{
-						detail="true"
+					if arg3 != "" && arg3 != "false" {
+						detail = "true"
 					}
-					if company == "i"{
-						if detail=="true" {
-							fmt.Printf("unspend:%s\n",b.UnspendAmount.String())
-							fmt.Printf("unconfirmed:%s\n",b.ConfirmAmount.String())
-							fmt.Printf("totalamount:%s\n",b.TotalAmount.String())
-							fmt.Printf("spendamount:%s\n",b.SpendAmount.String())
-						}else{
-							fmt.Printf("%s\n",b.UnspendAmount.String())
+					if company == "i" {
+						if detail == "true" {
+							fmt.Printf("unspend:%s\n", b.UnspendAmount.String())
+							fmt.Printf("unconfirmed:%s\n", b.ConfirmAmount.String())
+							fmt.Printf("totalamount:%s\n", b.TotalAmount.String())
+							fmt.Printf("spendamount:%s\n", b.SpendAmount.String())
+						} else {
+							fmt.Printf("%s\n", b.UnspendAmount.String())
 						}
-					}else{
-						if detail=="true" {
-							fmt.Printf("unspend:%f\n",b.UnspendAmount.ToCoin())
-							fmt.Printf("unconfirmed:%f\n",b.ConfirmAmount.ToCoin())
-							fmt.Printf("totalamount:%f\n",b.TotalAmount.ToCoin())
-							fmt.Printf("spendamount:%f\n",b.SpendAmount.ToCoin())
-						}else{
-							fmt.Printf("%f\n",b.UnspendAmount.ToCoin())
+					} else {
+						if detail == "true" {
+							fmt.Printf("unspend:%f\n", b.UnspendAmount.ToCoin())
+							fmt.Printf("unconfirmed:%f\n", b.ConfirmAmount.ToCoin())
+							fmt.Printf("totalamount:%f\n", b.TotalAmount.ToCoin())
+							fmt.Printf("spendamount:%f\n", b.SpendAmount.ToCoin())
+						} else {
+							fmt.Printf("%f\n", b.UnspendAmount.ToCoin())
 						}
 					}
 					break
@@ -267,61 +267,70 @@ func (c *Console) Interactive() {
 				//	listAccountsBalance(Default_minconf)
 				//	break
 				case "getListTxByAddr":
-					if arg1 == ""{
+					if arg1 == "" {
 						fmt.Println("getListTxByAddr err :Please enter your address.")
 						break
 					}
-					if arg2 == ""{
-						fmt.Println("getListTxByAddr err :Please enter your page.")
+					filter := wallet.FilterAll
+					if arg2 == "in" {
+						filter = wallet.FilterIn
+					} else if arg2 == "out" {
+						filter = wallet.FilterOut
+					}
+
+					getListTxByAddr(arg1, filter, wallet.PageUseDefault, wallet.PageDefaultSize)
+					break
+				case "getBillsByAddr":
+					if arg1 == "" {
+						fmt.Println("getBillsByAddr err :Please enter your address.")
 						break
 					}
-					stype :=int32(2)
-					if arg2== "in"{
-						stype = int32(0)
-					}else if arg2 == "out"{
-						stype = int32(1)
-					}else{
-						stype=int32(2)
+					filter := wallet.FilterAll
+					if arg2 == "in" {
+						filter = wallet.FilterIn
+					} else if arg2 == "out" {
+						filter = wallet.FilterOut
 					}
-					getListTxByAddr(arg1,int32(-1),int32(100),stype)
+
+					getBillsByAddr(arg1, filter, wallet.PageUseDefault, wallet.PageDefaultSize)
 					break
 				case "getNewAddress":
-					if arg1 == ""{
+					if arg1 == "" {
 						fmt.Println("getNewAddress err :Please enter your account.")
 						break
 					}
 					getNewAddress(arg1)
 					break
 				case "getAddressesByAccount":
-					if arg1 == ""{
+					if arg1 == "" {
 						fmt.Println("getAddressesByAccount err :Please enter your account.")
 						break
 					}
 					getAddressesByAccount(arg1)
 					break
 				case "getAccountByAddress":
-					if arg1 == ""{
+					if arg1 == "" {
 						fmt.Println("getAccountByAddress err :Please enter your address.")
 						break
 					}
 					getAccountByAddress(arg1)
 					break
 				case "importPrivKey":
-					if arg1 == ""{
+					if arg1 == "" {
 						fmt.Println("importPrivKey err :Please enter your priKey.")
 						break
 					}
 					importPrivKey(arg1)
 					break
 				case "importWifPrivKey":
-					if arg1 == ""{
+					if arg1 == "" {
 						fmt.Println("importwifPriKey err :Please enter your wif priKey.")
 						break
 					}
 					importWifPrivKey(arg1)
 					break
 				case "dumpPrivKey":
-					if arg1 == ""{
+					if arg1 == "" {
 						fmt.Println("dumpPrivKey err :Please enter your address.")
 						break
 					}
@@ -331,20 +340,20 @@ func (c *Console) Interactive() {
 					getAccountAndAddress()
 					break
 				case "sendToAddress":
-					if arg1 =="" {
+					if arg1 == "" {
 						fmt.Println("getAccountAndAddress err : Please enter the receipt address.")
 						break
 					}
-					if arg2 == ""{
+					if arg2 == "" {
 						fmt.Println("getAccountAndAddress err : Please enter the amount of transfer.")
 						break
 					}
-					f32,err := strconv.ParseFloat(arg2,32)
-					if(err!=nil){
-						fmt.Println("getAccountAndAddress err :",err.Error())
+					f32, err := strconv.ParseFloat(arg2, 32)
+					if err != nil {
+						fmt.Println("getAccountAndAddress err :", err.Error())
 						break
 					}
-					sendToAddress(arg1,float64(f32))
+					sendToAddress(arg1, float64(f32))
 					break
 				case "updateblock":
 					updateblock(0)
@@ -353,7 +362,7 @@ func (c *Console) Interactive() {
 					syncheight()
 					break
 				case "unlock":
-					if arg1 =="" {
+					if arg1 == "" {
 						fmt.Println("unlock err : Please enter the pri password.")
 						break
 					}
@@ -363,10 +372,10 @@ func (c *Console) Interactive() {
 					printHelp()
 					break
 				default:
-					fmt.Printf("Wrong command %s\n " , cmd)
+					fmt.Printf("Wrong command %s\n ", cmd)
 					break
 				}
-				input=""
+				input = ""
 			}
 		}
 	}
@@ -414,4 +423,3 @@ func countIndents(input string) int {
 
 	return indents
 }
-

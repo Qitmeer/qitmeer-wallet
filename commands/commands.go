@@ -82,12 +82,13 @@ func bindFlags() error {
 
 	pf := RootCmd.PersistentFlags()
 
-	pf.StringVarP(&uc.ConfigFile, "configfile", "c", uc.ConfigFile, "config file")
-	pf.StringP("appdatadir", "a", uc.AppDataDir, "wallet db path")
-	pf.StringP("debuglevel", "d", uc.DebugLevel, "Logging level {trace, debug, info, warn, error, critical}")
-	pf.StringP("logdir", "l", uc.LogDir, "log data path")
+	// Global shorthands should be capitalized to avoid collision with local shorthands
+	pf.StringVarP(&uc.ConfigFile, "configfile", "C", uc.ConfigFile, "config file")
+	pf.StringP("appdatadir", "A", uc.AppDataDir, "wallet db path")
+	pf.StringP("debuglevel", "D", uc.DebugLevel, "Logging level {trace, debug, info, warn, error, critical}")
+	pf.StringP("logdir", "L", uc.LogDir, "log data path")
 	pf.Bool("create", uc.Create, "Create a new wallet")
-	pf.StringP("network", "n", uc.Network, "network")
+	pf.StringP("network", "N", uc.Network, "network")
 
 	pf.Bool("ui", uc.UI, "Start Wallet with RPC and webUI interface")
 	pf.StringArray("listeners", uc.Listeners, "rpc listens")
@@ -103,16 +104,16 @@ func bindFlags() error {
 	pf.Int64("mintxfee", uc.MinTxFee, "The minimum transaction fee in QIT/kB default 20000 (aka. 0.0002 MEER/KB)")
 	pf.StringArray("apis", uc.APIs, "enabled APIs")
 
-	pf.StringP("qserver", "s", uc.QServer, "qitmeer node server, overwritten by qitmeerdselect")
-	pf.StringP("quser", "u", uc.QUser, "qitmeer node username")
-	pf.StringP("qpass", "p", uc.QPass, "qitmeer node password")
+	pf.StringP("qserver", "S", uc.QServer, "qitmeer node server, overwritten by qitmeerdselect")
+	pf.StringP("quser", "U", uc.QUser, "qitmeer node username")
+	pf.StringP("qpass", "P", uc.QPass, "qitmeer node password")
 	pf.String("qcert", uc.QCert, "Certificate path")
 	pf.Bool("qnotls", uc.QNoTLS, "disable TLS")
 	pf.Bool("qtlsskipverify", uc.QTLSSkipVerify, "skip TLS verification")
 	pf.String("qproxy", uc.QProxy, "qitmeer node proxy address")
 	pf.String("qproxyuser", uc.QProxyUser, "qitmeer node proxy username")
 	pf.String("qproxypass", uc.QProxyPass, "qitmeer node proxy password")
-	pf.StringP("walletpass", "P", uc.WalletPass, "data encryption password")
+	pf.String("walletpass", uc.WalletPass, "data encryption password")
 	pf.String("qitmeerdselect", uc.QitmeerdSelect,
 		"select qitmeer RPC config defined in Qitmeerds section of config file, overwrite qserver")
 

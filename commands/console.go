@@ -34,7 +34,7 @@ var ConsoleCmd = &cobra.Command{
 	Example: `
 		Enter console mode
 		`,
-	Args:             cobra.NoArgs,
+	Args: cobra.NoArgs,
 	Run: func(cmd *cobra.Command, args []string) {
 		b := checkWalletIeExist(config.Cfg)
 		if b == false {
@@ -125,6 +125,7 @@ func printHelp() {
 	fmt.Println("\t<getBalance> : Query the specified address balance. Parameter: [address]")
 	//fmt.Println("\t<listAccountsBalance> : Obtain all account balances. Parameter: []")
 	fmt.Println("\t<getListTxByAddr> : Gets all transaction records at the specified address. Parameter: [address] [stype:in,out,all]")
+	fmt.Println("\t<getBillsByAddr> : Gets all bill records at the specified address. Parameter: [address] [--filter=in,out,all]")
 	fmt.Println("\t<getNewAddress> : Create a new address under the account. Parameter: [account]")
 	fmt.Println("\t<getAddressesByAccount> : Check all addresses under the account. Parameter: [account]")
 	fmt.Println("\t<getAccountByAddress> : Inquire about the account number of the address. Parameter: [address]")
@@ -203,16 +204,31 @@ func listAccountsBalance() (interface{}, error) {
 	return msg, nil
 }
 
-func getListTxByAddr(addr string, page int32, pageSize int32, sType int32) (interface{}, error) {
+func getListTxByAddr(addr string, filter int, pageNo int, pageSize int) (interface{}, error) {
 	helper = &JsonCmdHelper{
 		JsonCmd: &qitmeerjson.GetListTxByAddrCmd{
 			Address:  addr,
-			Stype:    sType,
-			Page:     page,
-			PageSize: pageSize,
+			Stype:    int32(filter),
+			Page:     int32(pageNo),
+			PageSize: int32(pageSize),
 		},
 		Run: func(cmd interface{}, w *wallet.Wallet) (interface{}, error) {
 			return walletrpc.GetListTxByAddr(cmd, w)
+		},
+	}
+	return helper.Call()
+}
+
+func getBillsByAddr(addr string, filter int, pageNo int, pageSize int) (interface{}, error) {
+	helper = &JsonCmdHelper{
+		JsonCmd: &qitmeerjson.GetBillsByAddrCmd{
+			Address:  addr,
+			Filter:   int32(filter),
+			PageNo:   int32(pageNo),
+			PageSize: int32(pageSize),
+		},
+		Run: func(cmd interface{}, w *wallet.Wallet) (interface{}, error) {
+			return walletrpc.GetBillsByAddr(cmd, w)
 		},
 	}
 	return helper.Call()
