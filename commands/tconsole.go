@@ -264,9 +264,11 @@ func (c *Console) Interactive() {
 						}
 					}
 					break
-				//case "listAccountsBalance":
-				//	listAccountsBalance(Default_minconf)
-				//	break
+				case "listAccountsBalance":
+					if _, err := listAccountsBalance(); err != nil {
+						log.Error(err.Error())
+					}
+					break
 				case "getTx":
 					if arg1 == "" {
 						fmt.Println("getTx err :Please specify tx ID.")

@@ -122,7 +122,7 @@ func printHelp() {
 	fmt.Println("\tThe commands are:")
 	fmt.Println("\t<createNewAccount> : Create a new account. Parameter: [account]")
 	fmt.Println("\t<getBalance> : Query the specified address balance. Parameter: [address]")
-	//fmt.Println("\t<listAccountsBalance> : Obtain all account balances. Parameter: []")
+	fmt.Println("\t<listAccountsBalance> : Obtain all account balances. Parameter: []")
 	fmt.Println("\t<getTx> : Gets transaction by ID. Parameter: [txID]")
 	fmt.Println("\t<getListTxByAddr> : Gets all transactions that affect specified address, one transaction could affect MULTIPLE addresses. Parameter: [address] [stype:in,out,all]")
 	fmt.Println("\t<getBillByAddr> : Gets all payments that affect specified address, one payment could affect only ONE address. Parameter: [address] [filter:in,out,all]")
@@ -193,15 +193,13 @@ func GetTxSpendInfo(txId string) ([]*wtxmgr.AddrTxOutput, error) {
 }
 
 func listAccountsBalance() (interface{}, error) {
-	msg, err := walletrpc.ListAccounts(w)
-	if err != nil {
-		fmt.Println("listAccountsBalance", "err", err.Error())
-		return nil, err
+	helper = &JsonCmdHelper{
+		JsonCmd: nil,
+		Run: func(cmd interface{}, w *wallet.Wallet) (interface{}, error) {
+			return walletrpc.ListAccounts(w)
+		},
 	}
-	for k, v := range msg.(map[string]float64) {
-		fmt.Printf("%v:%v\n", k, v)
-	}
-	return msg, nil
+	return helper.Call()
 }
 
 func getListTxByAddr(addr string, filter int, pageNo int, pageSize int) (interface{}, error) {

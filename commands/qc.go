@@ -29,7 +29,7 @@ func AddQcCommand() {
 	QcCmd.AddCommand(sendToAddressCmd)
 	QcCmd.AddCommand(newImportPrivKeyCmd())
 	QcCmd.AddCommand(getAddressesByAccountCmd)
-	QcCmd.AddCommand(listAccountsBalanceCmd)
+	QcCmd.AddCommand(newListAccountsBalance())
 	QcCmd.AddCommand(newGetTxByTxIdCmd())
 	QcCmd.AddCommand(getTxSpendInfoCmd)
 }
@@ -316,21 +316,24 @@ func newImportPrivKeyCmd() *cobra.Command {
 	return importPrivKeyCmd
 }
 
-var listAccountsBalanceCmd = &cobra.Command{
-	Use:   "listaccountsbalance ",
-	Short: "list Accounts Balance",
-	Example: `
+func newListAccountsBalance() *cobra.Command {
+	listAccountsBalanceCmd := &cobra.Command{
+		Use:   "listaccountsbalance ",
+		Short: "list Accounts Balance",
+		Example: `
 		listaccountsbalance
 		`,
-	Args: cobra.NoArgs,
-	Run: func(cmd *cobra.Command, args []string) {
-		err := OpenWallet()
-		if err != nil {
-			fmt.Println(err.Error())
-			return
-		}
-		listAccountsBalance()
-	},
+		Args: cobra.NoArgs,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			if err := OpenWallet(); err != nil {
+				return err
+			}
+			_, err := listAccountsBalance()
+			return err
+		},
+	}
+
+	return listAccountsBalanceCmd
 }
 
 func newGetListTxByAddrCmd() *cobra.Command {
