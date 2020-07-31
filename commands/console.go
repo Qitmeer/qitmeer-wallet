@@ -2,7 +2,6 @@ package commands
 
 import (
 	"encoding/hex"
-	"encoding/json"
 	"fmt"
 	"github.com/Qitmeer/qitmeer-wallet/config"
 	"github.com/Qitmeer/qitmeer-wallet/json/qitmeerjson"
@@ -124,6 +123,7 @@ func printHelp() {
 	fmt.Println("\t<createNewAccount> : Create a new account. Parameter: [account]")
 	fmt.Println("\t<getBalance> : Query the specified address balance. Parameter: [address]")
 	//fmt.Println("\t<listAccountsBalance> : Obtain all account balances. Parameter: []")
+	fmt.Println("\t<getTx> : Gets transaction by ID. Parameter: [txID]")
 	fmt.Println("\t<getListTxByAddr> : Gets all transactions that affect specified address, one transaction could affect MULTIPLE addresses. Parameter: [address] [stype:in,out,all]")
 	fmt.Println("\t<getBillByAddr> : Gets all payments that affect specified address, one payment could affect only ONE address. Parameter: [address] [filter:in,out,all]")
 	fmt.Println("\t<getNewAddress> : Create a new address under the account. Parameter: [account]")
@@ -287,19 +287,16 @@ func getAccountByAddress(address string) (interface{}, error) {
 	fmt.Printf("%s\n", msg)
 	return msg, nil
 }
-func getTx(txid string) (interface{}, error) {
-	msg, err := walletrpc.GetTx(txid, w)
-	if err != nil {
-		fmt.Println("getTx", "err", err.Error())
-		return nil, err
+
+func getTx(txID string) (interface{}, error) {
+	helper = &JsonCmdHelper{
+		JsonCmd: txID,
+		Run: func(cmd interface{}, w *wallet.Wallet) (interface{}, error) {
+			txID := cmd.(string)
+			return walletrpc.GetTx(txID, w)
+		},
 	}
-	b, err := json.Marshal(msg)
-	if err != nil {
-		fmt.Println("getTx", "err", err.Error())
-		return nil, err
-	}
-	fmt.Printf("%s\n", b)
-	return msg, nil
+	return helper.Call()
 }
 
 func importPrivKey(priKey string) (interface{}, error) {

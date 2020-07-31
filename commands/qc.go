@@ -30,7 +30,7 @@ func AddQcCommand() {
 	QcCmd.AddCommand(newImportPrivKeyCmd())
 	QcCmd.AddCommand(getAddressesByAccountCmd)
 	QcCmd.AddCommand(listAccountsBalanceCmd)
-	QcCmd.AddCommand(getTxByTxIdCmd)
+	QcCmd.AddCommand(newGetTxByTxIdCmd())
 	QcCmd.AddCommand(getTxSpendInfoCmd)
 }
 
@@ -237,22 +237,28 @@ var sendToAddressCmd = &cobra.Command{
 		sendToAddress(args[0], float64(f32))
 	},
 }
-var getTxByTxIdCmd = &cobra.Command{
-	Use:   "gettx {txid}",
-	Short: "Access to transaction information ",
-	Example: `
+
+func newGetTxByTxIdCmd() *cobra.Command {
+	getTxByTxIdCmd := &cobra.Command{
+		Use:   "gettx {txid}",
+		Short: "Access to transaction information ",
+		Example: `
 		gettx 81278a6ba67d4ea2fc49fb469f2a45f6adb2306b82146747b9d5f3bd655e5030
 		`,
-	Args: cobra.MinimumNArgs(1),
-	Run: func(cmd *cobra.Command, args []string) {
-		err := OpenWallet()
-		if err != nil {
-			fmt.Println(err.Error())
-			return
-		}
-		getTx(args[0])
-	},
+		Args: cobra.MinimumNArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			if err := OpenWallet(); err != nil {
+				return err
+			}
+
+			_, err := getTx(args[0])
+			return err
+		},
+	}
+
+	return getTxByTxIdCmd
 }
+
 var getAddressesByAccountCmd = &cobra.Command{
 	Use:   "getaddressesbyaccount {string ,account,defalut imported} ",
 	Short: "get addresses by account ",
@@ -335,7 +341,7 @@ func newGetListTxByAddrCmd() *cobra.Command {
 	getListTxAddrCmd := &cobra.Command{
 		Use:   "getlisttxbyaddr {address}",
 		Short: "get all transactions by address",
-		Long:  `request all the transactions that affect a specific address, 
+		Long: `request all the transactions that affect a specific address, 
 a transaction could affect MULTIPLE addresses`,
 		Example: `
 		getlisttxbyaddr Tme9dVJ4GeWRninBygrA6oDwCAGYbBvNxY7 --filter=in

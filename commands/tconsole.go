@@ -3,6 +3,7 @@ package commands
 import (
 	"fmt"
 	"github.com/Qitmeer/qitmeer-wallet/wallet"
+	"github.com/Qitmeer/qitmeer/log"
 	"github.com/peterh/liner"
 	"io"
 	"io/ioutil"
@@ -266,6 +267,15 @@ func (c *Console) Interactive() {
 				//case "listAccountsBalance":
 				//	listAccountsBalance(Default_minconf)
 				//	break
+				case "getTx":
+					if arg1 == "" {
+						fmt.Println("getTx err :Please specify tx ID.")
+						break
+					}
+					if _, err := getTx(arg1); err != nil {
+						log.Error(err.Error())
+					}
+					break
 				case "getListTxByAddr":
 					if arg1 == "" {
 						fmt.Println("getListTxByAddr err :Please enter your address.")
