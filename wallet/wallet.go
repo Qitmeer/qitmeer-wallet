@@ -415,25 +415,28 @@ const (
 )
 
 /**
+request all the transactions that affect a specific address,
+a transaction can have MULTIPLE payments and affect MULTIPLE addresses
+
 sType 0 Turn in 1 Turn out 2 all no page
 */
-func (w *Wallet) GetListTxByAddr(addr string, sType int32, page int32, pageSize int32) (*clijson.PageTxRawResult, error) {
+func (w *Wallet) GetListTxByAddr(addr string, sType int, pageNo int, pageSize int) (*clijson.PageTxRawResult, error) {
 
-	bills, err := w.getPagedBillsByAddr(addr, int(sType), int(page), int(pageSize))
+	bill, err := w.getPagedBillByAddr(addr, sType, pageNo, pageSize)
 	if err != nil {
 		return nil, err
 	}
 
 	result := clijson.PageTxRawResult{}
-	result.Page = page
-	result.PageSize = pageSize
-	result.Total = int32(bills.Len())
+	result.Page = int32(pageNo)
+	result.PageSize = int32(pageSize)
+	result.Total = int32(bill.Len())
 
 	var transactions []corejson.TxRawResult
 	err = walletdb.View(w.db, func(tx walletdb.ReadTx) error {
 		ns := tx.ReadBucket(wtxmgrNamespaceKey)
 		txNs := ns.NestedReadBucket(wtxmgr.BucketTxJson)
-		for _, b := range *bills {
+		for _, b := range *bill {
 			txHs := b.TxID
 			v := txNs.Get(txHs.Bytes())
 			if v == nil {
@@ -456,28 +459,31 @@ func (w *Wallet) GetListTxByAddr(addr string, sType int32, page int32, pageSize 
 	return &result, nil
 }
 
-func (w *Wallet) GetBillsByAddr(addr string, filter int, pageNo int, pageSize int) (*clijson.PagedBillsResult, error) {
-	bills, err := w.getPagedBillsByAddr(addr, filter, pageNo, pageSize)
+// request the bill of a specific address, a bill is the log of payments,
+// which are the effects that a transaction makes on a specific address
+// a payment can affect only ONE address
+func (w *Wallet) GetBillByAddr(addr string, filter int, pageNo int, pageSize int) (*clijson.PagedBillResult, error) {
+	bill, err := w.getPagedBillByAddr(addr, filter, pageNo, pageSize)
 	if err != nil {
 		return nil, err
 	}
 
-	res := clijson.PagedBillsResult{}
+	res := clijson.PagedBillResult{}
 	res.PageNo = int32(pageNo)
 	res.PageSize = int32(pageSize)
-	res.Total = int32(bills.Len())
+	res.Total = int32(bill.Len())
 
-	for _, v := range *bills {
-		res.Bills = append(res.Bills, clijson.BillResult{
-			TxID:   v.TxID.String(),
-			Amount: int64(v.Amount),
+	for _, p := range *bill {
+		res.Bill = append(res.Bill, clijson.PaymentResult{
+			TxID:      p.TxID.String(),
+			Variation: p.Variation,
 		})
 	}
 
 	return &res, nil
 }
 
-func (w *Wallet) getPagedBillsByAddr(addr string, filter int, pageNo int, pageSize int) (*wt.Bills, error) {
+func (w *Wallet) getPagedBillByAddr(addr string, filter int, pageNo int, pageSize int) (*wt.Bill, error) {
 	at, err := w.getAddrAndAddrTxOutputByAddr(addr)
 	if err != nil {
 		return nil, err
@@ -490,22 +496,23 @@ func (w *Wallet) getPagedBillsByAddr(addr string, filter int, pageNo int, pageSi
 	}
 	startIndex := (pageNo - 1) * pageSize
 	var endIndex int
-	var allTxs wt.Bills
-	var inTxs wt.Bills
-	var outTxs wt.Bills
+	var allTxs wt.Bill
+	var inTxs wt.Bill
+	var outTxs wt.Bill
 	var dataLen int
 
-	allMap := make(map[hash.Hash]wt.Bill)
+	allMap := make(map[hash.Hash]wt.Payment)
 
 	for _, o := range at.Txoutput {
 
 		txOut, found := allMap[o.TxId]
 		if found {
-			txOut.Amount += o.Amount
+			txOut.Variation += int64(o.Amount)
 		} else {
 			txOut.TxID = o.TxId
-			txOut.Amount = o.Amount
-			txOut.Block = o.Block
+			txOut.Variation = int64(o.Amount)
+			txOut.BlockHash = o.Block.Hash
+			txOut.BlockOrder = uint32(o.Block.Height)
 		}
 		//log.Debug(fmt.Sprintf("%s %v %v", o.TxId.String(), float64(o.Amount)/math.Pow10(8), float64(txOut.Amount)/math.Pow10(8)))
 
@@ -514,12 +521,13 @@ func (w *Wallet) getPagedBillsByAddr(addr string, filter int, pageNo int, pageSi
 		if o.SpendTo != nil {
 			txOut, found := allMap[o.SpendTo.TxHash]
 			if found {
-				txOut.Amount -= o.Amount
+				txOut.Variation -= int64(o.Amount)
 			} else {
 				txOut.TxID = o.SpendTo.TxHash
-				txOut.Amount = -o.Amount
+				txOut.Variation = -int64(o.Amount)
 				// ToDo: add Block to SpendTo
-				txOut.Block = o.Block
+				txOut.BlockHash = o.Block.Hash
+				txOut.BlockOrder = uint32(o.Block.Height)
 			}
 			allMap[o.SpendTo.TxHash] = txOut
 			//log.Debug(fmt.Sprintf("%s %v %v", o.SpendTo.TxHash.String(), float64(-o.Amount)/math.Pow10(8), float64(txOut.Amount)/math.Pow10(8)))
@@ -527,7 +535,7 @@ func (w *Wallet) getPagedBillsByAddr(addr string, filter int, pageNo int, pageSi
 	}
 
 	for _, out := range allMap {
-		if out.Amount > 0 {
+		if out.Variation > 0 {
 			inTxs = append(inTxs, out)
 		} else {
 			outTxs = append(outTxs, out)
@@ -1262,9 +1270,6 @@ b:
 					return nil, err
 				}
 				addrByte := []byte(addroutput.Addr)
-				if err != nil {
-					return nil, err
-				}
 
 				for _, output := range addroutput.Txoutput {
 					output.Address = addroutput.Addr

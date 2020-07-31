@@ -23,7 +23,7 @@ func AddQcCommand() {
 	QcCmd.AddCommand(getnewaddressCmd)
 	QcCmd.AddCommand(getBalanceCmd)
 	QcCmd.AddCommand(newGetListTxByAddrCmd())
-	QcCmd.AddCommand(newGetBillsByAddrCmd())
+	QcCmd.AddCommand(newGetBillByAddrCmd())
 	QcCmd.AddCommand(updateblockCmd)
 	QcCmd.AddCommand(syncheightCmd)
 	QcCmd.AddCommand(sendToAddressCmd)
@@ -335,6 +335,8 @@ func newGetListTxByAddrCmd() *cobra.Command {
 	getListTxAddrCmd := &cobra.Command{
 		Use:   "getlisttxbyaddr {address}",
 		Short: "get all transactions by address",
+		Long:  `request all the transactions that affect a specific address, 
+a transaction could affect MULTIPLE addresses`,
 		Example: `
 		getlisttxbyaddr Tme9dVJ4GeWRninBygrA6oDwCAGYbBvNxY7 --filter=in
 		getlisttxbyaddr Tme9dVJ4GeWRninBygrA6oDwCAGYbBvNxY7 --filter=out 
@@ -369,19 +371,21 @@ func newGetListTxByAddrCmd() *cobra.Command {
 	return getListTxAddrCmd
 }
 
-func newGetBillsByAddrCmd() *cobra.Command {
+func newGetBillByAddrCmd() *cobra.Command {
 	filterFlag := "all"
 	pageNoFlag := wallet.PageUseDefault
 	pageSizeFlag := wallet.PageDefaultSize
 
-	getBillsAddrCmd := &cobra.Command{
-		Use:   "getbillsbyaddr {address}",
-		Short: "get bills by address",
+	getBillAddrCmd := &cobra.Command{
+		Use:   "getbillbyaddr {address}",
+		Short: "get bill by address",
+		Long: `request the bill of a specific address, a bill is the log of payments, 
+which are the effect that a transaction makes on a specific address`,
 		Example: `
-		getbillsbyaddr Tme9dVJ4GeWRninBygrA6oDwCAGYbBvNxY7 --filter=in
-		getbillsbyaddr Tme9dVJ4GeWRninBygrA6oDwCAGYbBvNxY7 --filter=out 
-		getbillsbyaddr Tme9dVJ4GeWRninBygrA6oDwCAGYbBvNxY7 
-		getbillsbyaddr Tme9dVJ4GeWRninBygrA6oDwCAGYbBvNxY7 --page_no=1 --page_size=10
+		getbillbyaddr Tme9dVJ4GeWRninBygrA6oDwCAGYbBvNxY7 --filter=in
+		getbillbyaddr Tme9dVJ4GeWRninBygrA6oDwCAGYbBvNxY7 --filter=out 
+		getbillbyaddr Tme9dVJ4GeWRninBygrA6oDwCAGYbBvNxY7 
+		getbillbyaddr Tme9dVJ4GeWRninBygrA6oDwCAGYbBvNxY7 --page_no=1 --page_size=10
 		`,
 		Args: cobra.MinimumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -396,19 +400,19 @@ func newGetBillsByAddrCmd() *cobra.Command {
 				filter = wallet.FilterOut
 			}
 
-			_, err := getBillsByAddr(args[0], filter, pageNoFlag, pageSizeFlag)
+			_, err := getBillByAddr(args[0], filter, pageNoFlag, pageSizeFlag)
 			return err
 		},
 	}
 
-	getBillsAddrCmd.Flags().StringVarP(
+	getBillAddrCmd.Flags().StringVarP(
 		&filterFlag, "filter", "f", "all", "Filter. {in, out, all}")
-	getBillsAddrCmd.Flags().IntVarP(
+	getBillAddrCmd.Flags().IntVarP(
 		&pageNoFlag, "page_no", "i", wallet.PageUseDefault, "Page number.")
-	getBillsAddrCmd.Flags().IntVarP(
+	getBillAddrCmd.Flags().IntVarP(
 		&pageSizeFlag, "page_size", "s", wallet.PageMaxSize, "Page size.")
 
-	return getBillsAddrCmd
+	return getBillAddrCmd
 }
 
 var updateblockCmd = &cobra.Command{

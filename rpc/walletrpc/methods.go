@@ -317,7 +317,7 @@ func Unlock(password string, w *wallet.Wallet) error {
 
 func GetListTxByAddr(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
 	cmd := icmd.(*qitmeerjson.GetListTxByAddrCmd)
-	m, err := w.GetListTxByAddr(cmd.Address, cmd.Stype, cmd.Page, cmd.PageSize)
+	m, err := w.GetListTxByAddr(cmd.Address, int(cmd.Stype), int(cmd.Page), int(cmd.PageSize))
 	if err != nil {
 		log.Error("GetListTxByAddr ", " err", err.Error())
 		return nil, err
@@ -325,11 +325,11 @@ func GetListTxByAddr(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
 	return m, nil
 }
 
-func GetBillsByAddr(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
-	cmd := icmd.(*qitmeerjson.GetBillsByAddrCmd)
-	m, err := w.GetBillsByAddr(cmd.Address, int(cmd.Filter), int(cmd.PageNo), int(cmd.PageSize))
+func GetBillByAddr(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
+	cmd := icmd.(*qitmeerjson.GetBillByAddrCmd)
+	m, err := w.GetBillByAddr(cmd.Address, int(cmd.Filter), int(cmd.PageNo), int(cmd.PageSize))
 	if err != nil {
-		log.Error("GetBillsByAddr ", " err", err.Error())
+		log.Error("GetBillByAddr ", " err", err.Error())
 		return nil, err
 	}
 	return m, nil

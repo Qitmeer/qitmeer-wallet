@@ -1,22 +1,25 @@
 package types
 
 import (
-	"github.com/Qitmeer/qitmeer-wallet/wtxmgr"
 	"github.com/Qitmeer/qitmeer/common/hash"
-	"github.com/Qitmeer/qitmeer/core/types"
 )
 
-type Bill struct {
-	TxID   hash.Hash
-	Amount types.Amount
-	Block  wtxmgr.Block
+//  effects that a transaction makes on a specific address
+type Payment struct {
+	TxID      hash.Hash
+	Variation int64	// deposit: >0, withdraw: <= 0
+
+	BlockHash  hash.Hash
+	BlockOrder uint32
 }
-type Bills []Bill
 
-func (s Bills) Len() int { return len(s) }
+//  log of payments
+type Bill []Payment
 
-func (s Bills) Swap(i, j int) { s[i], s[j] = s[j], s[i] }
+func (b Bill) Len() int { return len(b) }
 
-func (s Bills) Less(i, j int) bool {
-	return s[i].Block.Height >= s[j].Block.Height
+func (b Bill) Swap(i, j int) { b[i], b[j] = b[j], b[i] }
+
+func (b Bill) Less(i, j int) bool {
+	return b[i].BlockOrder >= b[j].BlockOrder
 }

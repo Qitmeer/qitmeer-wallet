@@ -143,29 +143,29 @@ func test_wallet_getlisttxbyaddr(w *wallet.Wallet) (interface{}, error) {
 	return result, nil
 }
 
-func test_wallet_getBillsByAddr(w *wallet.Wallet) (interface{}, error) {
-	cmd := &qitmeerjson.GetBillsByAddrCmd{
+func test_wallet_getBillByAddr(w *wallet.Wallet) (interface{}, error) {
+	cmd := &qitmeerjson.GetBillByAddrCmd{
 		Address:  "Tme9dVJ4GeWRninBygrA6oDwCAGYbBvNxY7",
 		Filter:   int32(0),
 		PageNo:   int32(1),
 		PageSize: int32(100),
 	}
-	result, err := GetBillsByAddr(cmd, w)
+	result, err := GetBillByAddr(cmd, w)
 	if err != nil {
 		log.Info("errr:", err.Error())
 		return nil, err
 	}
 	if err != nil {
-		fmt.Errorf("test_wallet_getBillsByAddr err:%s", err.Error())
+		fmt.Errorf("test_wallet_getBillByAddr err:%s", err.Error())
 	} else {
-		a := result.(*qjson.PagedBillsResult)
-		log.Info("test_wallet_getBillsByAddr msg a.Total:", a.Total)
-		for _, b := range a.Bills {
+		a := result.(*qjson.PagedBillResult)
+		log.Info("test_wallet_getBillByAddr msg a.Total:", a.Total)
+		for _, b := range a.Bill {
 			bill, err := json.Marshal(b)
 			if err != nil {
 				return nil, err
 			}
-			log.Info("test_wallet_getBillsByAddr ", "result", string(bill))
+			log.Info("test_wallet_getBillByAddr ", "result", string(bill))
 		}
 	}
 	return result, nil

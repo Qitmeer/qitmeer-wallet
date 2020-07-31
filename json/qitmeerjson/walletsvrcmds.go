@@ -76,7 +76,7 @@ type GetListTxByAddrCmd struct {
 	Stype int32
 }
 
-type GetBillsByAddrCmd struct {
+type GetBillByAddrCmd struct {
 	Address  string
 	Filter   int32
 	PageNo   int32

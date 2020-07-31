@@ -40,8 +40,8 @@
 
     <el-main class="cmain">
       <el-table :data="txList">
-        <el-table-column prop="txId" label="txId" width="470"></el-table-column>
-        <el-table-column prop="type" label="in/out" width="60"></el-table-column>
+        <el-table-column prop="txId" label="交易编号" width="470"></el-table-column>
+        <el-table-column prop="type" label="类型" width="60"></el-table-column>
         <el-table-column prop="amount" label="金额"></el-table-column>
       </el-table>
     </el-main>
@@ -80,24 +80,24 @@ export default {
     this.currentAccount = this.$store.state.Accounts[0].account;
   },
   methods: {
-    bills2table(bills) {
+    bill2table(bill) {
       let _this = this;
       let tmpTable = [];
-      for (let i = 0; i < bills.length; i++) {
-        let bill = bills[i]
-        let amount = bill.amount / Math.pow(10.0, 8);
-        let inOut = amount <= 0 ? "OUT" : "IN";
+      for (let i = 0; i < bill.length; i++) {
+        let p = bill[i]
+        let inOut =  p.variation <= 0 ? "出账" : "入账";
+        let amount = Math.abs( p.variation / Math.pow(10.0, 8));
 
         tmpTable.push({
           date: "",
           type: inOut,
-          txId: bill.tx_id,
+          txId:  p.tx_id,
           amount: amount
         });
       }
       _this.txList = tmpTable;
     },
-    getBills(addr) {
+    getBill(addr) {
       if (addr == "*") {
         //todo all account addresses
         return;
@@ -111,7 +111,7 @@ export default {
         method: "post",
         data: JSON.stringify({
           id: new Date().getTime(),
-          method: "wallet_getBillsByAddr",
+          method: "wallet_getBillByAddr",
           params: [addr, 2, -1, 100]
         })
       }).then(resp => {
@@ -122,7 +122,7 @@ export default {
           return;
         }
 
-        _this.bills2table(resp.data.result.bills);
+        _this.bill2table(resp.data.result.bill);
       }).catch(() => {
         _this.$emit("setLoading", false, "");
       });
@@ -160,7 +160,7 @@ export default {
     },
     currentAddress() {
       this.txList = [];
-      this.getBills(this.currentAddress);
+      this.getBill(this.currentAddress);
     }
   }
 };

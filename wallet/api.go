@@ -314,12 +314,10 @@ func (api *API) SendToAddress(addressStr string, amount float64) (string, error)
 		addressStr: amt,
 	}
 
-	return api.wt.SendPairs( pairs, waddrmgr.AccountMergePayNum, txrules.DefaultRelayFeePerKb)
+	return api.wt.SendPairs(pairs, waddrmgr.AccountMergePayNum, txrules.DefaultRelayFeePerKb)
 }
 
-
-
-func (api *API) SendToMany( addAmounts map[string]float64) (string, error) {
+func (api *API) SendToMany(addAmounts map[string]float64) (string, error) {
 
 	pairs := make(map[string]types.Amount)
 	for addr, amount := range addAmounts {
@@ -331,10 +329,10 @@ func (api *API) SendToMany( addAmounts map[string]float64) (string, error) {
 			return "", qitmeerjson.ErrNeedPositiveAmount
 		}
 
-		pairs[addr]= amt
+		pairs[addr] = amt
 	}
 
-	return api.wt.SendPairs( pairs, waddrmgr.AccountMergePayNum,txrules.DefaultRelayFeePerKb)
+	return api.wt.SendPairs(pairs, waddrmgr.AccountMergePayNum, txrules.DefaultRelayFeePerKb)
 }
 
 // SendToAddressByAccount by account
@@ -360,7 +358,7 @@ func (api *API) SendToAddressByAccount(accountName string, addressStr string, am
 		addressStr: amt,
 	}
 
-	return api.wt.SendPairs( pairs, int64(accountNum),txrules.DefaultRelayFeePerKb)
+	return api.wt.SendPairs(pairs, int64(accountNum), txrules.DefaultRelayFeePerKb)
 }
 
 //GetBalanceByAddr get balance by address
@@ -372,14 +370,14 @@ func (api *API) GetBalanceByAddr(addrStr string) (*Balance, error) {
 	return m, nil
 }
 
-//GetTxListByAddr get addr tx list
-func (api *API) GetTxListByAddr(addr string, sType int32, page int32, pageSize int32) (*clijson.PageTxRawResult, error) {
+//GetTxListByAddr get transactions affecting specific address, one transaction could affect MULTIPLE addresses
+func (api *API) GetTxListByAddr(addr string, sType int, page int, pageSize int) (*clijson.PageTxRawResult, error) {
 	rs, err := api.wt.GetListTxByAddr(addr, sType, page, pageSize)
 	return rs, err
 }
 
-//GetBillsByAddr get bill list
-func (api *API) GetBillsByAddr(addr string, filter int, page int, pageSize int) (*clijson.PagedBillsResult, error) {
-	rs, err := api.wt.GetBillsByAddr(addr, filter, page, pageSize)
+//GetBillByAddr get bill of payments affecting specific address, one payment could affect ONE address
+func (api *API) GetBillByAddr(addr string, filter int, page int, pageSize int) (*clijson.PagedBillResult, error) {
+	rs, err := api.wt.GetBillByAddr(addr, filter, page, pageSize)
 	return rs, err
 }

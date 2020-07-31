@@ -124,8 +124,8 @@ func printHelp() {
 	fmt.Println("\t<createNewAccount> : Create a new account. Parameter: [account]")
 	fmt.Println("\t<getBalance> : Query the specified address balance. Parameter: [address]")
 	//fmt.Println("\t<listAccountsBalance> : Obtain all account balances. Parameter: []")
-	fmt.Println("\t<getListTxByAddr> : Gets all transaction records at the specified address. Parameter: [address] [stype:in,out,all]")
-	fmt.Println("\t<getBillsByAddr> : Gets all bill records at the specified address. Parameter: [address] [--filter=in,out,all]")
+	fmt.Println("\t<getListTxByAddr> : Gets all transactions that affect specified address, one transaction could affect MULTIPLE addresses. Parameter: [address] [stype:in,out,all]")
+	fmt.Println("\t<getBillByAddr> : Gets all payments that affect specified address, one payment could affect only ONE address. Parameter: [address] [filter:in,out,all]")
 	fmt.Println("\t<getNewAddress> : Create a new address under the account. Parameter: [account]")
 	fmt.Println("\t<getAddressesByAccount> : Check all addresses under the account. Parameter: [account]")
 	fmt.Println("\t<getAccountByAddress> : Inquire about the account number of the address. Parameter: [address]")
@@ -219,16 +219,16 @@ func getListTxByAddr(addr string, filter int, pageNo int, pageSize int) (interfa
 	return helper.Call()
 }
 
-func getBillsByAddr(addr string, filter int, pageNo int, pageSize int) (interface{}, error) {
+func getBillByAddr(addr string, filter int, pageNo int, pageSize int) (interface{}, error) {
 	helper = &JsonCmdHelper{
-		JsonCmd: &qitmeerjson.GetBillsByAddrCmd{
+		JsonCmd: &qitmeerjson.GetBillByAddrCmd{
 			Address:  addr,
 			Filter:   int32(filter),
 			PageNo:   int32(pageNo),
 			PageSize: int32(pageSize),
 		},
 		Run: func(cmd interface{}, w *wallet.Wallet) (interface{}, error) {
-			return walletrpc.GetBillsByAddr(cmd, w)
+			return walletrpc.GetBillByAddr(cmd, w)
 		},
 	}
 	return helper.Call()

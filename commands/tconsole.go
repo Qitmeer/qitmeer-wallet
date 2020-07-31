@@ -280,9 +280,9 @@ func (c *Console) Interactive() {
 
 					getListTxByAddr(arg1, filter, wallet.PageUseDefault, wallet.PageDefaultSize)
 					break
-				case "getBillsByAddr":
+				case "getBillByAddr":
 					if arg1 == "" {
-						fmt.Println("getBillsByAddr err :Please enter your address.")
+						fmt.Println("getBillByAddr err :Please enter your address.")
 						break
 					}
 					filter := wallet.FilterAll
@@ -292,7 +292,7 @@ func (c *Console) Interactive() {
 						filter = wallet.FilterOut
 					}
 
-					getBillsByAddr(arg1, filter, wallet.PageUseDefault, wallet.PageDefaultSize)
+					getBillByAddr(arg1, filter, wallet.PageUseDefault, wallet.PageDefaultSize)
 					break
 				case "getNewAddress":
 					if arg1 == "" {
