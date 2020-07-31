@@ -10,5 +10,5 @@ type PagedBillResult struct {
 	Total    int32      `json:"total"`
 	PageNo   int32      `json:"page_no"`
 	PageSize int32      `json:"page_size"`
-	Bill     BillResult `json:"bill"`
+	Bill     BillResult `json:"bill,omitempty"`
 }
