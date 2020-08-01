@@ -18,10 +18,6 @@ import (
 	"github.com/Qitmeer/qitmeer-wallet/wallet"
 )
 
-
-
-
-
 // createNewAccount handles a createnewaccount request by creating and
 // returning a new account. If the last account has no transaction history
 // as per BIP 0044 a new account cannot be created so an error will be returned.
@@ -269,7 +265,7 @@ func SendToAddress(iCmd interface{}, w *wallet.Wallet) (interface{}, error) {
 		cmd.Address: amt,
 	}
 
-	return w.SendPairs(pairs, int64(waddrmgr.AccountMergePayNum),  txrules.DefaultRelayFeePerKb)
+	return w.SendPairs(pairs, int64(waddrmgr.AccountMergePayNum), txrules.DefaultRelayFeePerKb)
 }
 
 func UpdateBlock(iCmd interface{}, w *wallet.Wallet) error {
@@ -297,8 +293,8 @@ func GetBalance(iCmd interface{}, w *wallet.Wallet) (interface{}, error) {
 	return m, nil
 }
 
-func SetSynceToNum(order int64,w *wallet.Wallet) error {
-	err:=w.SetSynceToNum(order)
+func SetSynceToNum(order int64, w *wallet.Wallet) error {
+	err := w.SetSynceToNum(order)
 	if err != nil {
 		log.Error("GetBalance ", "err ", err.Error())
 		return err
@@ -306,8 +302,8 @@ func SetSynceToNum(order int64,w *wallet.Wallet) error {
 	return nil
 }
 
-func GetTxSpendInfo(txId string ,w *wallet.Wallet)(interface{}, error){
-	info,err:=w.GetTxSpendInfo(txId)
+func GetTxSpendInfo(txId string, w *wallet.Wallet) (interface{}, error) {
+	info, err := w.GetTxSpendInfo(txId)
 	if err != nil {
 		log.Error("GetTxSpendInfo ", "err ", err.Error())
 		return nil, err
@@ -321,7 +317,7 @@ func Unlock(password string, w *wallet.Wallet) error {
 
 func GetListTxByAddr(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
 	cmd := icmd.(*qitmeerjson.GetListTxByAddrCmd)
-	m, err := w.GetListTxByAddr(cmd.Address, cmd.Stype, cmd.Page, cmd.PageSize)
+	m, err := w.GetListTxByAddr(cmd.Address, int(cmd.Stype), int(cmd.Page), int(cmd.PageSize))
 	if err != nil {
 		log.Error("GetListTxByAddr ", " err", err.Error())
 		return nil, err
@@ -329,6 +325,15 @@ func GetListTxByAddr(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
 	return m, nil
 }
 
+func GetBillByAddr(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
+	cmd := icmd.(*qitmeerjson.GetBillByAddrCmd)
+	m, err := w.GetBillByAddr(cmd.Address, int(cmd.Filter), int(cmd.PageNo), int(cmd.PageSize))
+	if err != nil {
+		log.Error("GetBillByAddr ", " err", err.Error())
+		return nil, err
+	}
+	return m, nil
+}
 
 func isNilOrEmpty(s *string) bool {
 	return s == nil || *s == ""

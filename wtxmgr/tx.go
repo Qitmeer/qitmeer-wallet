@@ -63,7 +63,9 @@ func (s AddrTxOutputs) Len() int { return len(s) }
 
 func (s AddrTxOutputs) Swap(i, j int) { s[i], s[j] = s[j], s[i] }
 
-func (s AddrTxOutputs) Less(i, j int) bool { return i < j }
+func (s AddrTxOutputs) Less(i, j int) bool {
+	return s[i].Block.Height < s[j].Block.Height
+}
 
 type SpendStatus int32
 

@@ -3,6 +3,7 @@ package commands
 import (
 	"encoding/hex"
 	"fmt"
+	"github.com/Qitmeer/qitmeer-wallet/wallet"
 	"github.com/Qitmeer/qitmeer/log"
 	"github.com/Qitmeer/qitmeer/qx"
 	"github.com/spf13/cobra"
@@ -10,25 +11,26 @@ import (
 )
 
 var QcCmd = &cobra.Command{
-	Use:              "qc",
-	Short:            "qitmeer wallet command",
-	Long:             `qitmeer wallet command`,
+	Use:   "qc",
+	Short: "qitmeer wallet command",
+	Long:  `qitmeer wallet command`,
 }
 
-func AddQcCommand()  {
+func AddQcCommand() {
 	QcCmd.AddCommand(createWalletCmd)
 	QcCmd.AddCommand(setSynceToNumCmd)
 	QcCmd.AddCommand(createNewAccountCmd)
 	QcCmd.AddCommand(getnewaddressCmd)
 	QcCmd.AddCommand(getBalanceCmd)
-	QcCmd.AddCommand(getlisttxbyaddrCmd)
+	QcCmd.AddCommand(newGetListTxByAddrCmd())
+	QcCmd.AddCommand(newGetBillByAddrCmd())
 	QcCmd.AddCommand(updateblockCmd)
 	QcCmd.AddCommand(syncheightCmd)
 	QcCmd.AddCommand(sendToAddressCmd)
 	QcCmd.AddCommand(newImportPrivKeyCmd())
 	QcCmd.AddCommand(getAddressesByAccountCmd)
-	QcCmd.AddCommand(listAccountsBalanceCmd)
-	QcCmd.AddCommand(getTxByTxIdCmd)
+	QcCmd.AddCommand(newListAccountsBalance())
+	QcCmd.AddCommand(newGetTxByTxIdCmd())
 	QcCmd.AddCommand(getTxSpendInfoCmd)
 }
 
@@ -235,22 +237,28 @@ var sendToAddressCmd = &cobra.Command{
 		sendToAddress(args[0], float64(f32))
 	},
 }
-var getTxByTxIdCmd = &cobra.Command{
-	Use:   "gettx {txid}",
-	Short: "Access to transaction information ",
-	Example: `
+
+func newGetTxByTxIdCmd() *cobra.Command {
+	getTxByTxIdCmd := &cobra.Command{
+		Use:   "gettx {txid}",
+		Short: "Access to transaction information ",
+		Example: `
 		gettx 81278a6ba67d4ea2fc49fb469f2a45f6adb2306b82146747b9d5f3bd655e5030
 		`,
-	Args: cobra.MinimumNArgs(1),
-	Run: func(cmd *cobra.Command, args []string) {
-		err := OpenWallet()
-		if err != nil {
-			fmt.Println(err.Error())
-			return
-		}
-		getTx(args[0])
-	},
+		Args: cobra.MinimumNArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			if err := OpenWallet(); err != nil {
+				return err
+			}
+
+			_, err := getTx(args[0])
+			return err
+		},
+	}
+
+	return getTxByTxIdCmd
 }
+
 var getAddressesByAccountCmd = &cobra.Command{
 	Use:   "getaddressesbyaccount {string ,account,defalut imported} ",
 	Short: "get addresses by account ",
@@ -308,49 +316,114 @@ func newImportPrivKeyCmd() *cobra.Command {
 	return importPrivKeyCmd
 }
 
-var listAccountsBalanceCmd = &cobra.Command{
-	Use:   "listaccountsbalance ",
-	Short: "list Accounts Balance",
-	Example: `
+func newListAccountsBalance() *cobra.Command {
+	listAccountsBalanceCmd := &cobra.Command{
+		Use:   "listaccountsbalance ",
+		Short: "list Accounts Balance",
+		Example: `
 		listaccountsbalance
 		`,
-	Args: cobra.NoArgs,
-	Run: func(cmd *cobra.Command, args []string) {
-		err := OpenWallet()
-		if err != nil {
-			fmt.Println(err.Error())
-			return
-		}
-		listAccountsBalance()
-	},
-}
-var getlisttxbyaddrCmd = &cobra.Command{
-	Use:   "getlisttxbyaddr {address} {String ,Transaction type : in ,out ,all ,default all } ",
-	Short: "get all transactions for address",
-	Example: `
-		getlisttxbyaddr Tmjc34zWMTAASHTwcNtPppPujFKVK5SeuaJ in
-		getlisttxbyaddr Tmjc34zWMTAASHTwcNtPppPujFKVK5SeuaJ out 
-		getlisttxbyaddr Tmjc34zWMTAASHTwcNtPppPujFKVK5SeuaJ all
-		`,
-	Args: cobra.MinimumNArgs(1),
-	RunE: func(cmd *cobra.Command, args []string) error {
-		if err := OpenWallet(); err != nil {
-			return err
-		}
-		stype := int32(2)
-		if len(args) > 1 {
-			if args[1] == "in" {
-				stype = int32(0)
-			} else if args[1] == "out" {
-				stype = int32(1)
-			} else {
-				stype = int32(2)
+		Args: cobra.NoArgs,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			if err := OpenWallet(); err != nil {
+				return err
 			}
-		}
-		_, err := getListTxByAddr(args[0], int32(-1), int32(100), stype)
-		return err
-	},
+			_, err := listAccountsBalance()
+			return err
+		},
+	}
+
+	return listAccountsBalanceCmd
 }
+
+func newGetListTxByAddrCmd() *cobra.Command {
+	filterFlag := "all"
+	pageNoFlag := wallet.PageUseDefault
+	pageSizeFlag := wallet.PageDefaultSize
+
+	getListTxAddrCmd := &cobra.Command{
+		Use:   "getlisttxbyaddr {address}",
+		Short: "get all transactions by address",
+		Long: `request all the transactions that affect a specific address, 
+a transaction could affect MULTIPLE addresses`,
+		Example: `
+		getlisttxbyaddr Tme9dVJ4GeWRninBygrA6oDwCAGYbBvNxY7 --filter=in
+		getlisttxbyaddr Tme9dVJ4GeWRninBygrA6oDwCAGYbBvNxY7 --filter=out 
+		getlisttxbyaddr Tme9dVJ4GeWRninBygrA6oDwCAGYbBvNxY7 
+		getlisttxbyaddr Tme9dVJ4GeWRninBygrA6oDwCAGYbBvNxY7 --page_no=1 --page_size=10
+		`,
+		Args: cobra.MinimumNArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			if err := OpenWallet(); err != nil {
+				return err
+			}
+			filter := wallet.FilterAll
+
+			if filterFlag == "in" {
+				filter = wallet.FilterIn
+			} else if filterFlag == "out" {
+				filter = wallet.FilterOut
+			}
+
+			_, err := getListTxByAddr(args[0], filter, pageNoFlag, pageSizeFlag)
+			return err
+		},
+	}
+
+	getListTxAddrCmd.Flags().StringVarP(
+		&filterFlag, "filter", "f", "all", "Filter. {in, out, all}")
+	getListTxAddrCmd.Flags().IntVarP(
+		&pageNoFlag, "page_no", "i", wallet.PageUseDefault, "Page number.")
+	getListTxAddrCmd.Flags().IntVarP(
+		&pageSizeFlag, "page_size", "s", wallet.PageDefaultSize, "Page size.")
+
+	return getListTxAddrCmd
+}
+
+func newGetBillByAddrCmd() *cobra.Command {
+	filterFlag := "all"
+	pageNoFlag := wallet.PageUseDefault
+	pageSizeFlag := wallet.PageDefaultSize
+
+	getBillAddrCmd := &cobra.Command{
+		Use:   "getbillbyaddr {address}",
+		Short: "get bill by address",
+		Long: `request the bill of a specific address, a bill is the log of payments, 
+which are the effect that a transaction makes on a specific address`,
+		Example: `
+		getbillbyaddr Tme9dVJ4GeWRninBygrA6oDwCAGYbBvNxY7 --filter=in
+		getbillbyaddr Tme9dVJ4GeWRninBygrA6oDwCAGYbBvNxY7 --filter=out 
+		getbillbyaddr Tme9dVJ4GeWRninBygrA6oDwCAGYbBvNxY7 
+		getbillbyaddr Tme9dVJ4GeWRninBygrA6oDwCAGYbBvNxY7 --page_no=1 --page_size=10
+		`,
+		Args: cobra.MinimumNArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			if err := OpenWallet(); err != nil {
+				return err
+			}
+			filter := wallet.FilterAll
+
+			if filterFlag == "in" {
+				filter = wallet.FilterIn
+			} else if filterFlag == "out" {
+				filter = wallet.FilterOut
+			}
+
+			_, err := getBillByAddr(args[0], filter, pageNoFlag, pageSizeFlag)
+			return err
+		},
+	}
+
+	getBillAddrCmd.Flags().StringVarP(
+		&filterFlag, "filter", "f", "all", "Filter. {in, out, all}")
+	getBillAddrCmd.Flags().IntVarP(
+		&pageNoFlag, "page_no", "i", wallet.PageUseDefault, "Page number.")
+	getBillAddrCmd.Flags().IntVarP(
+		&pageSizeFlag, "page_size", "s", wallet.PageMaxSize, "Page size.")
+
+	return getBillAddrCmd
+}
+
 var updateblockCmd = &cobra.Command{
 	Use:   "updateblock {int,Update to the specified block, 0 is updated to the latest by default,defalut 0}",
 	Short: "Update local block data",

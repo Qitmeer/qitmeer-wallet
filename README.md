@@ -27,6 +27,17 @@ if you have golang environment, you can build it by yourself
     ```bash
     go env GOPATH
     ```
+   
+   Note: Minimum  go version is above 1.12, see [#47](https://github.com/Qitmeer/qitmeer-wallet/issues/47)
+   ```shell script
+   go version
+   
+   # Recommend for debian based OS to upgrade to the latest
+   # https://github.com/golang/go/wiki/Ubuntu
+    sudo add-apt-repository ppa:longsleep/golang-backports
+    sudo apt update
+    sudo apt install golang-go
+    ```
 3. build
     ```bash
     git clone https://github.com/Qitmeer/qitmeer-wallet ~/github.com/Qitmeer/qitmeer-wallet

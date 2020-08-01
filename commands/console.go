@@ -2,7 +2,6 @@ package commands
 
 import (
 	"encoding/hex"
-	"encoding/json"
 	"fmt"
 	"github.com/Qitmeer/qitmeer-wallet/config"
 	"github.com/Qitmeer/qitmeer-wallet/json/qitmeerjson"
@@ -34,7 +33,7 @@ var ConsoleCmd = &cobra.Command{
 	Example: `
 		Enter console mode
 		`,
-	Args:             cobra.NoArgs,
+	Args: cobra.NoArgs,
 	Run: func(cmd *cobra.Command, args []string) {
 		b := checkWalletIeExist(config.Cfg)
 		if b == false {
@@ -123,8 +122,10 @@ func printHelp() {
 	fmt.Println("\tThe commands are:")
 	fmt.Println("\t<createNewAccount> : Create a new account. Parameter: [account]")
 	fmt.Println("\t<getBalance> : Query the specified address balance. Parameter: [address]")
-	//fmt.Println("\t<listAccountsBalance> : Obtain all account balances. Parameter: []")
-	fmt.Println("\t<getListTxByAddr> : Gets all transaction records at the specified address. Parameter: [address] [stype:in,out,all]")
+	fmt.Println("\t<listAccountsBalance> : Obtain all account balances. Parameter: []")
+	fmt.Println("\t<getTx> : Gets transaction by ID. Parameter: [txID]")
+	fmt.Println("\t<getListTxByAddr> : Gets all transactions that affect specified address, one transaction could affect MULTIPLE addresses. Parameter: [address] [stype:in,out,all]")
+	fmt.Println("\t<getBillByAddr> : Gets all payments that affect specified address, one payment could affect only ONE address. Parameter: [address] [filter:in,out,all]")
 	fmt.Println("\t<getNewAddress> : Create a new address under the account. Parameter: [account]")
 	fmt.Println("\t<getAddressesByAccount> : Check all addresses under the account. Parameter: [account]")
 	fmt.Println("\t<getAccountByAddress> : Inquire about the account number of the address. Parameter: [address]")
@@ -192,27 +193,40 @@ func GetTxSpendInfo(txId string) ([]*wtxmgr.AddrTxOutput, error) {
 }
 
 func listAccountsBalance() (interface{}, error) {
-	msg, err := walletrpc.ListAccounts(w)
-	if err != nil {
-		fmt.Println("listAccountsBalance", "err", err.Error())
-		return nil, err
+	helper = &JsonCmdHelper{
+		JsonCmd: nil,
+		Run: func(cmd interface{}, w *wallet.Wallet) (interface{}, error) {
+			return walletrpc.ListAccounts(w)
+		},
 	}
-	for k, v := range msg.(map[string]float64) {
-		fmt.Printf("%v:%v\n", k, v)
-	}
-	return msg, nil
+	return helper.Call()
 }
 
-func getListTxByAddr(addr string, page int32, pageSize int32, sType int32) (interface{}, error) {
+func getListTxByAddr(addr string, filter int, pageNo int, pageSize int) (interface{}, error) {
 	helper = &JsonCmdHelper{
 		JsonCmd: &qitmeerjson.GetListTxByAddrCmd{
 			Address:  addr,
-			Stype:    sType,
-			Page:     page,
-			PageSize: pageSize,
+			Stype:    int32(filter),
+			Page:     int32(pageNo),
+			PageSize: int32(pageSize),
 		},
 		Run: func(cmd interface{}, w *wallet.Wallet) (interface{}, error) {
 			return walletrpc.GetListTxByAddr(cmd, w)
+		},
+	}
+	return helper.Call()
+}
+
+func getBillByAddr(addr string, filter int, pageNo int, pageSize int) (interface{}, error) {
+	helper = &JsonCmdHelper{
+		JsonCmd: &qitmeerjson.GetBillByAddrCmd{
+			Address:  addr,
+			Filter:   int32(filter),
+			PageNo:   int32(pageNo),
+			PageSize: int32(pageSize),
+		},
+		Run: func(cmd interface{}, w *wallet.Wallet) (interface{}, error) {
+			return walletrpc.GetBillByAddr(cmd, w)
 		},
 	}
 	return helper.Call()
@@ -271,19 +285,16 @@ func getAccountByAddress(address string) (interface{}, error) {
 	fmt.Printf("%s\n", msg)
 	return msg, nil
 }
-func getTx(txid string) (interface{}, error) {
-	msg, err := walletrpc.GetTx(txid, w)
-	if err != nil {
-		fmt.Println("getTx", "err", err.Error())
-		return nil, err
+
+func getTx(txID string) (interface{}, error) {
+	helper = &JsonCmdHelper{
+		JsonCmd: txID,
+		Run: func(cmd interface{}, w *wallet.Wallet) (interface{}, error) {
+			txID := cmd.(string)
+			return walletrpc.GetTx(txID, w)
+		},
 	}
-	b, err := json.Marshal(msg)
-	if err != nil {
-		fmt.Println("getTx", "err", err.Error())
-		return nil, err
-	}
-	fmt.Printf("%s\n", b)
-	return msg, nil
+	return helper.Call()
 }
 
 func importPrivKey(priKey string) (interface{}, error) {
