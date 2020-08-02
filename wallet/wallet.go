@@ -1,3 +1,8 @@
+// Copyright (c) 2018-2020 The qitmeer developers
+// Copyright (c) 2013-2017 The btcsuite developers
+// Copyright (c) 2015-2016 The Decred developers
+// Use of this source code is governed by an ISC
+// license that can be found in the LICENSE file.
 package wallet
 
 import (
@@ -36,9 +41,23 @@ import (
 )
 
 const (
+	// InsecurePubPassphrase is the default outer encryption passphrase used
+	// for public data (everything but private keys).  Using a non-default
+	// public passphrase can prevent an attacker without the public
+	// passphrase from discovering all past and future wallet addresses if
+	// they gain access to the wallet database.
+	//
+	// NOTE: at time of writing, public encryption only applies to public
+	// data in the waddrmgr namespace.  Transactions are not yet encrypted.
 	InsecurePubPassphrase   = "public"
 	webUpdateBlockTicker    = 30
 	defaultNewAddressNumber = 1
+)
+
+var (
+	// Namespace bucket keys.
+	waddrmgrNamespaceKey = []byte("waddrmgr")
+	wtxmgrNamespaceKey   = []byte("wtxmgr")
 )
 
 var UploadRun = false
@@ -51,16 +70,15 @@ type Wallet struct {
 	Manager *waddrmgr.Manager
 	TxStore *wtxmgr.Store
 
-	chainParams *chaincfg.Params
-
 	HttpClient *httpConfig
 
 	// Channels for the manager locker.
-	unlockRequests chan unlockRequest
-	lockRequests   chan struct{}
-	lockState      chan bool
+	unlockRequests     chan unlockRequest
+	lockRequests       chan struct{}
+	lockState          chan bool
 
-	wg sync.WaitGroup
+	chainParams *chaincfg.Params
+	wg          sync.WaitGroup
 
 	started bool
 	quit    chan struct{}
@@ -69,14 +87,16 @@ type Wallet struct {
 	SyncHeight int32
 }
 
-// Start wallet routine
+// Start starts the goroutines necessary to manage a wallet.
 func (w *Wallet) Start() {
-	log.Trace("wallet start")
 	w.quitMu.Lock()
 	select {
 	case <-w.quit:
+		// Restart the wallet goroutines after shutdown finishes.
+		w.WaitForShutdown()
 		w.quit = make(chan struct{})
 	default:
+		// Ignore when the wallet is still running.
 		if w.started {
 			w.quitMu.Unlock()
 			return
@@ -85,6 +105,7 @@ func (w *Wallet) Start() {
 	}
 	w.quitMu.Unlock()
 
+	w.wg.Add(1)
 	go w.walletLocker()
 
 	go func() {
@@ -106,6 +127,43 @@ func (w *Wallet) Start() {
 		}
 
 	}()
+}
+
+// quitChan atomically reads the quit channel.
+func (w *Wallet) quitChan() <-chan struct{} {
+	w.quitMu.Lock()
+	c := w.quit
+	w.quitMu.Unlock()
+	return c
+}
+
+// Stop signals all wallet goroutines to shutdown.
+func (w *Wallet) Stop() {
+	w.quitMu.Lock()
+	quit := w.quit
+	w.quitMu.Unlock()
+
+	select {
+	case <-quit:
+	default:
+		close(quit)
+	}
+}
+
+// ShuttingDown returns whether the wallet is currently in the process of
+// shutting down or not.
+func (w *Wallet) ShuttingDown() bool {
+	select {
+	case <-w.quitChan():
+		return true
+	default:
+		return false
+	}
+}
+
+// WaitForShutdown blocks until all wallet goroutines have finished executing.
+func (w *Wallet) WaitForShutdown() {
+	w.wg.Wait()
 }
 
 type (
@@ -139,12 +197,6 @@ type AddrAndAddrTxOutput struct {
 	balance  Balance
 	Txoutput []wtxmgr.AddrTxOutput
 }
-
-// Namespace bucket keys.
-var (
-	waddrmgrNamespaceKey = []byte("waddrmgr")
-	wtxmgrNamespaceKey   = []byte("wtxmgr")
-)
 
 // ImportPrivateKey imports a private key to the wallet and writes the new
 // wallet to disk.
@@ -229,7 +281,11 @@ func Create(db walletdb.DB, pubPass, privPass, seed []byte, params *chaincfg.Par
 func Open(db walletdb.DB, pubPass []byte, _ *waddrmgr.OpenCallbacks,
 	params *chaincfg.Params, _ uint32, cfg *config.Config) (*Wallet, error) {
 
-	var addrMgr *waddrmgr.Manager
+	var (
+		addrMgr *waddrmgr.Manager
+		txMgr   *wtxmgr.Store
+	)
+
 	// Before attempting to open the wallet, we'll check if there are any
 	// database upgrades for us to proceed. We'll also create our references
 	// to the address and transaction managers, as they are backed by the
@@ -248,7 +304,7 @@ func Open(db walletdb.DB, pubPass []byte, _ *waddrmgr.OpenCallbacks,
 		if err != nil {
 			return err
 		}
-		_, err = wtxmgr.Open(txMgrBucket, params)
+		txMgr, err = wtxmgr.Open(txMgrBucket, params)
 		if err != nil {
 			return err
 		}
@@ -261,12 +317,15 @@ func Open(db walletdb.DB, pubPass []byte, _ *waddrmgr.OpenCallbacks,
 	log.Trace("Opened wallet")
 
 	w := &Wallet{
-		cfg:            cfg,
-		db:             db,
-		Manager:        addrMgr,
-		unlockRequests: make(chan unlockRequest),
-		lockState:      make(chan bool),
-		chainParams:    params,
+		cfg:                cfg,
+		db:                 db,
+		Manager:            addrMgr,
+		TxStore:            txMgr,
+		unlockRequests:     make(chan unlockRequest),
+		lockRequests:       make(chan struct{}),
+		lockState:          make(chan bool),
+		chainParams:        params,
+		quit:               make(chan struct{}),
 	}
 
 	return w, nil
@@ -1083,14 +1142,6 @@ func (w *Wallet) Locked() bool {
 	return <-w.lockState
 }
 
-// quitChan atomically reads the quit channel.
-func (w *Wallet) quitChan() <-chan struct{} {
-	w.quitMu.Lock()
-	c := w.quit
-	w.quitMu.Unlock()
-	return c
-}
-
 func (w *Wallet) UnLockManager(passphrase []byte) error {
 	err := walletdb.View(w.db, func(tx walletdb.ReadTx) error {
 		addrMgrNs := tx.ReadBucket(waddrmgrNamespaceKey)
@@ -1104,14 +1155,12 @@ func (w *Wallet) UnLockManager(passphrase []byte) error {
 
 // walletLocker manages the locked/unlocked state of a wallet.
 func (w *Wallet) walletLocker() {
-	log.Trace("wallet walletLocker")
 	var timeout <-chan time.Time
 	quit := w.quitChan()
 out:
 	for {
 		select {
 		case req := <-w.unlockRequests:
-			log.Trace("walletLocker,unlockRequests")
 			err := walletdb.View(w.db, func(tx walletdb.ReadTx) error {
 				addMgrNs := tx.ReadBucket(waddrmgrNamespaceKey)
 				return w.Manager.Unlock(addMgrNs, req.passphrase)
@@ -1135,8 +1184,19 @@ out:
 		case <-quit:
 			break out
 
+		case <-w.lockRequests:
+		case <-timeout:
 		}
 
+		// Select statement fell through by an explicit lock or the
+		// timer expiring.  Lock the manager here.
+		timeout = nil
+		err := w.Manager.Lock()
+		if err != nil && !waddrmgr.IsError(err, waddrmgr.ErrLocked) {
+			log.Error("Could not lock wallet: ", err.Error())
+		} else {
+			log.Info("The wallet has been locked")
+		}
 	}
 	w.wg.Done()
 }

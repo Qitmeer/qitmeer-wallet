@@ -257,8 +257,8 @@ func (l *Loader) UnloadWallet() error {
 		return ErrNotLoaded
 	}
 
-	//l.wallet.Stop()
-	//l.wallet.WaitForShutdown()
+	l.wallet.Stop()
+	l.wallet.WaitForShutdown()
 	err := l.db.Close()
 	if err != nil {
 		return err
