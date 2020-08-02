@@ -72,7 +72,7 @@ export default {
           data: JSON.stringify({
             id: new Date().getTime(),
             method: "wallet_importWifPrivKey",
-            params: ["imported", this.ruleForm.key, true]
+            params: ["imported", this.ruleForm.key]
           })
         }).then(response => {
           if (typeof response.data.error != "undefined") {
