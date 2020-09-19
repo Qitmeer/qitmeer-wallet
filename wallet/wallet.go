@@ -862,7 +862,7 @@ func (w *Wallet) GetSyncBlockHeight() int32 {
 	return height
 }
 
-func (w *Wallet) SetSynceToNum(order int64) error {
+func (w *Wallet) SetSyncedToNum(order int64) error {
 	var block clijson.BlockHttpResult
 	blockByte, err := w.HttpClient.getBlockByOrder(order)
 	if err != nil {

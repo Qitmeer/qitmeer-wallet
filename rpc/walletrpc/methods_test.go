@@ -21,18 +21,18 @@ func TestOpenWallet(t *testing.T) {
 
 }
 
-func TestSetSynceToNum(t *testing.T) {
+func TestSetSyncedToNum(t *testing.T) {
 	w, err := openWallet()
 	if err != nil {
 		log.Error("openWallet fail", "err", err.Error())
 		return
 	}
-	err = SetSynceToNum(100000, w)
+	err = SetSyncedToNum(100000, w)
 	if err != nil {
-		log.Error("SetSynceToNum fail", "err", err.Error())
+		log.Error("SetSyncedToNum fail", "err", err.Error())
 		return
 	}
-	fmt.Printf("TestSetSynceToNum succ")
+	fmt.Printf("TestSetSyncedToNum succ")
 }
 func TestGetSyncHeight(t *testing.T) {
 	w, err := openWallet()

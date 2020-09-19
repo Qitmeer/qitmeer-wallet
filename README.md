@@ -68,7 +68,7 @@ if you have golang environment, you can build it by yourself
      importprivkey         import priKey
      listaccountsbalance   list Accounts Balance
      sendtoaddress         send transaction
-     setsyncetonum         please use caution when specifying how many blocks to update from
+     setsyncedtonum         please use caution when specifying how many blocks to update from
      syncheight            Get the number of local synchronization blocks
      updateblock           Update local block data
    

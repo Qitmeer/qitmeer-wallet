@@ -293,8 +293,8 @@ func GetBalance(iCmd interface{}, w *wallet.Wallet) (interface{}, error) {
 	return m, nil
 }
 
-func SetSynceToNum(order int64, w *wallet.Wallet) error {
-	err := w.SetSynceToNum(order)
+func SetSyncedToNum(order int64, w *wallet.Wallet) error {
+	err := w.SetSyncedToNum(order)
 	if err != nil {
 		log.Error("GetBalance ", "err ", err.Error())
 		return err
