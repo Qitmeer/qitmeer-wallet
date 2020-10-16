@@ -2,6 +2,7 @@ package wallet
 
 import (
 	"encoding/hex"
+	corejson "github.com/Qitmeer/qitmeer/core/json"
 	"time"
 
 	"github.com/Qitmeer/qitmeer-wallet/config"
@@ -120,6 +121,15 @@ func (api *API) GetUTxo(addr string) ([]wtxmgr.UTxo, error) {
 		return nil, err
 	}
 	return results, nil
+}
+
+// GetTx get transaction by ID
+func (api *API) GetTx(txID string) (*corejson.TxRawResult, error) {
+	result, err := api.wt.GetTx(txID)
+	if err != nil {
+		return nil, err
+	}
+	return &result, nil
 }
 
 // CreateAccount create account
