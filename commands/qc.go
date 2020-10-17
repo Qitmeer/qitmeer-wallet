@@ -18,7 +18,7 @@ var QcCmd = &cobra.Command{
 
 func AddQcCommand() {
 	QcCmd.AddCommand(createWalletCmd)
-	QcCmd.AddCommand(setSynceToNumCmd)
+	QcCmd.AddCommand(setSyncedToNumCmd)
 	QcCmd.AddCommand(createNewAccountCmd)
 	QcCmd.AddCommand(getnewaddressCmd)
 	QcCmd.AddCommand(getBalanceCmd)
@@ -130,11 +130,11 @@ var getBalanceCmd = &cobra.Command{
 	},
 }
 
-var setSynceToNumCmd = &cobra.Command{
-	Use:   "setsyncetonum {num}  ",
+var setSyncedToNumCmd = &cobra.Command{
+	Use:   "setsyncedtonum {num}  ",
 	Short: "please use caution when specifying how many blocks to update from ",
 	Example: `
-		setsyncetonum 100000
+		setsyncedtonum 100000
 		`,
 	Args: cobra.MinimumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
@@ -146,14 +146,14 @@ var setSynceToNumCmd = &cobra.Command{
 
 		order, err := strconv.ParseInt(args[0], 10, 64)
 		if err != nil {
-			log.Error("setsyncetonum ", "error", err.Error())
+			log.Error("setsyncedtonum ", "error", err.Error())
 			return
 		}
 		if order < 0 {
-			log.Error("setsyncetonum ", "error", "The specified order cannot be less than 0")
+			log.Error("setsyncedtonum ", "error", "The specified order cannot be less than 0")
 			return
 		}
-		err = SetSynceToNum(order)
+		err = SetSyncedToNum(order)
 		if err == nil {
 			fmt.Println("succ")
 			return

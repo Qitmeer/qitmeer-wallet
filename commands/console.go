@@ -252,8 +252,8 @@ func getNewAddress(account string) (interface{}, error) {
 	return msg, nil
 }
 
-func SetSynceToNum(order int64) error {
-	return walletrpc.SetSynceToNum(order, w)
+func SetSyncedToNum(order int64) error {
+	return walletrpc.SetSyncedToNum(order, w)
 }
 
 func getAddressesByAccount(account string) (interface{}, error) {
