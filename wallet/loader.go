@@ -1,4 +1,3 @@
-
 package wallet
 
 import (
@@ -204,7 +203,7 @@ func (l *Loader) OpenExistingWallet(pubPassphrase []byte, canConsolePrompt bool)
 			ObtainPrivatePass: noConsole,
 		}
 	}
-	log.Trace("OpenExistingWallet", "ooooopen", "1")
+	log.Trace("OpenExistingWallet", "open", "1")
 	w, err := Open(db, pubPassphrase, cbs, l.chainParams, l.recoveryWindow, l.Cfg)
 	if err != nil {
 		log.Trace("OpenExistingWallet", "open error", err)
