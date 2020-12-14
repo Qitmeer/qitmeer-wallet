@@ -11,7 +11,6 @@ import (
 	"fmt"
 	"github.com/Qitmeer/qitmeer-wallet/json/qitmeerjson"
 	"github.com/Qitmeer/qitmeer/common/marshal"
-	"github.com/Qitmeer/qitmeer/core/message"
 	"github.com/Qitmeer/qitmeer/crypto/ecc"
 	"os"
 	"sort"
@@ -34,7 +33,7 @@ import (
 	"github.com/Qitmeer/qitmeer-wallet/config"
 	clijson "github.com/Qitmeer/qitmeer-wallet/json"
 	"github.com/Qitmeer/qitmeer-wallet/utils"
-	waddrmgr "github.com/Qitmeer/qitmeer-wallet/waddrmgs"
+	"github.com/Qitmeer/qitmeer-wallet/waddrmgs"
 	"github.com/Qitmeer/qitmeer-wallet/wallet/txrules"
 	"github.com/Qitmeer/qitmeer-wallet/walletdb"
 	"github.com/Qitmeer/qitmeer-wallet/wtxmgr"
@@ -73,9 +72,9 @@ type Wallet struct {
 	HttpClient *httpConfig
 
 	// Channels for the manager locker.
-	unlockRequests     chan unlockRequest
-	lockRequests       chan struct{}
-	lockState          chan bool
+	unlockRequests chan unlockRequest
+	lockRequests   chan struct{}
+	lockState      chan bool
 
 	chainParams *chaincfg.Params
 	wg          sync.WaitGroup
@@ -317,15 +316,15 @@ func Open(db walletdb.DB, pubPass []byte, _ *waddrmgr.OpenCallbacks,
 	log.Trace("Opened wallet")
 
 	w := &Wallet{
-		cfg:                cfg,
-		db:                 db,
-		Manager:            addrMgr,
-		TxStore:            txMgr,
-		unlockRequests:     make(chan unlockRequest),
-		lockRequests:       make(chan struct{}),
-		lockState:          make(chan bool),
-		chainParams:        params,
-		quit:               make(chan struct{}),
+		cfg:            cfg,
+		db:             db,
+		Manager:        addrMgr,
+		TxStore:        txMgr,
+		unlockRequests: make(chan unlockRequest),
+		lockRequests:   make(chan struct{}),
+		lockState:      make(chan bool),
+		chainParams:    params,
+		quit:           make(chan struct{}),
 	}
 
 	return w, nil
@@ -1480,7 +1479,7 @@ func (w *Wallet) multiAddressMergeSign(redeemTx types.Transaction, network strin
 		redeemTx.TxIn[i2].SignScript = sigScripts[i2]
 	}
 
-	mtxHex, err := marshal.MessageToHex(&message.MsgTx{Tx: &redeemTx})
+	mtxHex, err := marshal.MessageToHex(&redeemTx)
 	if err != nil {
 		return "", err
 	}

@@ -16,6 +16,7 @@ import (
 // if the byte length is incorrect or an unexpected magic number was
 // encountered.
 var ErrMalformedPrivateKey = errors.New("malformed private key")
+
 // ErrChecksumMismatch describes an error where decoding failed due
 // to a bad checksum.
 var ErrChecksumMismatch = errors.New("checksum mismatch")
@@ -82,14 +83,14 @@ func (w *WIF) IsForNet(net *params.Params) bool {
 // is of an impossible length or the expected compressed pubkey magic number
 // does not equal the expected value of 0x01.  ErrChecksumMismatch is returned
 // if the expected WIF checksum does not match the calculated checksum.
-func DecodeWIF(wif string,net *params.Params) (*WIF, error) {
+func DecodeWIF(wif string, net *params.Params) (*WIF, error) {
 
-	decoded := base58.Decode(wif)
+	decoded := base58.Decode([]byte(wif))
 	decodedLen := len(decoded)
 	var compress bool
-	netID:=[2]byte{decoded[0],decoded[1]}
-	if netID!=net.PrivateKeyID {
-		return nil,fmt.Errorf("net is err ")
+	netID := [2]byte{decoded[0], decoded[1]}
+	if netID != net.PrivateKeyID {
+		return nil, fmt.Errorf("net is err ")
 	}
 	// Length of base58 decoded WIF must be 32 bytes + an optional 1 byte
 	// (0x01) if compressed, plus 1 byte for netID + 4 bytes of checksum.
@@ -146,7 +147,12 @@ func (w *WIF) String() string {
 	}
 	cksum := hash.DoubleHashB(a)[:4]
 	a = append(a, cksum...)
-	return base58.Encode(a)
+
+	ret, err := base58.Encode(a)
+	if err != nil {
+		return ""
+	}
+	return string(ret)
 }
 
 // SerializePubKey serializes the associated public key of the imported or
