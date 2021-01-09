@@ -4,14 +4,14 @@ go 1.12
 
 require (
 	github.com/BurntSushi/toml v0.3.1
-	github.com/Qitmeer/qitmeer v0.9.1-alpha
+	github.com/Qitmeer/qitmeer v0.10.0-dev
 	github.com/briandowns/spinner v1.7.0
 	github.com/davecgh/go-spew v1.1.1
 	github.com/deckarep/golang-set v1.7.1
 	github.com/jessevdk/go-flags v1.4.0
 	github.com/jrick/logrotate v1.0.0
 	github.com/julienschmidt/httprouter v1.2.0
-	github.com/mattn/go-colorable v0.1.2
+	github.com/mattn/go-colorable v0.1.7
 	github.com/mitchellh/go-homedir v1.1.0
 	github.com/peterh/liner v1.1.0
 	github.com/qianlnk/pgbar v0.0.0-20190929032005-46c23acad4ed
@@ -21,9 +21,8 @@ require (
 	github.com/spf13/cobra v0.0.5
 	github.com/spf13/viper v1.3.2
 	go.etcd.io/bbolt v1.3.3
-	golang.org/x/crypto v0.0.0-20190701094942-4def268fd1a4
-	golang.org/x/net v0.0.0-20190620200207-3b0461eec859
-	golang.org/x/sys v0.0.0-20190507160741-ecd444e8653b // indirect
+	golang.org/x/crypto v0.0.0-20200510223506-06a226fb4e37
+	golang.org/x/net v0.0.0-20200222125558-5a598a2470a0
 )
 
 replace (
@@ -34,6 +33,5 @@ replace (
 	golang.org/x/sys => github.com/golang/sys v0.0.0-20190710143415-6ec70d6a5542
 	golang.org/x/text => github.com/golang/text v0.3.2
 	golang.org/x/tools => github.com/golang/tools v0.0.0-20190710184609-286818132824
-	gopkg.in/check.v1 => github.com/go-check/check v0.0.0-20180628173108-788fd7840127
 	gopkg.in/yaml.v2 => github.com/go-yaml/yaml v2.1.0+incompatible
 )
