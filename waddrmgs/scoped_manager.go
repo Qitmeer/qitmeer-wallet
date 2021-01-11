@@ -535,11 +535,12 @@ func (s *ScopedKeyManager) loadAndCacheAddress(ns walletdb.ReadBucket,
 	address types.Address) (ManagedAddress, error) {
 
 	// Attempt to load the raw address information from the database.
-	rowInterface, err := fetchAddress(ns, &s.scope, address.ScriptAddress())
+	rowInterface, err := fetchAddress(ns, &s.scope, address.Script())
+
 	if err != nil {
 		if merr, ok := err.(*ManagerError); ok {
 			desc := fmt.Sprintf("failed to fetch address '%s': %v",
-				address.ScriptAddress(), merr.Description)
+				address.Script(), merr.Description)
 			merr.Description = desc
 			return nil, merr
 		}
@@ -554,7 +555,7 @@ func (s *ScopedKeyManager) loadAndCacheAddress(ns walletdb.ReadBucket,
 	}
 
 	// Cache and return the new managed address.
-	s.addrs[addrKey(managedAddr.Address().ScriptAddress())] = managedAddr
+	s.addrs[addrKey(managedAddr.Address().Script())] = managedAddr
 
 	return managedAddr, nil
 }
@@ -595,7 +596,7 @@ func (s *ScopedKeyManager) Address(ns walletdb.ReadBucket,
 	// NOTE: Not using a defer on the lock here since a write lock is
 	// needed if the lookup fails.
 	s.mtx.RLock()
-	if ma, ok := s.addrs[addrKey(address.ScriptAddress())]; ok {
+	if ma, ok := s.addrs[addrKey(address.Script())]; ok {
 		s.mtx.RUnlock()
 		return ma, nil
 	}
@@ -612,7 +613,7 @@ func (s *ScopedKeyManager) Address(ns walletdb.ReadBucket,
 func (s *ScopedKeyManager) AddrAccount(ns walletdb.ReadBucket,
 	address types.Address) (uint32, error) {
 
-	account, err := fetchAddrAccount(ns, &s.scope, address.ScriptAddress())
+	account, err := fetchAddrAccount(ns, &s.scope, address.Script())
 	if err != nil {
 		return 0, maybeConvertDbError(err)
 	}
@@ -738,7 +739,7 @@ func (s *ScopedKeyManager) nextAddresses(ns walletdb.ReadWriteBucket,
 	// database in a single transaction.
 	for _, info := range addressInfo {
 		ma := info.managedAddr
-		addressID := ma.Address().ScriptAddress()
+		addressID := ma.Address().Script()
 
 		switch a := ma.(type) {
 		case *managedAddress:
@@ -786,7 +787,7 @@ func (s *ScopedKeyManager) nextAddresses(ns walletdb.ReadWriteBucket,
 
 		for _, info := range addressInfo {
 			ma := info.managedAddr
-			s.addrs[addrKey(ma.Address().ScriptAddress())] = ma
+			s.addrs[addrKey(ma.Address().Script())] = ma
 
 			// Add the new managed address to the list of addresses
 			// that need their private keys derived when the
@@ -1056,7 +1057,7 @@ func (s *ScopedKeyManager) ImportPrivateKey(ns walletdb.ReadWriteBucket,
 
 	// Add the new managed address to the cache of recent addresses and
 	// return it.
-	s.addrs[addrKey(managedAddr.Address().ScriptAddress())] = managedAddr
+	s.addrs[addrKey(managedAddr.Address().Script())] = managedAddr
 	return managedAddr, nil
 }
 

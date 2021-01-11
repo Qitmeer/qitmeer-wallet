@@ -256,13 +256,13 @@ func SendToAddress(iCmd interface{}, w *wallet.Wallet) (interface{}, error) {
 	}
 
 	// Check that signed integer parameters are positive.
-	if amt < 0 {
+	if amt.Value < 0 {
 		return nil, qitmeerjson.ErrNeedPositiveAmount
 	}
 
 	// Mock up map of address and amount pairs.
 	pairs := map[string]types.Amount{
-		cmd.Address: amt,
+		cmd.Address: *amt,
 	}
 
 	return w.SendPairs(pairs, int64(waddrmgr.AccountMergePayNum), txrules.DefaultRelayFeePerKb)

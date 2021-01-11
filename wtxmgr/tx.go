@@ -263,7 +263,7 @@ func (s *Store) updateMinedBalance(ns walletdb.ReadWriteBucket, rec *TxRecord,
 			return err
 		}
 
-		newMinedBalance -= amt
+		newMinedBalance.Value -= amt.Value
 	}
 
 	// For each output of the record that is marked as a credit, if the
@@ -304,7 +304,7 @@ func (s *Store) updateMinedBalance(ns walletdb.ReadWriteBucket, rec *TxRecord,
 			return err
 		}
 
-		newMinedBalance += amount
+		newMinedBalance.Value += amount.Value
 	}
 	if it.err != nil {
 		return it.err
@@ -477,7 +477,8 @@ func (s *Store) addCredit(ns walletdb.ReadWriteBucket, rec *TxRecord, block *Blo
 	if err != nil {
 		return false, err
 	}
-	err = putMinedBalance(ns, minedBalance+txOutAmt)
+	a := types.Amount{Value: minedBalance.Value + txOutAmt.Value, Id: types.MEERID}
+	err = putMinedBalance(ns, a)
 	if err != nil {
 		return false, err
 	}
@@ -573,7 +574,7 @@ func (s *Store) rollback(ns walletdb.ReadWriteBucket, height int32) error {
 
 					unspentKey, credKey := existsUnspent(ns, &op)
 					if credKey != nil {
-						minedBalance -= types.Amount(output.Amount)
+						minedBalance.Value -= output.Amount.Value
 						err = deleteRawUnspent(ns, unspentKey)
 						if err != nil {
 							return err
@@ -640,14 +641,14 @@ func (s *Store) rollback(ns walletdb.ReadWriteBucket, height int32) error {
 				// rollback, the credit amount is zero.  Only
 				// mark the previously spent credit as unspent
 				// if it still exists.
-				if amt == 0 {
+				if amt.Value == 0 {
 					continue
 				}
 				unspentVal, err := fetchRawCreditUnspentValue(credKey)
 				if err != nil {
 					return err
 				}
-				minedBalance += amt
+				minedBalance.Value += amt.Value
 				err = putRawUnspent(ns, prevOutKey, unspentVal)
 				if err != nil {
 					return err
@@ -685,7 +686,7 @@ func (s *Store) rollback(ns walletdb.ReadWriteBucket, height int32) error {
 
 				credKey := existsRawUnspent(ns, outPointKey)
 				if credKey != nil {
-					minedBalance -= types.Amount(output.Amount)
+					minedBalance.Value -= output.Amount.Value
 					err = deleteRawUnspent(ns, outPointKey)
 					if err != nil {
 						return err
@@ -850,7 +851,7 @@ func (s *Store) UnspentOutputs(ns walletdb.ReadBucket) ([]Credit, error) {
 func (s *Store) Balance(ns walletdb.ReadBucket, minConf int32, syncHeight int32) (types.Amount, error) {
 	bal, err := fetchMinedBalance(ns)
 	if err != nil {
-		return 0, err
+		return types.Amount{}, err
 	}
 
 	// Subtract the balance for each credit that is spent by an unMined
@@ -872,16 +873,16 @@ func (s *Store) Balance(ns walletdb.ReadBucket, minConf int32, syncHeight int32)
 			if err != nil {
 				return err
 			}
-			bal -= amt
+			bal.Value -= amt.Value
 		}
 		return nil
 	})
 	if err != nil {
 		if _, ok := err.(Error); ok {
-			return 0, err
+			return types.Amount{}, err
 		}
 		str := "failed iterating unspent outputs"
-		return 0, storeError(ErrDatabase, str, err)
+		return types.Amount{}, storeError(ErrDatabase, str, err)
 	}
 
 	// Decrement the balance for any unspent credit with less than
@@ -904,7 +905,7 @@ func (s *Store) Balance(ns walletdb.ReadBucket, minConf int32, syncHeight int32)
 			txHash := &block.transactions[i]
 			rec, err := fetchTxRecord(ns, txHash, &block.Block)
 			if err != nil {
-				return 0, err
+				return types.Amount{}, err
 			}
 			numOuts := uint32(len(rec.MsgTx.TxOut))
 			for i := uint32(0); i < numOuts; i++ {
@@ -922,7 +923,7 @@ func (s *Store) Balance(ns walletdb.ReadBucket, minConf int32, syncHeight int32)
 				}
 				amt, spent, err := fetchRawCreditAmountSpent(v)
 				if err != nil {
-					return 0, err
+					return types.Amount{}, err
 				}
 				if spent {
 					continue
@@ -930,13 +931,13 @@ func (s *Store) Balance(ns walletdb.ReadBucket, minConf int32, syncHeight int32)
 				confirms := syncHeight - block.Height + 1
 				if confirms < minConf || (IsCoinBaseTx(&rec.MsgTx) &&
 					confirms < coinBaseMaturity) {
-					bal -= amt
+					bal.Value -= amt.Value
 				}
 			}
 		}
 	}
 	if blockIt.err != nil {
-		return 0, blockIt.err
+		return types.Amount{}, blockIt.err
 	}
 
 	// If unMined outputs are included, increment the balance for each
@@ -953,15 +954,15 @@ func (s *Store) Balance(ns walletdb.ReadBucket, minConf int32, syncHeight int32)
 			if err != nil {
 				return err
 			}
-			bal += amount
+			bal.Value += amount.Value
 			return nil
 		})
 		if err != nil {
 			if _, ok := err.(Error); ok {
-				return 0, err
+				return types.Amount{}, err
 			}
 			str := "failed to iterate over unMined credits bucket"
-			return 0, storeError(ErrDatabase, str, err)
+			return types.Amount{}, storeError(ErrDatabase, str, err)
 		}
 	}
 

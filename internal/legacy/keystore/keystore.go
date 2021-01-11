@@ -510,7 +510,7 @@ type transactionHashKey string
 type comment []byte
 
 func getAddressKey(addr types.Address) addressKey {
-	return addressKey(addr.ScriptAddress())
+	return addressKey(addr.Script())
 }
 
 // Store represents an key store in memory.  It implements the
@@ -2347,7 +2347,7 @@ func (a *btcAddress) WriteTo(w io.Writer) (n int64, err error) {
 
 	pubKey := a.pubKeyBytes()
 
-	hash := a.address.ScriptAddress()
+	hash := a.address.Script()
 	datas := []interface{}{
 		&hash,
 		walletHash(hash),
@@ -2497,7 +2497,7 @@ func (a *btcAddress) Address() types.Address {
 
 // AddrHash returns the pub key hash, implementing WalletAddress.
 func (a *btcAddress) AddrHash() string {
-	return string(a.address.ScriptAddress())
+	return string(a.address.Script())
 }
 
 // FirstBlock returns the first block the address is seen in, implementing
@@ -2793,7 +2793,7 @@ func newScriptAddress(s *Store, script []byte, bs *BlockStamp) (addr *scriptAddr
 
 	scriptHash := hash.Hash160(script)
 
-	address, err := address.NewAddressScriptHashFromHash(scriptHash, s.netParams())
+	address, err := address.NewScriptHashAddressFromHash(scriptHash, s.netParams())
 	if err != nil {
 		return nil, err
 	}
@@ -2864,13 +2864,15 @@ func (sa *scriptAddress) ReadFrom(r io.Reader) (n int64, err error) {
 		}
 	}
 
-	address, err := address.NewAddressScriptHashFromHash(scriptHash[:],
+	address, err := address.NewScriptHashAddressFromHash(scriptHash[:],
 		sa.store.netParams())
 	if err != nil {
 		return n, err
 	}
 
 	sa.address = address
+
+
 
 	if !sa.flags.hasScript {
 		return n, errors.New("read in an addresss with no script")
@@ -2893,7 +2895,7 @@ func (sa *scriptAddress) ReadFrom(r io.Reader) (n int64, err error) {
 func (sa *scriptAddress) WriteTo(w io.Writer) (n int64, err error) {
 	var written int64
 
-	hash := sa.address.ScriptAddress()
+	hash := sa.address.Script()
 	datas := []interface{}{
 		&hash,
 		walletHash(hash),
@@ -2927,7 +2929,7 @@ func (sa *scriptAddress) Address() types.Address {
 
 // AddrHash returns the script hash, implementing AddressInfo.
 func (sa *scriptAddress) AddrHash() string {
-	return string(sa.address.ScriptAddress())
+	return string(sa.address.Script())
 }
 
 // FirstBlock returns the first blockheight the address is known at.

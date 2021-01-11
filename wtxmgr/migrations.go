@@ -3,6 +3,7 @@ package wtxmgr
 import (
 	"github.com/Qitmeer/qitmeer-wallet/walletdb"
 	"github.com/Qitmeer/qitmeer-wallet/walletdb/migration"
+	"github.com/Qitmeer/qitmeer/core/types"
 	"github.com/Qitmeer/qitmeer/log"
 )
 
@@ -100,5 +101,5 @@ func dropTransactionHistory(ns walletdb.ReadWriteBucket) error {
 	}
 
 	// Finally, we'll insert a 0 value for our mined balance.
-	return putMinedBalance(ns, 0)
+	return putMinedBalance(ns, types.Amount{})
 }

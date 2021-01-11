@@ -82,10 +82,10 @@ func (api *API) GetAccountsAndBalance() (map[string]*Balance, error) {
 		accountBalance := accountsBalances[aaa.AccountName]
 
 		for _, addr := range aaa.AddrsOutput {
-			accountBalance.ConfirmAmount = accountBalance.ConfirmAmount + addr.balance.ConfirmAmount
-			accountBalance.SpendAmount = accountBalance.SpendAmount + addr.balance.SpendAmount
-			accountBalance.TotalAmount = accountBalance.TotalAmount + addr.balance.TotalAmount
-			accountBalance.UnspendAmount = accountBalance.UnspendAmount + addr.balance.UnspendAmount
+			accountBalance.ConfirmAmount.Value += addr.balance.ConfirmAmount.Value
+			accountBalance.SpendAmount.Value += addr.balance.SpendAmount.Value
+			accountBalance.TotalAmount.Value += addr.balance.TotalAmount.Value
+			accountBalance.UnspendAmount.Value += addr.balance.UnspendAmount.Value
 		}
 
 	}
@@ -104,10 +104,10 @@ func (api *API) GetBalanceByAccount(name string) (*Balance, error) {
 	for _, result := range results {
 		if result.AccountName == name {
 			for _, addr := range result.AddrsOutput {
-				accountBalance.ConfirmAmount = accountBalance.ConfirmAmount + addr.balance.ConfirmAmount
-				accountBalance.SpendAmount = accountBalance.SpendAmount + addr.balance.SpendAmount
-				accountBalance.TotalAmount = accountBalance.TotalAmount + addr.balance.TotalAmount
-				accountBalance.UnspendAmount = accountBalance.UnspendAmount + addr.balance.UnspendAmount
+				accountBalance.ConfirmAmount.Value += addr.balance.ConfirmAmount.Value
+				accountBalance.SpendAmount.Value += addr.balance.SpendAmount.Value
+				accountBalance.TotalAmount.Value += addr.balance.TotalAmount.Value
+				accountBalance.UnspendAmount.Value += addr.balance.UnspendAmount.Value
 			}
 		}
 	}
@@ -315,13 +315,13 @@ func (api *API) SendToAddress(addressStr string, amount float64) (string, error)
 	}
 
 	// Check that signed integer parameters are positive.
-	if amt < 0 {
+	if amt.Value < 0 {
 		return "", qitmeerjson.ErrNeedPositiveAmount
 	}
 
 	// Mock up map of address and amount pairs.
 	pairs := map[string]types.Amount{
-		addressStr: amt,
+		addressStr: *amt,
 	}
 
 	return api.wt.SendPairs(pairs, waddrmgr.AccountMergePayNum, txrules.DefaultRelayFeePerKb)
@@ -335,11 +335,11 @@ func (api *API) SendToMany(addAmounts map[string]float64) (string, error) {
 		if err != nil {
 			return "", err
 		}
-		if amt < 0 {
+		if amt.Value < 0 {
 			return "", qitmeerjson.ErrNeedPositiveAmount
 		}
 
-		pairs[addr] = amt
+		pairs[addr] = *amt
 	}
 
 	return api.wt.SendPairs(pairs, waddrmgr.AccountMergePayNum, txrules.DefaultRelayFeePerKb)
@@ -359,13 +359,13 @@ func (api *API) SendToAddressByAccount(accountName string, addressStr string, am
 	}
 
 	// Check that signed integer parameters are positive.
-	if amt < 0 {
+	if amt.Value < 0 {
 		return "", qitmeerjson.ErrNeedPositiveAmount
 	}
 
 	// Mock up map of address and amount pairs.
 	pairs := map[string]types.Amount{
-		addressStr: amt,
+		addressStr: *amt,
 	}
 
 	return api.wt.SendPairs(pairs, int64(accountNum), txrules.DefaultRelayFeePerKb)

@@ -442,13 +442,13 @@ func (w *Wallet) getAddrAndAddrTxOutputByAddr(addr string) (*AddrAndAddrTxOutput
 	var confirmAmount types.Amount
 	for _, txOut := range txOuts {
 		if txOut.Spend == wtxmgr.SpendStatusSpend {
-			spendAmount += txOut.Amount
+			spendAmount.Value += txOut.Amount.Value
 		} else if txOut.Spend == wtxmgr.SpendStatusUnconfirmed {
-			totalAmount += txOut.Amount
-			confirmAmount += txOut.Amount
+			totalAmount.Value += txOut.Amount.Value
+			confirmAmount.Value += txOut.Amount.Value
 		} else {
-			totalAmount += txOut.Amount
-			unspentAmount += txOut.Amount
+			totalAmount.Value += txOut.Amount.Value
+			unspentAmount.Value += txOut.Amount.Value
 		}
 	}
 
@@ -565,10 +565,10 @@ func (w *Wallet) getPagedBillByAddr(addr string, filter int, pageNo int, pageSiz
 
 		txOut, found := allMap[o.TxId]
 		if found {
-			txOut.Variation += int64(o.Amount)
+			txOut.Variation += o.Amount.Value
 		} else {
 			txOut.TxID = o.TxId
-			txOut.Variation = int64(o.Amount)
+			txOut.Variation = o.Amount.Value
 			txOut.BlockHash = o.Block.Hash
 			txOut.BlockOrder = uint32(o.Block.Height)
 		}
@@ -579,10 +579,10 @@ func (w *Wallet) getPagedBillByAddr(addr string, filter int, pageNo int, pageSiz
 		if o.SpendTo != nil {
 			txOut, found := allMap[o.SpendTo.TxHash]
 			if found {
-				txOut.Variation -= int64(o.Amount)
+				txOut.Variation -= o.Amount.Value
 			} else {
 				txOut.TxID = o.SpendTo.TxHash
-				txOut.Variation = -int64(o.Amount)
+				txOut.Variation = - o.Amount.Value
 				// ToDo: add Block to SpendTo
 				txOut.BlockHash = o.Block.Hash
 				txOut.BlockOrder = uint32(o.Block.Height)
@@ -827,7 +827,7 @@ func parseTx(tr corejson.TxRawResult, height int32, isBlue bool) ([]wtxmgr.TxInp
 				Address: vo.ScriptPubKey.Addresses[0],
 				TxId:    *txId,
 				Index:   uint32(index),
-				Amount:  types.Amount(vo.Amount),
+				Amount:  types.Amount{Value: int64(vo.Amount), Id: types.MEERID},
 				Block:   block,
 				Spend:   spend,
 				IsBlue:  isBlue,
@@ -1001,9 +1001,9 @@ func (w *Wallet) AccountBalances(scope waddrmgr.KeyScope) ([]AccountBalanceResul
 	for index, aaa := range aaaRs {
 		results[index].AccountNumber = aaa.AccountNumber
 		results[index].AccountName = aaa.AccountName
-		unSpendAmount := types.Amount(0)
+		unSpendAmount := types.Amount{}
 		for _, addr := range aaa.AddrsOutput {
-			unSpendAmount = unSpendAmount + addr.balance.UnspendAmount
+			unSpendAmount.Value += addr.balance.UnspendAmount.Value
 		}
 		results[index].AccountBalance = unSpendAmount
 	}
@@ -1294,13 +1294,13 @@ func (w *Wallet) SendOutputs(outputs []*types.TxOutput, account int64, satPerKb 
 	syncSendOutputs.Lock()
 	defer syncSendOutputs.Unlock()
 	tx := types.NewTransaction()
-	payAmout := types.Amount(0)
-	feeAmout := int64(0)
+	payAmount := types.Amount{}
+	feeAmount := types.Amount{}
 	for _, output := range outputs {
 		if err := txrules.CheckOutput(output, satPerKb); err != nil {
 			return nil, err
 		}
-		payAmout = payAmout + types.Amount(output.Amount)
+		payAmount.Value += output.Amount.Value
 		tx.AddTxOut(output)
 	}
 	aaars, err := w.GetAccountAndAddress(waddrmgr.KeyScopeBIP0044)
@@ -1317,10 +1317,10 @@ b:
 			continue
 		}
 
-		for _, addroutput := range aaar.AddrsOutput {
-			log.Trace(fmt.Sprintf("addr:%s,unspend:%v", addroutput.Addr, addroutput.balance.UnspendAmount))
-			if addroutput.balance.UnspendAmount > 0 {
-				addr, err := address.DecodeAddress(addroutput.Addr)
+		for _, addrOutput := range aaar.AddrsOutput {
+			log.Trace(fmt.Sprintf("addr:%s,unspend:%v", addrOutput.Addr, addrOutput.balance.UnspendAmount))
+			if addrOutput.balance.UnspendAmount.Value > 0 {
+				addr, err := address.DecodeAddress(addrOutput.Addr)
 				if err != nil {
 					return nil, err
 				}
@@ -1328,29 +1328,30 @@ b:
 				if err != nil {
 					return nil, err
 				}
-				addrByte := []byte(addroutput.Addr)
+				addrByte := []byte(addrOutput.Addr)
 
-				for _, output := range addroutput.Txoutput {
-					output.Address = addroutput.Addr
+				for _, output := range addrOutput.Txoutput {
+					output.Address = addrOutput.Addr
 					if output.Spend == wtxmgr.SpendStatusUnspent {
-						if payAmout > 0 && feeAmout == 0 {
-							if output.Amount > payAmout {
+						if payAmount.Value > 0 && feeAmount.Value == 0 {
+							if output.Amount.Value > payAmount.Value {
 								input := types.NewOutPoint(&output.TxId, output.Index)
 								tx.AddTxIn(types.NewTxInput(input, addrByte))
-								selfTxOut := types.NewTxOutput(uint64(output.Amount-payAmout), frompkscipt)
-								feeAmout = util.CalcMinRequiredTxRelayFee(int64(tx.SerializeSize()+selfTxOut.SerializeSize()), types.Amount(config.Cfg.MinTxFee))
+								txOutput := types.Amount{Value: output.Amount.Value - payAmount.Value, Id: types.MEERID}
+								selfTxOut := types.NewTxOutput(txOutput, frompkscipt)
+								feeAmount.Value = util.CalcMinRequiredTxRelayFee(int64(tx.SerializeSize()+selfTxOut.SerializeSize()), types.Amount{Value: config.Cfg.MinTxFee, Id: types.MEERID})
 								sendAddrTxOutput = append(sendAddrTxOutput, output)
-								if (output.Amount - payAmout - types.Amount(feeAmout)) >= 0 {
-									selfTxOut.Amount = uint64(output.Amount - payAmout - types.Amount(feeAmout))
-									if selfTxOut.Amount > 0 {
+								if (output.Amount.Value - payAmount.Value - feeAmount.Value) >= 0 {
+									selfTxOut.Amount.Value = output.Amount.Value - payAmount.Value - feeAmount.Value
+									if selfTxOut.Amount.Value > 0 {
 										tx.AddTxOut(selfTxOut)
 									}
-									payAmout = 0
-									feeAmout = 0
+									payAmount = types.Amount{}
+									feeAmount = types.Amount{}
 									break b
 								} else {
-									selfTxOut.Amount = uint64(output.Amount - payAmout)
-									payAmout = 0
+									selfTxOut.Amount.Value = output.Amount.Value - payAmount.Value
+									payAmount = types.Amount{}
 									tx.AddTxOut(selfTxOut)
 								}
 
@@ -1358,29 +1359,30 @@ b:
 								input := types.NewOutPoint(&output.TxId, output.Index)
 								tx.AddTxIn(types.NewTxInput(input, addrByte))
 								sendAddrTxOutput = append(sendAddrTxOutput, output)
-								payAmout = payAmout - output.Amount
-								if payAmout == 0 {
-									feeAmout = util.CalcMinRequiredTxRelayFee(int64(tx.SerializeSize()), types.Amount(config.Cfg.MinTxFee))
+								payAmount.Value -= output.Amount.Value
+								if payAmount.Value == 0 {
+									feeAmount.Value = util.CalcMinRequiredTxRelayFee(int64(tx.SerializeSize()), types.Amount{Value: config.Cfg.MinTxFee, Id: types.MEERID})
 								}
 							}
-						} else if payAmout == 0 && feeAmout > 0 {
-							if output.Amount >= types.Amount(feeAmout) {
+						} else if payAmount.Value == 0 && feeAmount.Value > 0 {
+							if output.Amount.Value >= feeAmount.Value {
 								input := types.NewOutPoint(&output.TxId, output.Index)
 								tx.AddTxIn(types.NewTxInput(input, addrByte))
-								selfTxOut := types.NewTxOutput(uint64(output.Amount-types.Amount(feeAmout)), frompkscipt)
-								if selfTxOut.Amount > 0 {
+								txOutput := types.Amount{Value: output.Amount.Value - feeAmount.Value, Id: types.MEERID}
+								selfTxOut := types.NewTxOutput(txOutput, frompkscipt)
+								if selfTxOut.Amount.Value > 0 {
 									tx.AddTxOut(selfTxOut)
 								}
 								sendAddrTxOutput = append(sendAddrTxOutput, output)
-								feeAmout = 0
+								feeAmount = types.Amount{}
 								break b
 							} else {
-								log.Trace("utxo < feeAmout")
+								log.Trace("utxo < feeAmount")
 							}
 
 						} else {
-							log.Trace(fmt.Sprintf("system err payAmout :%v ,feeAmout :%v\n", payAmout, feeAmout))
-							return nil, fmt.Errorf("system err payAmout :%v ,feeAmout :%v\n", payAmout, feeAmout)
+							log.Trace(fmt.Sprintf("system err payAmount :%v ,feeAmount :%v\n", payAmount, feeAmount))
+							return nil, fmt.Errorf("system err payAmount :%v ,feeAmount :%v\n", payAmount, feeAmount)
 						}
 					}
 				}
@@ -1388,10 +1390,10 @@ b:
 			//}
 		}
 	}
-	if payAmout.ToCoin() != types.Amount(0).ToCoin() || feeAmout != 0 {
-		log.Trace("payAmout", "payAmout", payAmout)
-		log.Trace("feeAmout", "feeAmout", feeAmout)
-		return nil, fmt.Errorf("balance is not enough,please deduct the service charge:%v", types.Amount(feeAmout).ToCoin())
+	if payAmount.ToCoin() != 0.0 || feeAmount.Value != 0 {
+		log.Trace("payAmount", "payAmount", payAmount)
+		log.Trace("feeAmount", "feeAmount", feeAmount)
+		return nil, fmt.Errorf("balance is not enough,please deduct the service charge:%v", feeAmount.ToCoin())
 	}
 
 	signTx, err := w.multiAddressMergeSign(*tx, w.chainParams.Name)
@@ -1538,7 +1540,7 @@ func makeOutputs(pairs map[string]types.Amount) ([]*types.TxOutput, error) {
 			return nil, fmt.Errorf("cannot create txout script: %s", err)
 		}
 
-		outputs = append(outputs, types.NewTxOutput(uint64(amt), pkScript))
+		outputs = append(outputs, types.NewTxOutput(amt, pkScript))
 	}
 	return outputs, nil
 }

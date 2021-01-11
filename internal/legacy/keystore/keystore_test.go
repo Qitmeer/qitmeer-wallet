@@ -909,7 +909,7 @@ func TestImportScript(t *testing.T) {
 		return
 	}
 
-	if string(sinfo.Address().ScriptAddress()) != sinfo.AddrHash() {
+	if string(sinfo.Address().Script()) != sinfo.AddrHash() {
 		t.Error("script hash doesn't match address.")
 		return
 	}
@@ -993,7 +993,7 @@ func TestImportScript(t *testing.T) {
 		return
 	}
 
-	if string(sinfo2.Address().ScriptAddress()) != sinfo2.AddrHash() {
+	if string(sinfo2.Address().Script()) != sinfo2.AddrHash() {
 		t.Error("script hash doesn't match address.")
 		return
 	}

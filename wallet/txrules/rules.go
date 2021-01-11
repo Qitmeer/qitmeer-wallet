@@ -14,7 +14,7 @@ import (
 )
 
 // DefaultRelayFeePerKb is the default minimum relay fee policy for a mempool.
-const DefaultRelayFeePerKb types.Amount = 1e3
+var DefaultRelayFeePerKb = types.Amount{Value: 1e3, Id: types.MEERID}
 
 // GetDustThreshold is used to define the amount below which output will be
 // determined as dust. Threshold is determined as 3 times the relay fee.
@@ -28,16 +28,16 @@ func GetDustThreshold(scriptSize int, relayFeePerKb types.Amount) types.Amount {
 	totalSize := 8 + serialization.VarIntSerializeSize(uint64(scriptSize)) +
 		scriptSize + 148
 
-	byteFee := relayFeePerKb / 1000
-	relayFee := types.Amount(totalSize) * byteFee
-	return 3 * relayFee
+	byteFee := relayFeePerKb.MulF64(1.0/1000)
+	replayFee := byteFee.MulF64(float64(totalSize))
+	return *replayFee.MulF64(3.0)
 }
 
 // IsDustAmount determines whether a transaction output value and script length would
 // cause the output to be considered dust.  Transactions with dust outputs are
 // not standard and are rejected by mempools with default policies.
 func IsDustAmount(amount types.Amount, scriptSize int, relayFeePerKb types.Amount) bool {
-	return amount < GetDustThreshold(scriptSize, relayFeePerKb)
+	return amount.Value < GetDustThreshold(scriptSize, relayFeePerKb).Value
 }
 
 // IsDustOutput determines whether a transaction output is considered dust.
@@ -76,10 +76,10 @@ const (
 // CheckOutput performs simple consensus and policy tests on a transaction
 // output.
 func CheckOutput(output *types.TxOutput, relayFeePerKb types.Amount) error {
-	if output.Amount < 0 {
+	if output.Amount.Value < 0 {
 		return ErrAmountNegative
 	}
-	if output.Amount > MaxSatoshi {
+	if output.Amount.Value > MaxSatoshi {
 		return ErrAmountExceedsMax
 	}
 	if IsDustOutput(output, relayFeePerKb) {
@@ -91,15 +91,15 @@ func CheckOutput(output *types.TxOutput, relayFeePerKb types.Amount) error {
 // FeeForSerializeSize calculates the required fee for a transaction of some
 // arbitrary size given a mempool's relay fee policy.
 func FeeForSerializeSize(relayFeePerKb types.Amount, txSerializeSize int) types.Amount {
-	fee := relayFeePerKb * types.Amount(txSerializeSize) / 1000
+	fee := relayFeePerKb.MulF64(float64(txSerializeSize)/1000)
 
-	if fee == 0 && relayFeePerKb > 0 {
-		fee = relayFeePerKb
+	if fee.Value == 0 && relayFeePerKb.Value > 0 {
+		fee = &relayFeePerKb
 	}
 
-	if fee < 0 || fee > MaxSatoshi {
-		fee = MaxSatoshi
+	if fee.Value < 0 || fee.Value > MaxSatoshi {
+		fee.Value = MaxSatoshi
 	}
 
-	return fee
+	return *fee
 }

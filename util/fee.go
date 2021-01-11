@@ -10,10 +10,10 @@ func CalcMinRequiredTxRelayFee(serializedSize int64, minRelayTxFee types.Amount)
 	// free transaction relay fee).  minTxRelayFee is in Atom/KB, so
 	// multiply by serializedSize (which is in bytes) and divide by 1000 to
 	// get minimum Atoms.
-	minFee := (serializedSize * int64(minRelayTxFee)) / 1000
+	minFee := (serializedSize * minRelayTxFee.Value) / 1000
 
-	if minFee == 0 && minRelayTxFee > 0 {
-		minFee = int64(minRelayTxFee)
+	if minFee == 0 && minRelayTxFee.Value > 0 {
+		minFee = minRelayTxFee.Value
 	}
 
 	// Set the minimum fee to the maximum possible value if the calculated

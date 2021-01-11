@@ -578,7 +578,7 @@ func (a *scriptAddress) Script() ([]byte, error) {
 func newScriptAddress(m *ScopedKeyManager, account uint32, scriptHash,
 	scriptEncrypted []byte) (*scriptAddress, error) {
 
-	address, err := addr.NewAddressScriptHashFromHash(scriptHash, m.rootManager.chainParams)
+	address, err := addr.NewScriptHashAddressFromHash(scriptHash, m.rootManager.chainParams)
 	if err != nil {
 		return nil, err
 	}
