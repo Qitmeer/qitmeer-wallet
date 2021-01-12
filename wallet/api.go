@@ -50,7 +50,13 @@ func (api *API) SyncStats() (*SyncStats, error) {
 //Unlock wallet
 func (api *API) Unlock(walletPriPass string, second int64) error {
 	//if api.wSvr.Wt.Locked() {
-	err := api.wt.Unlock([]byte(walletPriPass), time.After(time.Duration(second)*time.Second))
+	var dur <-chan time.Time
+	if second < 0 {
+		dur = nil
+	} else {
+		dur = time.After(time.Duration(second) * time.Second)
+	}
+	err := api.wt.Unlock([]byte(walletPriPass), dur)
 	if err != nil {
 		log.Error("Failed to unlock new wallet during old wallet key import", "err", err)
 		return err
