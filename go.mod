@@ -4,7 +4,7 @@ go 1.12
 
 require (
 	github.com/BurntSushi/toml v0.3.1
-	github.com/Qitmeer/qitmeer v0.10.0-dev
+	github.com/Qitmeer/qitmeer v0.10.0-dev.0.20210124080746-76d668c40e09
 	github.com/briandowns/spinner v1.7.0
 	github.com/davecgh/go-spew v1.1.1
 	github.com/deckarep/golang-set v1.7.1

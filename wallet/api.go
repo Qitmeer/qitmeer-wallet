@@ -302,70 +302,65 @@ func (api *API) ImportPrivKey(accountName string, key string) error {
 	return err
 }
 
+type ApiAmount struct {
+	Value float64
+	Id types.CoinID
+}
+
 //SendToAddress handles a sendtoaddress RPC request by creating a new
 //transaction spending unspent transaction outputs for a wallet to another
 //payment address.  Leftover inputs not sent to the payment address or a fee
 //for the miner are sent back to a new address in the wallet.  Upon success,
 //the TxID for the created transaction is returned.
-func (api *API) SendToAddress(addressStr string, amount float64) (string, error) {
-
-	amt, err := types.NewAmount(amount)
-	if err != nil {
-		return "", err
-	}
+func (api *API) SendToAddress(addressStr string, amount ApiAmount) (string, error) {
 
 	// Check that signed integer parameters are positive.
-	if amt.Value < 0 {
+	if amount.Value < 0 {
 		return "", qitmeerjson.ErrNeedPositiveAmount
 	}
 
+	amt := types.Amount{Value: int64(amount.Value * types.AtomsPerCoin), Id: amount.Id}
+
 	// Mock up map of address and amount pairs.
 	pairs := map[string]types.Amount{
-		addressStr: *amt,
+		addressStr: amt,
 	}
 
 	return api.wt.SendPairs(pairs, waddrmgr.AccountMergePayNum, txrules.DefaultRelayFeePerKb)
 }
 
-func (api *API) SendToMany(addAmounts map[string]float64) (string, error) {
+func (api *API) SendToMany(addAmounts map[string]ApiAmount) (string, error) {
 
 	pairs := make(map[string]types.Amount)
 	for addr, amount := range addAmounts {
-		amt, err := types.NewAmount(amount)
-		if err != nil {
-			return "", err
-		}
-		if amt.Value < 0 {
+		if amount.Value < 0 {
 			return "", qitmeerjson.ErrNeedPositiveAmount
 		}
-
-		pairs[addr] = *amt
+		amt := types.Amount{Value: int64(amount.Value * types.AtomsPerCoin), Id: amount.Id}
+		pairs[addr] = amt
 	}
 
 	return api.wt.SendPairs(pairs, waddrmgr.AccountMergePayNum, txrules.DefaultRelayFeePerKb)
 }
 
 // SendToAddressByAccount by account
-func (api *API) SendToAddressByAccount(accountName string, addressStr string, amount float64, comment string, commentTo string) (string, error) {
+func (api *API) SendToAddressByAccount(accountName string, addressStr string, amount ApiAmount, comment string, commentTo string) (string, error) {
 
 	accountNum, err := api.wt.AccountNumber(waddrmgr.KeyScopeBIP0044, accountName)
 	if err != nil {
 		return "", err
 	}
 
-	amt, err := types.NewAmount(amount)
-	if err != nil {
-		return "", err
-	}
-
 	// Check that signed integer parameters are positive.
-	if amt.Value < 0 {
+	if amount.Value < 0 {
 		return "", qitmeerjson.ErrNeedPositiveAmount
 	}
 
+	amt := types.Amount{Value: int64(amount.Value * types.AtomsPerCoin), Id: amount.Id}
+
 	// Mock up map of address and amount pairs.
 	pairs := map[string]types.Amount{
-		addressStr: *amt,
+		addressStr: amt,
 	}
 
 	return api.wt.SendPairs(pairs, int64(accountNum), txrules.DefaultRelayFeePerKb)

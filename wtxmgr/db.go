@@ -5,11 +5,10 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
-	"time"
-
 	"github.com/Qitmeer/qitmeer-wallet/walletdb"
 	"github.com/Qitmeer/qitmeer/common/hash"
 	"github.com/Qitmeer/qitmeer/core/types"
+	"time"
 )
 
 // Big endian is the preferred byte order, due to cursor scans over integer
@@ -44,26 +43,35 @@ var (
 	rootMinedBalance = []byte("bal")
 )
 
+func rootMinedBalanceKey(coinId types.CoinID) []byte {
+	balSize := binary.Size(rootMinedBalance)
+	idSize := binary.Size(coinId)
+	n := make([]byte, balSize+idSize)
+	copy(n, rootMinedBalance)
+	byteOrder.PutUint16(n[balSize:balSize+idSize], uint16(coinId))
+	return n
+}
+
 // The root bucket's mined balance k/v pair records the total balance for all
 // unspent credits from mined transactions.  This includes immature outputs, and
 // outputs spent by mempool transactions, which must be considered when
 // returning the actual balance for a given number of block confirmations.  The
 // value is the amount serialized as a uint64.
-func fetchMinedBalance(ns walletdb.ReadBucket) (types.Amount, error) {
-	v := ns.Get(rootMinedBalance)
+func fetchMinedBalance(ns walletdb.ReadBucket, coinId types.CoinID) (types.Amount, error) {
+	v := ns.Get(rootMinedBalanceKey(coinId))
 	if len(v) != 8 {
 		str := fmt.Sprintf("balance: short read (expected 8 bytes, "+
 			"read %v)", len(v))
 		return types.Amount{}, storeError(ErrData, str, nil)
 	}
-	a := types.Amount{Value: int64(byteOrder.Uint64(v)), Id: types.MEERID}
+	a := types.Amount{Value: int64(byteOrder.Uint64(v)), Id: coinId}
 	return a, nil
 }
 
 func putMinedBalance(ns walletdb.ReadWriteBucket, amt types.Amount) error {
 	v := make([]byte, 8)
 	byteOrder.PutUint64(v, uint64(amt.Value))
-	err := ns.Put(rootMinedBalance, v)
+	err := ns.Put(rootMinedBalanceKey(amt.Id), v)
 	if err != nil {
 		str := "failed to put balance"
 		return storeError(ErrDatabase, str, err)
@@ -125,19 +133,20 @@ func valueBlockRecord(block *BlockMeta, txHash *hash.Hash) []byte {
 func ValueAddrTxOutput(txout *AddrTxOutput) []byte {
 	var v []byte
 	if txout.SpendTo == nil {
-		v = make([]byte, 96)
+		v = make([]byte, 96+2)
 	} else {
-		v = make([]byte, 96+36)
+		v = make([]byte, 96+36+2)
 	}
 	copy(v, txout.TxId[:])
 	byteOrder.PutUint32(v[32:36], txout.Index)
 	byteOrder.PutUint64(v[36:44], uint64(txout.Amount.Value))
-	copy(v[44:76], txout.Block.Hash[:])
-	byteOrder.PutUint32(v[88:92], uint32(txout.Block.Height))
-	byteOrder.PutUint32(v[92:96], uint32(txout.Spend))
-	if len(v) == 132 {
-		byteOrder.PutUint32(v[96:100], txout.SpendTo.Index)
-		copy(v[100:132], txout.SpendTo.TxHash[:])
+	byteOrder.PutUint16(v[44:44+2], uint16(txout.Amount.Id))
+	copy(v[44+2:76+2], txout.Block.Hash[:])
+	byteOrder.PutUint32(v[88+2:92+2], uint32(txout.Block.Height))
+	byteOrder.PutUint32(v[92+2:96+2], uint32(txout.Spend))
+	if len(v) == 132+2 {
+		byteOrder.PutUint32(v[96+2:100+2], txout.SpendTo.Index)
+		copy(v[100+2:132+2], txout.SpendTo.TxHash[:])
 	}
 	return v
 }
@@ -152,13 +161,14 @@ func ReadAddrTxOutput(v []byte, txout *AddrTxOutput) (err error) {
 	copy(txout.TxId[:], v[0:32])
 	txout.Index = byteOrder.Uint32(v[32:36])
 	txout.Amount.Value = int64(byteOrder.Uint64(v[36:44]))
-	copy(txout.Block.Hash[:], v[44:76])
-	txout.Block.Height = int32(byteOrder.Uint32(v[88:92]))
-	txout.Spend = SpendStatus(byteOrder.Uint32(v[92:96]))
-	if len(v) == 132 {
+	txout.Amount.Id = types.CoinID(byteOrder.Uint16(v[44:44+2]))
+	copy(txout.Block.Hash[:], v[44+2:76+2])
+	txout.Block.Height = int32(byteOrder.Uint32(v[88+2:92+2]))
+	txout.Spend = SpendStatus(byteOrder.Uint32(v[92+2:96+2]))
+	if len(v) == 132+2 {
 		st := SpendTo{}
-		st.Index = byteOrder.Uint32(v[96:100])
-		copy(st.TxHash[:], v[100:132])
+		st.Index = byteOrder.Uint32(v[96+2:100+2])
+		copy(st.TxHash[:], v[100+2:132+2])
 		txout.SpendTo = &st
 	}
 	return nil
@@ -522,8 +532,9 @@ func keyCredit(txHash *hash.Hash, index uint32, block *Block) []byte {
 // credits are created unspent, and are only marked spent later, so there is no
 // value function to create either spent or unspent credits.
 func valueUnspentCredit(cred *credit) []byte {
-	v := make([]byte, 9)
+	v := make([]byte, 9+2)
 	byteOrder.PutUint64(v, uint64(cred.amount.Value))
+	byteOrder.PutUint16(v, uint16(cred.amount.Id))
 	if cred.change {
 		v[8] |= 1 << 1
 	}
@@ -558,48 +569,48 @@ func extractRawCreditIndex(k []byte) uint32 {
 
 // fetchRawCreditAmount returns the amount of the credit.
 func fetchRawCreditAmount(v []byte) (types.Amount, error) {
-	if len(v) < 9 {
+	if len(v) < 9+2 {
 		str := fmt.Sprintf("%s: short read (expected %d bytes, read %d)",
-			bucketCredits, 9, len(v))
+			bucketCredits, 9+2, len(v))
 		return types.Amount{}, storeError(ErrData, str, nil)
 	}
-	a := types.Amount{Value: int64(byteOrder.Uint64(v)), Id:types.MEERID}
+	a := types.Amount{Value: int64(byteOrder.Uint64(v[0:8])), Id: types.CoinID(byteOrder.Uint16(v[8:10]))}
 	return a, nil
 }
 
 // fetchRawCreditAmountSpent returns the amount of the credit and whether the
 // credit is spent.
 func fetchRawCreditAmountSpent(v []byte) (types.Amount, bool, error) {
-	if len(v) < 9 {
+	if len(v) < 9+2 {
 		str := fmt.Sprintf("%s: short read (expected %d bytes, read %d)",
-			bucketCredits, 9, len(v))
+			bucketCredits, 9+2, len(v))
 		return types.Amount{}, false, storeError(ErrData, str, nil)
 	}
-	a := types.Amount{Value: int64(byteOrder.Uint64(v)), Id:types.MEERID}
-	return a, v[8]&(1<<0) != 0, nil
+	a := types.Amount{Value: int64(byteOrder.Uint64(v[0:8])), Id: types.CoinID(byteOrder.Uint16(v[8:10]))}
+	return a, v[8+2]&(1<<0) != 0, nil
 }
 
 // fetchRawCreditAmountChange returns the amount of the credit and whether the
 // credit is marked as change.
 func fetchRawCreditAmountChange(v []byte) (types.Amount, bool, error) {
-	if len(v) < 9 {
+	if len(v) < 9+2 {
 		str := fmt.Sprintf("%s: short read (expected %d bytes, read %d)",
-			bucketCredits, 9, len(v))
+			bucketCredits, 9+2, len(v))
 		return types.Amount{}, false, storeError(ErrData, str, nil)
 	}
-	a := types.Amount{Value: int64(byteOrder.Uint64(v)), Id:types.MEERID}
-	return a, v[8]&(1<<1) != 0, nil
+	a := types.Amount{Value: int64(byteOrder.Uint64(v)), Id: types.CoinID(byteOrder.Uint16(v[8:10]))}
+	return a, v[8+2]&(1<<1) != 0, nil
 }
 
 // fetchRawCreditUnspentValue returns the unspent value for a raw credit key.
 // This may be used to mark a credit as unspent.
 func fetchRawCreditUnspentValue(k []byte) ([]byte, error) {
-	if len(k) < 72 {
+	if len(k) < 72+2 {
 		str := fmt.Sprintf("%s: short key (expected %d bytes, read %d)",
-			bucketCredits, 72, len(k))
+			bucketCredits, 72+2, len(k))
 		return nil, storeError(ErrData, str, nil)
 	}
-	return k[32:68], nil
+	return k[32+2 : 68+2], nil
 }
 
 // spendRawCredit marks the credit with a given key as mined at some particular
@@ -607,16 +618,16 @@ func fetchRawCreditUnspentValue(k []byte) ([]byte, error) {
 // amount is returned.
 func spendCredit(ns walletdb.ReadWriteBucket, k []byte, spender *indexedIncidence) (types.Amount, error) {
 	v := ns.NestedReadBucket(bucketCredits).Get(k)
-	newv := make([]byte, 81)
+	newv := make([]byte, 81+2)
 	copy(newv, v)
 	v = newv
-	v[8] |= 1 << 0
-	copy(v[9:41], spender.txHash[:])
-	byteOrder.PutUint32(v[41:45], uint32(spender.block.Height))
-	copy(v[45:77], spender.block.Hash[:])
-	byteOrder.PutUint32(v[77:81], spender.index)
+	v[8+4] |= 1 << 0
+	copy(v[9+2:41+2], spender.txHash[:])
+	byteOrder.PutUint32(v[41+2:45+2], uint32(spender.block.Height))
+	copy(v[45+2:77+2], spender.block.Hash[:])
+	byteOrder.PutUint32(v[77+2:81+2], spender.index)
 
-	a := types.Amount{Value: int64(byteOrder.Uint64(v[0:8])), Id:types.MEERID}
+	a := types.Amount{Value: int64(byteOrder.Uint64(v[0:8])), Id: types.CoinID(byteOrder.Uint16(v[8:10]))}
 	return a, putRawCredit(ns, k, v)
 }
 
@@ -629,9 +640,9 @@ func unspendRawCredit(ns walletdb.ReadWriteBucket, k []byte) (types.Amount, erro
 	if v == nil {
 		return types.Amount{}, nil
 	}
-	newv := make([]byte, 9)
+	newv := make([]byte, 9+2)
 	copy(newv, v)
-	newv[8] &^= 1 << 0
+	newv[8+2] &^= 1 << 0
 
 	err := b.Put(k, newv)
 	if err != nil {
@@ -639,7 +650,7 @@ func unspendRawCredit(ns walletdb.ReadWriteBucket, k []byte) (types.Amount, erro
 		return types.Amount{}, storeError(ErrDatabase, str, err)
 	}
 
-	a := types.Amount{Value: int64(byteOrder.Uint64(v[0:8])), Id:types.MEERID}
+	a := types.Amount{Value: int64(byteOrder.Uint64(v[0:8])), Id: types.CoinID(byteOrder.Uint16(v[8:10]))}
 	return a, nil
 }
 
@@ -677,20 +688,20 @@ func makeReadCreditIterator(ns walletdb.ReadBucket, prefix []byte) creditIterato
 }
 
 func (it *creditIterator) readElem() error {
-	if len(it.ck) < 72 {
+	if len(it.ck) < 72+2 {
 		str := fmt.Sprintf("%s: short key (expected %d bytes, read %d)",
-			bucketCredits, 72, len(it.ck))
+			bucketCredits, 72+2, len(it.ck))
 		return storeError(ErrData, str, nil)
 	}
-	if len(it.cv) < 9 {
+	if len(it.cv) < 9+2 {
 		str := fmt.Sprintf("%s: short read (expected %d bytes, read %d)",
-			bucketCredits, 9, len(it.cv))
+			bucketCredits, 9+2, len(it.cv))
 		return storeError(ErrData, str, nil)
 	}
-	it.elem.Index = byteOrder.Uint32(it.ck[68:72])
-	it.elem.Amount = types.Amount{Value: int64(byteOrder.Uint64(it.cv)), Id: types.MEERID}
-	it.elem.Spent = it.cv[8]&(1<<0) != 0
-	it.elem.Change = it.cv[8]&(1<<1) != 0
+	it.elem.Index = byteOrder.Uint32(it.ck[68+2 : 72+2])
+	it.elem.Amount = types.Amount{Value: int64(byteOrder.Uint64(it.cv[0:8])), Id: types.CoinID(byteOrder.Uint16(it.cv[8:10]))}
+	it.elem.Spent = it.cv[8+2]&(1<<0) != 0
+	it.elem.Change = it.cv[8+2]&(1<<1) != 0
 	return nil
 }
 
@@ -892,18 +903,18 @@ func makeReadDebitIterator(ns walletdb.ReadBucket, prefix []byte) debitIterator 
 }
 
 func (it *debitIterator) readElem() error {
-	if len(it.ck) < 72 {
+	if len(it.ck) < 72+2 {
 		str := fmt.Sprintf("%s: short key (expected %d bytes, read %d)",
 			bucketDebits, 72, len(it.ck))
 		return storeError(ErrData, str, nil)
 	}
-	if len(it.cv) < 80 {
+	if len(it.cv) < 80+2 {
 		str := fmt.Sprintf("%s: short read (expected %d bytes, read %d)",
-			bucketDebits, 80, len(it.cv))
+			bucketDebits, 80+2, len(it.cv))
 		return storeError(ErrData, str, nil)
 	}
-	it.elem.Index = byteOrder.Uint32(it.ck[68:72])
-	it.elem.Amount = types.Amount{Value: int64(byteOrder.Uint64(it.cv)), Id: types.MEERID}
+	it.elem.Index = byteOrder.Uint32(it.ck[68+2 : 72+2])
+	it.elem.Amount = types.Amount{Value: int64(byteOrder.Uint64(it.cv[0:8])), Id: types.CoinID(byteOrder.Uint16(it.cv[8:10]))}
 	return nil
 }
 
@@ -977,14 +988,16 @@ func deleteRawUnmMined(ns walletdb.ReadWriteBucket, k []byte) error {
 // format is thus:
 //
 //   [0:8]   Amount (8 bytes)
-//   [8]     Flags (1 byte)
+//   [8:10]  Coin ID (2 bytes)
+//   [8+2]     Flags (1 byte)
 //             0x02: Change
 
 func valueUnMinedCredit(amount types.Amount, change bool) []byte {
-	v := make([]byte, 9)
+	v := make([]byte, 9+2)
 	byteOrder.PutUint64(v, uint64(amount.Value))
+	byteOrder.PutUint16(v, uint16(amount.Id))
 	if change {
-		v[8] = 1 << 1
+		v[8+2] = 1 << 1
 	}
 	return v
 }
@@ -1007,21 +1020,21 @@ func fetchRawUnMinedCreditIndex(k []byte) (uint32, error) {
 }
 
 func fetchRawUnMinedCreditAmount(v []byte) (types.Amount, error) {
-	if len(v) < 9 {
+	if len(v) < 9+2 {
 		str := "short unmMined credit value"
 		return types.Amount{}, storeError(ErrData, str, nil)
 	}
-	a := types.Amount{Value: int64(byteOrder.Uint64(v)), Id: types.MEERID}
+	a := types.Amount{Value: int64(byteOrder.Uint64(v[0:8])), Id: types.CoinID(byteOrder.Uint16(v[8:10]))}
 	return a, nil
 }
 
 func fetchRawUnMinedCreditAmountChange(v []byte) (types.Amount, bool, error) {
-	if len(v) < 9 {
+	if len(v) < 9+2 {
 		str := "short unmMined credit value"
 		return types.Amount{}, false, storeError(ErrData, str, nil)
 	}
-	amt  := types.Amount{Value:int64(byteOrder.Uint64(v)), Id: types.MEERID}
-	change := v[8]&(1<<1) != 0
+	amt := types.Amount{Value: int64(byteOrder.Uint64(v)), Id: types.CoinID(byteOrder.Uint16(v[8:10]))}
+	change := v[8+2]&(1<<1) != 0
 	return amt, change, nil
 }
 
@@ -1208,7 +1221,7 @@ func createStore(ns walletdb.ReadWriteBucket) error {
 
 	// Write a zero balance.
 	byteOrder.PutUint64(v[:], 0)
-	err = ns.Put(rootMinedBalance, v[:])
+	err = ns.Put(rootMinedBalanceKey(types.MEERID), v[:])
 	if err != nil {
 		str := "failed to write zero balance"
 		return storeError(ErrDatabase, str, err)

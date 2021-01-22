@@ -827,7 +827,7 @@ func parseTx(tr corejson.TxRawResult, height int32, isBlue bool) ([]wtxmgr.TxInp
 				Address: vo.ScriptPubKey.Addresses[0],
 				TxId:    *txId,
 				Index:   uint32(index),
-				Amount:  types.Amount{Value: int64(vo.Amount), Id: types.MEERID},
+				Amount:  types.Amount{Value: int64(vo.Amount), Id: types.CoinID(vo.CoinId)},
 				Block:   block,
 				Spend:   spend,
 				IsBlue:  isBlue,
@@ -1287,113 +1287,121 @@ var syncSendOutputs = new(sync.Mutex)
 
 // SendOutputs creates and sends payment transactions. It returns the
 // transaction upon success.
-func (w *Wallet) SendOutputs(outputs []*types.TxOutput, account int64, satPerKb types.Amount) (*string, error) {
+func (w *Wallet) SendOutputs(coin2outputs map[types.CoinID][]*types.TxOutput, account int64, satPerKb int64) (*string, error) {
 
 	// Ensure the outputs to be created adhere to the network's consensus
 	// rules.
 	syncSendOutputs.Lock()
 	defer syncSendOutputs.Unlock()
+
 	tx := types.NewTransaction()
-	payAmount := types.Amount{}
-	feeAmount := types.Amount{}
-	for _, output := range outputs {
-		if err := txrules.CheckOutput(output, satPerKb); err != nil {
+	allSendAddrTxOutput := make([]wtxmgr.AddrTxOutput, 0)
+	for coinId, outputs := range coin2outputs {
+		payAmount := types.Amount{Id: coinId}
+		feeAmount := types.Amount{Id: coinId}
+		for _, output := range outputs {
+			if err := txrules.CheckOutput(output, satPerKb); err != nil {
+				return nil, err
+			}
+			payAmount.Value += output.Amount.Value
+			tx.AddTxOut(output)
+		}
+		aaars, err := w.GetAccountAndAddress(waddrmgr.KeyScopeBIP0044)
+		if err != nil {
 			return nil, err
 		}
-		payAmount.Value += output.Amount.Value
-		tx.AddTxOut(output)
-	}
-	aaars, err := w.GetAccountAndAddress(waddrmgr.KeyScopeBIP0044)
-	if err != nil {
-		return nil, err
-	}
 
-	var sendAddrTxOutput []wtxmgr.AddrTxOutput
-	//var prk string
-b:
-	for _, aaar := range aaars {
+		var sendAddrTxOutput []wtxmgr.AddrTxOutput
+		//var prk string
+	b:
+		for _, aaar := range aaars {
 
-		if int64(aaar.AccountNumber) != account && account != waddrmgr.AccountMergePayNum {
-			continue
-		}
+			if int64(aaar.AccountNumber) != account && account != waddrmgr.AccountMergePayNum {
+				continue
+			}
 
-		for _, addrOutput := range aaar.AddrsOutput {
-			log.Trace(fmt.Sprintf("addr:%s,unspend:%v", addrOutput.Addr, addrOutput.balance.UnspendAmount))
-			if addrOutput.balance.UnspendAmount.Value > 0 {
-				addr, err := address.DecodeAddress(addrOutput.Addr)
-				if err != nil {
-					return nil, err
-				}
-				frompkscipt, err := txscript.PayToAddrScript(addr)
-				if err != nil {
-					return nil, err
-				}
-				addrByte := []byte(addrOutput.Addr)
+			for _, addrOutput := range aaar.AddrsOutput {
+				log.Trace(fmt.Sprintf("addr:%s,unspend:%v", addrOutput.Addr, addrOutput.balance.UnspendAmount))
+				if addrOutput.balance.UnspendAmount.Value > 0 {
+					addr, err := address.DecodeAddress(addrOutput.Addr)
+					if err != nil {
+						return nil, err
+					}
+					frompkscipt, err := txscript.PayToAddrScript(addr)
+					if err != nil {
+						return nil, err
+					}
+					addrByte := []byte(addrOutput.Addr)
 
-				for _, output := range addrOutput.Txoutput {
-					output.Address = addrOutput.Addr
-					if output.Spend == wtxmgr.SpendStatusUnspent {
-						if payAmount.Value > 0 && feeAmount.Value == 0 {
-							if output.Amount.Value > payAmount.Value {
-								input := types.NewOutPoint(&output.TxId, output.Index)
-								tx.AddTxIn(types.NewTxInput(input, addrByte))
-								txOutput := types.Amount{Value: output.Amount.Value - payAmount.Value, Id: types.MEERID}
-								selfTxOut := types.NewTxOutput(txOutput, frompkscipt)
-								feeAmount.Value = util.CalcMinRequiredTxRelayFee(int64(tx.SerializeSize()+selfTxOut.SerializeSize()), types.Amount{Value: config.Cfg.MinTxFee, Id: types.MEERID})
-								sendAddrTxOutput = append(sendAddrTxOutput, output)
-								if (output.Amount.Value - payAmount.Value - feeAmount.Value) >= 0 {
-									selfTxOut.Amount.Value = output.Amount.Value - payAmount.Value - feeAmount.Value
+					for _, output := range addrOutput.Txoutput {
+						output.Address = addrOutput.Addr
+						if output.Spend == wtxmgr.SpendStatusUnspent {
+							if payAmount.Value > 0 && feeAmount.Value == 0 {
+								if output.Amount.Value > payAmount.Value {
+									input := types.NewOutPoint(&output.TxId, output.Index)
+									tx.AddTxIn(types.NewTxInput(input, addrByte))
+									txOutput := types.Amount{Value: output.Amount.Value - payAmount.Value, Id: coinId}
+									selfTxOut := types.NewTxOutput(txOutput, frompkscipt)
+									feeAmount.Value = util.CalcMinRequiredTxRelayFee(int64(tx.SerializeSize()+selfTxOut.SerializeSize()), types.Amount{Value: config.Cfg.MinTxFee, Id: coinId})
+									sendAddrTxOutput = append(sendAddrTxOutput, output)
+									allSendAddrTxOutput = append(allSendAddrTxOutput,output)
+
+									if (output.Amount.Value - payAmount.Value - feeAmount.Value) >= 0 {
+										selfTxOut.Amount.Value = output.Amount.Value - payAmount.Value - feeAmount.Value
+										if selfTxOut.Amount.Value > 0 {
+											tx.AddTxOut(selfTxOut)
+										}
+										payAmount = types.Amount{Id: coinId}
+										feeAmount = types.Amount{Id: coinId}
+										break b
+									} else {
+										selfTxOut.Amount.Value = output.Amount.Value - payAmount.Value
+										payAmount = types.Amount{Id: coinId}
+										tx.AddTxOut(selfTxOut)
+									}
+
+								} else {
+									input := types.NewOutPoint(&output.TxId, output.Index)
+									tx.AddTxIn(types.NewTxInput(input, addrByte))
+									sendAddrTxOutput = append(sendAddrTxOutput, output)
+									allSendAddrTxOutput = append(allSendAddrTxOutput,output)
+									payAmount.Value -= output.Amount.Value
+									if payAmount.Value == 0 {
+										feeAmount.Value = util.CalcMinRequiredTxRelayFee(int64(tx.SerializeSize()), types.Amount{Value: config.Cfg.MinTxFee, Id: coinId})
+									}
+								}
+							} else if payAmount.Value == 0 && feeAmount.Value > 0 {
+								if output.Amount.Value >= feeAmount.Value {
+									input := types.NewOutPoint(&output.TxId, output.Index)
+									tx.AddTxIn(types.NewTxInput(input, addrByte))
+									txOutput := types.Amount{Value: output.Amount.Value - feeAmount.Value, Id: coinId}
+									selfTxOut := types.NewTxOutput(txOutput, frompkscipt)
 									if selfTxOut.Amount.Value > 0 {
 										tx.AddTxOut(selfTxOut)
 									}
-									payAmount = types.Amount{}
-									feeAmount = types.Amount{}
+									sendAddrTxOutput = append(sendAddrTxOutput, output)
+									allSendAddrTxOutput = append(allSendAddrTxOutput,output)
+									feeAmount = types.Amount{Id: coinId}
 									break b
 								} else {
-									selfTxOut.Amount.Value = output.Amount.Value - payAmount.Value
-									payAmount = types.Amount{}
-									tx.AddTxOut(selfTxOut)
+									log.Trace("utxo < feeAmount")
 								}
 
 							} else {
-								input := types.NewOutPoint(&output.TxId, output.Index)
-								tx.AddTxIn(types.NewTxInput(input, addrByte))
-								sendAddrTxOutput = append(sendAddrTxOutput, output)
-								payAmount.Value -= output.Amount.Value
-								if payAmount.Value == 0 {
-									feeAmount.Value = util.CalcMinRequiredTxRelayFee(int64(tx.SerializeSize()), types.Amount{Value: config.Cfg.MinTxFee, Id: types.MEERID})
-								}
+								log.Trace(fmt.Sprintf("system err payAmount :%v ,feeAmount :%v\n", payAmount, feeAmount))
+								return nil, fmt.Errorf("system err payAmount :%v ,feeAmount :%v\n", payAmount, feeAmount)
 							}
-						} else if payAmount.Value == 0 && feeAmount.Value > 0 {
-							if output.Amount.Value >= feeAmount.Value {
-								input := types.NewOutPoint(&output.TxId, output.Index)
-								tx.AddTxIn(types.NewTxInput(input, addrByte))
-								txOutput := types.Amount{Value: output.Amount.Value - feeAmount.Value, Id: types.MEERID}
-								selfTxOut := types.NewTxOutput(txOutput, frompkscipt)
-								if selfTxOut.Amount.Value > 0 {
-									tx.AddTxOut(selfTxOut)
-								}
-								sendAddrTxOutput = append(sendAddrTxOutput, output)
-								feeAmount = types.Amount{}
-								break b
-							} else {
-								log.Trace("utxo < feeAmount")
-							}
-
-						} else {
-							log.Trace(fmt.Sprintf("system err payAmount :%v ,feeAmount :%v\n", payAmount, feeAmount))
-							return nil, fmt.Errorf("system err payAmount :%v ,feeAmount :%v\n", payAmount, feeAmount)
 						}
 					}
 				}
+				//}
 			}
-			//}
 		}
-	}
-	if payAmount.ToCoin() != 0.0 || feeAmount.Value != 0 {
-		log.Trace("payAmount", "payAmount", payAmount)
-		log.Trace("feeAmount", "feeAmount", feeAmount)
-		return nil, fmt.Errorf("balance is not enough,please deduct the service charge:%v", feeAmount.ToCoin())
+		if payAmount.ToCoin() != 0.0 || feeAmount.Value != 0 {
+			log.Trace("payAmount", "payAmount", payAmount)
+			log.Trace("feeAmount", "feeAmount", feeAmount)
+			return nil, fmt.Errorf("balance is not enough,please deduct the service charge:%v", feeAmount.ToCoin())
+		}
 	}
 
 	signTx, err := w.multiAddressMergeSign(*tx, w.chainParams.Name)
@@ -1413,7 +1421,7 @@ b:
 	err = walletdb.Update(w.db, func(tx walletdb.ReadWriteTx) error {
 		ns := tx.ReadWriteBucket(wtxmgrNamespaceKey)
 		outns := ns.NestedReadWriteBucket(wtxmgr.BucketAddrtxout)
-		for _, txoutput := range sendAddrTxOutput {
+		for _, txoutput := range allSendAddrTxOutput {
 			txoutput.Spend = wtxmgr.SpendStatusSpend
 			err = w.TxStore.UpdateAddrTxOut(outns, &txoutput)
 			if err != nil {
@@ -1492,7 +1500,7 @@ func (w *Wallet) multiAddressMergeSign(redeemTx types.Transaction, network strin
 //It returns the transaction hash in string format upon success
 //All errors are returned in btcjson.RPCError format
 func (w *Wallet) SendPairs(amounts map[string]types.Amount,
-	account int64, feeSatPerKb types.Amount) (string, error) {
+	account int64, feeSatPerKb int64) (string, error) {
 	check, err := w.HttpClient.CheckSyncUpdate(int64(w.Manager.SyncedTo().Height))
 
 	if check == false {
@@ -1527,9 +1535,11 @@ func (w *Wallet) SendPairs(amounts map[string]types.Amount,
 // strings to amounts.  This is used to create the outputs to include in newly
 // created transactions from a JSON object describing the output destinations
 // and amounts.
-func makeOutputs(pairs map[string]types.Amount) ([]*types.TxOutput, error) {
-	outputs := make([]*types.TxOutput, 0, len(pairs))
+func makeOutputs(pairs map[string]types.Amount) (map[types.CoinID][]*types.TxOutput, error) {
+	coin2outputs := make(map[types.CoinID][]*types.TxOutput)
 	for addrStr, amt := range pairs {
+		outputs := coin2outputs[amt.Id]
+
 		addr, err := address.DecodeAddress(addrStr)
 		if err != nil {
 			return nil, fmt.Errorf("cannot decode address: %s,address:%s", err, addrStr)
@@ -1542,5 +1552,5 @@ func makeOutputs(pairs map[string]types.Amount) ([]*types.TxOutput, error) {
 
 		outputs = append(outputs, types.NewTxOutput(amt, pkScript))
 	}
-	return outputs, nil
+	return coin2outputs, nil
 }

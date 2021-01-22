@@ -225,7 +225,7 @@ func (s *Store) updateMinedBalance(ns walletdb.ReadWriteBucket, rec *TxRecord,
 	block *BlockMeta) error {
 
 	// Fetch the mined balance in case we need to update it.
-	minedBalance, err := fetchMinedBalance(ns)
+	minedBalance, err := fetchMinedBalance(ns, types.MEERID)
 	if err != nil {
 		return err
 	}
@@ -444,7 +444,7 @@ func (s *Store) addCredit(ns walletdb.ReadWriteBucket, rec *TxRecord, block *Blo
 		if existsRawUnspent(ns, k) != nil {
 			return false, nil
 		}
-		v := valueUnMinedCredit(types.Amount(rec.MsgTx.TxOut[index].Amount), change)
+		v := valueUnMinedCredit(rec.MsgTx.TxOut[index].Amount, change)
 		return true, putRawUnMinedCredit(ns, k, v)
 	}
 
@@ -453,7 +453,7 @@ func (s *Store) addCredit(ns walletdb.ReadWriteBucket, rec *TxRecord, block *Blo
 		return false, nil
 	}
 
-	txOutAmt := types.Amount(rec.MsgTx.TxOut[index].Amount)
+	txOutAmt := rec.MsgTx.TxOut[index].Amount
 	log.Debug("Marking transaction %v output %d (%v) spendable",
 		rec.Hash, index, txOutAmt)
 
@@ -473,11 +473,11 @@ func (s *Store) addCredit(ns walletdb.ReadWriteBucket, rec *TxRecord, block *Blo
 		return false, err
 	}
 
-	minedBalance, err := fetchMinedBalance(ns)
+	minedBalance, err := fetchMinedBalance(ns, txOutAmt.Id)
 	if err != nil {
 		return false, err
 	}
-	a := types.Amount{Value: minedBalance.Value + txOutAmt.Value, Id: types.MEERID}
+	a := types.Amount{Value: minedBalance.Value + txOutAmt.Value, Id: txOutAmt.Id}
 	err = putMinedBalance(ns, a)
 	if err != nil {
 		return false, err
@@ -514,7 +514,7 @@ func IsCoinBaseTx(tx *types.Transaction) bool {
 }
 
 func (s *Store) rollback(ns walletdb.ReadWriteBucket, height int32) error {
-	minedBalance, err := fetchMinedBalance(ns)
+	minedBalance, err := fetchMinedBalance(ns, types.MEERID)
 	if err != nil {
 		return err
 	}
@@ -848,8 +848,8 @@ func (s *Store) UnspentOutputs(ns walletdb.ReadBucket) ([]Credit, error) {
 //
 // Balance may return unexpected results if syncHeight is lower than the block
 // height of the most recent mined transaction in the store.
-func (s *Store) Balance(ns walletdb.ReadBucket, minConf int32, syncHeight int32) (types.Amount, error) {
-	bal, err := fetchMinedBalance(ns)
+func (s *Store) Balance(ns walletdb.ReadBucket, minConf int32, syncHeight int32, coinId types.CoinID) (types.Amount, error) {
+	bal, err := fetchMinedBalance(ns, coinId)
 	if err != nil {
 		return types.Amount{}, err
 	}
