@@ -1337,14 +1337,19 @@ b:
 
 					mature := false
 					if outTx, err := w.GetTx(output.TxId.String()); err == nil {
-						confirms := uint16(w.SyncHeight - output.Block.Height + 1)
-						if !outTx.Vin[0].IsCoinBase() || confirms > w.chainParams.CoinbaseMaturity {
+						if outTx.Vin[0].IsCoinBase() {
+							if blockByte, err := w.HttpClient.getBlockByOrder(int64(output.Block.Height)); err == nil {
+								var block clijson.BlockHttpResult
+								if err := json.Unmarshal(blockByte, &block); err == nil {
+									if block.Confirmations >= int64(w.chainParams.CoinbaseMaturity) {
+										mature = true
+									}
+								}
+							}
+						} else {
 							mature = true
 						}
-						log.Info("SendOutputs", "confirms", confirms, "IsCoinBase", outTx.Vin[0].IsCoinBase(),
-							"if", !outTx.Vin[0].IsCoinBase() || confirms > w.chainParams.CoinbaseMaturity)
 					}
-					log.Info("SendOutputs", "TxId", output.TxId.String(), "mature", mature)
 					if output.Spend == wtxmgr.SpendStatusUnspent && mature {
 						if payAmount > 0 && feeAmount == 0 {
 							if output.Amount > payAmount {
