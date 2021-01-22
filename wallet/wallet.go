@@ -73,9 +73,9 @@ type Wallet struct {
 	HttpClient *httpConfig
 
 	// Channels for the manager locker.
-	unlockRequests     chan unlockRequest
-	lockRequests       chan struct{}
-	lockState          chan bool
+	unlockRequests chan unlockRequest
+	lockRequests   chan struct{}
+	lockState      chan bool
 
 	chainParams *chaincfg.Params
 	wg          sync.WaitGroup
@@ -317,15 +317,15 @@ func Open(db walletdb.DB, pubPass []byte, _ *waddrmgr.OpenCallbacks,
 	log.Trace("Opened wallet")
 
 	w := &Wallet{
-		cfg:                cfg,
-		db:                 db,
-		Manager:            addrMgr,
-		TxStore:            txMgr,
-		unlockRequests:     make(chan unlockRequest),
-		lockRequests:       make(chan struct{}),
-		lockState:          make(chan bool),
-		chainParams:        params,
-		quit:               make(chan struct{}),
+		cfg:            cfg,
+		db:             db,
+		Manager:        addrMgr,
+		TxStore:        txMgr,
+		unlockRequests: make(chan unlockRequest),
+		lockRequests:   make(chan struct{}),
+		lockState:      make(chan bool),
+		chainParams:    params,
+		quit:           make(chan struct{}),
 	}
 
 	return w, nil
@@ -336,6 +336,7 @@ func (w *Wallet) GetTx(txId string) (corejson.TxRawResult, error) {
 	trx := corejson.TxRawResult{}
 	err := walletdb.View(w.db, func(tx walletdb.ReadTx) error {
 		ns := tx.ReadBucket(wtxmgrNamespaceKey)
+
 		txNs := ns.NestedReadBucket(wtxmgr.BucketTxJson)
 		k, err := hash.NewHashFromStr(txId)
 		if err != nil {
@@ -1295,13 +1296,13 @@ func (w *Wallet) SendOutputs(outputs []*types.TxOutput, account int64, satPerKb 
 	syncSendOutputs.Lock()
 	defer syncSendOutputs.Unlock()
 	tx := types.NewTransaction()
-	payAmout := types.Amount(0)
-	feeAmout := int64(0)
+	payAmount := types.Amount(0)
+	feeAmount := int64(0)
 	for _, output := range outputs {
 		if err := txrules.CheckOutput(output, satPerKb); err != nil {
 			return nil, err
 		}
-		payAmout = payAmout + types.Amount(output.Amount)
+		payAmount = payAmount + types.Amount(output.Amount)
 		tx.AddTxOut(output)
 	}
 	aaars, err := w.GetAccountAndAddress(waddrmgr.KeyScopeBIP0044)
@@ -1333,25 +1334,33 @@ b:
 
 				for _, output := range addroutput.Txoutput {
 					output.Address = addroutput.Addr
-					if output.Spend == wtxmgr.SpendStatusUnspent {
-						if payAmout > 0 && feeAmout == 0 {
-							if output.Amount > payAmout {
+
+					mature := false
+					if outTx, err := w.GetTx(output.TxId.String()); err != nil {
+						confirms := uint16(w.SyncHeight - output.Block.Height + 1)
+						if !outTx.Vin[0].IsCoinBase() || confirms > w.chainParams.CoinbaseMaturity {
+							mature = true
+						}
+					}
+					if output.Spend == wtxmgr.SpendStatusUnspent && mature {
+						if payAmount > 0 && feeAmount == 0 {
+							if output.Amount > payAmount {
 								input := types.NewOutPoint(&output.TxId, output.Index)
 								tx.AddTxIn(types.NewTxInput(input, addrByte))
-								selfTxOut := types.NewTxOutput(uint64(output.Amount-payAmout), frompkscipt)
-								feeAmout = util.CalcMinRequiredTxRelayFee(int64(tx.SerializeSize()+selfTxOut.SerializeSize()), types.Amount(config.Cfg.MinTxFee))
+								selfTxOut := types.NewTxOutput(uint64(output.Amount-payAmount), frompkscipt)
+								feeAmount = util.CalcMinRequiredTxRelayFee(int64(tx.SerializeSize()+selfTxOut.SerializeSize()), types.Amount(config.Cfg.MinTxFee))
 								sendAddrTxOutput = append(sendAddrTxOutput, output)
-								if (output.Amount - payAmout - types.Amount(feeAmout)) >= 0 {
-									selfTxOut.Amount = uint64(output.Amount - payAmout - types.Amount(feeAmout))
+								if (output.Amount - payAmount - types.Amount(feeAmount)) >= 0 {
+									selfTxOut.Amount = uint64(output.Amount - payAmount - types.Amount(feeAmount))
 									if selfTxOut.Amount > 0 {
 										tx.AddTxOut(selfTxOut)
 									}
-									payAmout = 0
-									feeAmout = 0
+									payAmount = 0
+									feeAmount = 0
 									break b
 								} else {
-									selfTxOut.Amount = uint64(output.Amount - payAmout)
-									payAmout = 0
+									selfTxOut.Amount = uint64(output.Amount - payAmount)
+									payAmount = 0
 									tx.AddTxOut(selfTxOut)
 								}
 
@@ -1359,29 +1368,29 @@ b:
 								input := types.NewOutPoint(&output.TxId, output.Index)
 								tx.AddTxIn(types.NewTxInput(input, addrByte))
 								sendAddrTxOutput = append(sendAddrTxOutput, output)
-								payAmout = payAmout - output.Amount
-								if payAmout == 0 {
-									feeAmout = util.CalcMinRequiredTxRelayFee(int64(tx.SerializeSize()), types.Amount(config.Cfg.MinTxFee))
+								payAmount = payAmount - output.Amount
+								if payAmount == 0 {
+									feeAmount = util.CalcMinRequiredTxRelayFee(int64(tx.SerializeSize()), types.Amount(config.Cfg.MinTxFee))
 								}
 							}
-						} else if payAmout == 0 && feeAmout > 0 {
-							if output.Amount >= types.Amount(feeAmout) {
+						} else if payAmount == 0 && feeAmount > 0 {
+							if output.Amount >= types.Amount(feeAmount) {
 								input := types.NewOutPoint(&output.TxId, output.Index)
 								tx.AddTxIn(types.NewTxInput(input, addrByte))
-								selfTxOut := types.NewTxOutput(uint64(output.Amount-types.Amount(feeAmout)), frompkscipt)
+								selfTxOut := types.NewTxOutput(uint64(output.Amount-types.Amount(feeAmount)), frompkscipt)
 								if selfTxOut.Amount > 0 {
 									tx.AddTxOut(selfTxOut)
 								}
 								sendAddrTxOutput = append(sendAddrTxOutput, output)
-								feeAmout = 0
+								feeAmount = 0
 								break b
 							} else {
-								log.Trace("utxo < feeAmout")
+								log.Trace("utxo < feeAmount")
 							}
 
 						} else {
-							log.Trace(fmt.Sprintf("system err payAmout :%v ,feeAmout :%v\n", payAmout, feeAmout))
-							return nil, fmt.Errorf("system err payAmout :%v ,feeAmout :%v\n", payAmout, feeAmout)
+							log.Trace(fmt.Sprintf("system err payAmount :%v ,feeAmount :%v\n", payAmount, feeAmount))
+							return nil, fmt.Errorf("system err payAmount :%v ,feeAmount :%v\n", payAmount, feeAmount)
 						}
 					}
 				}
@@ -1389,10 +1398,10 @@ b:
 			//}
 		}
 	}
-	if payAmout.ToCoin() != types.Amount(0).ToCoin() || feeAmout != 0 {
-		log.Trace("payAmout", "payAmout", payAmout)
-		log.Trace("feeAmout", "feeAmout", feeAmout)
-		return nil, fmt.Errorf("balance is not enough,please deduct the service charge:%v", types.Amount(feeAmout).ToCoin())
+	if payAmount.ToCoin() != types.Amount(0).ToCoin() || feeAmount != 0 {
+		log.Trace("payAmount", "payAmount", payAmount)
+		log.Trace("feeAmount", "feeAmount", feeAmount)
+		return nil, fmt.Errorf("balance is not enough,please deduct the service charge:%v", types.Amount(feeAmount).ToCoin())
 	}
 
 	signTx, err := w.multiAddressMergeSign(*tx, w.chainParams.Name)
