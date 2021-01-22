@@ -1341,7 +1341,10 @@ b:
 						if !outTx.Vin[0].IsCoinBase() || confirms > w.chainParams.CoinbaseMaturity {
 							mature = true
 						}
+						log.Info("SendOutputs", "confirms", confirms, "IsCoinBase", outTx.Vin[0].IsCoinBase(),
+							"if", !outTx.Vin[0].IsCoinBase() || confirms > w.chainParams.CoinbaseMaturity)
 					}
+					log.Info("SendOutputs", "TxId", output.TxId.String(), "mature", mature)
 					if output.Spend == wtxmgr.SpendStatusUnspent && mature {
 						if payAmount > 0 && feeAmount == 0 {
 							if output.Amount > payAmount {
