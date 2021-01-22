@@ -1336,7 +1336,7 @@ b:
 					output.Address = addroutput.Addr
 
 					mature := false
-					if outTx, err := w.GetTx(output.TxId.String()); err != nil {
+					if outTx, err := w.GetTx(output.TxId.String()); err == nil {
 						confirms := uint16(w.SyncHeight - output.Block.Height + 1)
 						if !outTx.Vin[0].IsCoinBase() || confirms > w.chainParams.CoinbaseMaturity {
 							mature = true
