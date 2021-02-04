@@ -51,6 +51,7 @@ const (
 	// data in the waddrmgr namespace.  Transactions are not yet encrypted.
 	InsecurePubPassphrase   = "public"
 	webUpdateBlockTicker    = 30
+	waitBlockMature         = 30
 	defaultNewAddressNumber = 1
 )
 
@@ -739,39 +740,29 @@ func (w *Wallet) insertTx(txins []wtxmgr.TxInputPoint, txouts []wtxmgr.AddrTxOut
 	return err
 }
 
-func (w *Wallet) SyncTx(order int64) (clijson.BlockHttpResult, error) {
-	var block clijson.BlockHttpResult
-	blockByte, err := w.HttpClient.getBlockByOrder(order)
+func (w *Wallet) SyncTx(block clijson.BlockHttpResult) error {
+	if !block.Txsvalid {
+		log.Trace(fmt.Sprintf("block:%v err,txsvalid is false", block.Hash))
+		return nil
+	}
+	isBlue, err := w.HttpClient.isBlue(block.Hash)
 	if err != nil {
-		return block, err
+		return err
 	}
-	if err := json.Unmarshal(blockByte, &block); err == nil {
-		if !block.Txsvalid {
-			log.Trace(fmt.Sprintf("block:%v err,txsvalid is false", block.Hash))
-			return block, nil
-		}
-		isBlue, err := w.HttpClient.isBlue(block.Hash)
-		if err != nil {
-			return block, err
-		}
-		block.IsBlue = isBlue
-		if !block.IsBlue {
-			log.Trace(fmt.Sprintf("block:%v is not blue", block.Hash))
-		}
-		txIns, txOuts, trRs, err := parseBlockTxs(block)
-		if err != nil {
-			return block, err
-		}
-		err = w.insertTx(txIns, txOuts, trRs)
-		if err != nil {
-			return block, err
-		}
+	block.IsBlue = isBlue
+	if !block.IsBlue {
+		log.Trace(fmt.Sprintf("block:%v is not blue", block.Hash))
+	}
+	txIns, txOuts, trRs, err := parseBlockTxs(block)
+	if err != nil {
+		return err
+	}
+	err = w.insertTx(txIns, txOuts, trRs)
+	if err != nil {
+		return err
+	}
 
-	} else {
-		log.Error(err.Error())
-		return block, err
-	}
-	return block, nil
+	return nil
 }
 
 func parseTx(tr corejson.TxRawResult, height int32, isBlue bool) ([]wtxmgr.TxInputPoint, []wtxmgr.AddrTxOutput, error) {
@@ -897,18 +888,26 @@ func (w *Wallet) SetSyncedToNum(order int64) error {
 	}
 }
 
-func (w *Wallet) handleBlockSynced(order int64) error {
-
-	br, er := w.SyncTx(order)
-	if er != nil {
-		return er
-	}
-	hs, err := hash.NewHashFromStr(br.Hash)
+func (w *Wallet) handleBlockSynced(order int64) (bool, error) {
+	var block clijson.BlockHttpResult
+	blockByte, err := w.HttpClient.getBlockByOrder(order)
 	if err != nil {
-		return fmt.Errorf("blockhash string to hash  err:%s", err.Error())
+		return false, err
 	}
-	if br.Confirmations > config.Cfg.Confirmations {
-		stamp := &waddrmgr.BlockStamp{Hash: *hs, Height: br.Order}
+	if err := json.Unmarshal(blockByte, &block); err != nil {
+		return false, err
+	}
+	if block.Confirmations > config.Cfg.Confirmations {
+		er := w.SyncTx(block)
+		if er != nil {
+			return false, er
+		}
+		hs, err := hash.NewHashFromStr(block.Hash)
+		if err != nil {
+			return false, fmt.Errorf("blockhash string to hash  err:%s", err.Error())
+		}
+
+		stamp := &waddrmgr.BlockStamp{Hash: *hs, Height: block.Order}
 		err = walletdb.Update(w.db, func(tx walletdb.ReadWriteTx) error {
 			ns := tx.ReadWriteBucket(waddrmgrNamespaceKey)
 			err := w.Manager.SetSyncedTo(ns, stamp)
@@ -918,10 +917,12 @@ func (w *Wallet) handleBlockSynced(order int64) error {
 			return nil
 		})
 		if err != nil {
-			return err
+			return false, err
 		}
+	} else {
+		return false, nil
 	}
-	return nil
+	return true, nil
 }
 
 func (w *Wallet) UpdateBlock(toHeight int64) error {
@@ -943,13 +944,16 @@ func (w *Wallet) UpdateBlock(toHeight int64) error {
 	if h < blockHeight {
 		log.Trace(fmt.Sprintf("localheight:%d,blockHeight:%d", h, blockHeight))
 		for h < blockHeight {
-			err := w.handleBlockSynced(h)
+			ok, err := w.handleBlockSynced(h)
 			if err != nil {
 				return err
-			} else {
+			} else if ok {
 				w.SyncHeight = int32(h)
 				_, _ = fmt.Fprintf(os.Stdout, "update blcok:%s/%s\r", strconv.FormatInt(h, 10), strconv.FormatInt(blockHeight-1, 10))
 				h++
+			} else {
+				_, _ = fmt.Fprintf(os.Stdout, "update blcok:%s/%s\r", strconv.FormatInt(h, 10), strconv.FormatInt(blockHeight-1, 10))
+				time.Sleep(time.Second * waitBlockMature)
 			}
 		}
 		fmt.Print("\nsucc\n")
@@ -1335,15 +1339,12 @@ b:
 				for _, output := range addroutput.Txoutput {
 					output.Address = addroutput.Addr
 
-					mature := false
-					if outTx, err := w.GetTx(output.TxId.String()); err == nil {
-						if outTx.Vin[0].IsCoinBase() {
-							confirms := uint16(w.SyncHeight - output.Block.Height)
-							if confirms > w.chainParams.CoinbaseMaturity+uint16(2*config.Cfg.Confirmations) && output.IsBlue {
-								mature = true
+					mature := true
+					if !output.IsBlue {
+						if outTx, err := w.GetTx(output.TxId.String()); err == nil {
+							if outTx.Vin[0].IsCoinBase() {
+								mature = false
 							}
-						} else {
-							mature = true
 						}
 					}
 					if output.Spend == wtxmgr.SpendStatusUnspent && mature {
