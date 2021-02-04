@@ -1338,13 +1338,9 @@ b:
 					mature := false
 					if outTx, err := w.GetTx(output.TxId.String()); err == nil {
 						if outTx.Vin[0].IsCoinBase() {
-							if blockByte, err := w.HttpClient.getBlockByOrder(int64(output.Block.Height)); err == nil {
-								var block clijson.BlockHttpResult
-								if err := json.Unmarshal(blockByte, &block); err == nil {
-									if block.Confirmations >= int64(w.chainParams.CoinbaseMaturity) {
-										mature = true
-									}
-								}
+							confirms := uint16(w.SyncHeight - output.Block.Height)
+							if confirms > w.chainParams.CoinbaseMaturity+uint16(2*config.Cfg.Confirmations) && output.IsBlue {
+								mature = true
 							}
 						} else {
 							mature = true
