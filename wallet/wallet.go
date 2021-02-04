@@ -1334,23 +1334,7 @@ b:
 
 				for _, output := range addroutput.Txoutput {
 					output.Address = addroutput.Addr
-
-					mature := false
-					if outTx, err := w.GetTx(output.TxId.String()); err == nil {
-						if outTx.Vin[0].IsCoinBase() {
-							if blockByte, err := w.HttpClient.getBlockByOrder(int64(output.Block.Height)); err == nil {
-								var block clijson.BlockHttpResult
-								if err := json.Unmarshal(blockByte, &block); err == nil {
-									if block.Confirmations >= int64(w.chainParams.CoinbaseMaturity) {
-										mature = true
-									}
-								}
-							}
-						} else {
-							mature = true
-						}
-					}
-					if output.Spend == wtxmgr.SpendStatusUnspent && mature {
+					if output.Spend == wtxmgr.SpendStatusUnspent {
 						if payAmount > 0 && feeAmount == 0 {
 							if output.Amount > payAmount {
 								input := types.NewOutPoint(&output.TxId, output.Index)
