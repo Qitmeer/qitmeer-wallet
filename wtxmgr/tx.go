@@ -15,8 +15,9 @@ import (
 // Block contains the minimum amount of data to uniquely identify any block on
 // either the best or side chain.
 type Block struct {
-	Hash   hash.Hash
-	Height int32
+	Hash       hash.Hash
+	Height     int32
+	MainHeight int32
 }
 
 // BlockMeta contains the unique identification for a block and any metadata

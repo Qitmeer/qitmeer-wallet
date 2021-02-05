@@ -12,7 +12,8 @@ QTLSSkipVerify=true
 WalletPass="public" #Wallet encryption code default public
 
 MinTxFee=200000   # The minimum transaction fee in QIT/KB default 200000 (aka. 0.002 MEER/KB)
-Confirmations=10   # Number of block confirmations
+Confirmations=15   # Number of block confirmations
+CoinbaseMaturity=800 # Number of CoinBase confirmations
 
 #web model
 #listeners=["127.0.0.1:8130"]
