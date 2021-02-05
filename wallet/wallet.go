@@ -84,7 +84,8 @@ type Wallet struct {
 	quit    chan struct{}
 	quitMu  sync.Mutex
 
-	SyncHeight int32
+	SyncHeight     int32
+	SyncMainHeight int32
 }
 
 // Start starts the goroutines necessary to manage a wallet.
@@ -774,7 +775,7 @@ func (w *Wallet) SyncTx(order int64) (clijson.BlockHttpResult, error) {
 	return block, nil
 }
 
-func parseTx(tr corejson.TxRawResult, height int32, isBlue bool) ([]wtxmgr.TxInputPoint, []wtxmgr.AddrTxOutput, error) {
+func parseTx(tr corejson.TxRawResult, height, mainHeight int32, isBlue bool) ([]wtxmgr.TxInputPoint, []wtxmgr.AddrTxOutput, error) {
 	var txins []wtxmgr.TxInputPoint
 	var txouts []wtxmgr.AddrTxOutput
 	blockhash, err := hash.NewHashFromStr(tr.BlockHash)
@@ -782,8 +783,9 @@ func parseTx(tr corejson.TxRawResult, height int32, isBlue bool) ([]wtxmgr.TxInp
 		return nil, nil, err
 	}
 	block := wtxmgr.Block{
-		Hash:   *blockhash,
-		Height: height,
+		Hash:       *blockhash,
+		Height:     height,
+		MainHeight: mainHeight,
 	}
 	txId, err := hash.NewHashFromStr(tr.Txid)
 	if err != nil {
@@ -847,7 +849,7 @@ func parseBlockTxs(block clijson.BlockHttpResult) ([]wtxmgr.TxInputPoint, []wtxm
 	var tx []corejson.TxRawResult
 	for _, tr := range block.Transactions {
 		tx = append(tx, tr)
-		tin, tout, err := parseTx(tr, block.Order, block.IsBlue)
+		tin, tout, err := parseTx(tr, block.Order, block.Height, block.IsBlue)
 		if err != nil {
 			return nil, nil, nil, err
 		} else {
@@ -898,7 +900,6 @@ func (w *Wallet) SetSyncedToNum(order int64) error {
 }
 
 func (w *Wallet) handleBlockSynced(order int64) error {
-
 	br, er := w.SyncTx(order)
 	if er != nil {
 		return er
@@ -915,6 +916,7 @@ func (w *Wallet) handleBlockSynced(order int64) error {
 			if err != nil {
 				return err
 			}
+			w.SyncMainHeight = br.Height
 			return nil
 		})
 		if err != nil {
@@ -1338,18 +1340,17 @@ b:
 					mature := false
 					if outTx, err := w.GetTx(output.TxId.String()); err == nil {
 						if outTx.Vin[0].IsCoinBase() {
-							if blockByte, err := w.HttpClient.getBlockByOrder(int64(output.Block.Height)); err == nil {
-								var block clijson.BlockHttpResult
-								if err := json.Unmarshal(blockByte, &block); err == nil {
-									if block.Confirmations >= int64(w.chainParams.CoinbaseMaturity) {
-										mature = true
-									}
+							if output.IsBlue {
+								confirms := uint16(w.SyncMainHeight - output.Block.MainHeight + 1)
+								if confirms > uint16(config.Cfg.CoinbaseMaturity) {
+									mature = true
 								}
 							}
 						} else {
 							mature = true
 						}
 					}
+
 					if output.Spend == wtxmgr.SpendStatusUnspent && mature {
 						if payAmount > 0 && feeAmount == 0 {
 							if output.Amount > payAmount {

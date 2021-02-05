@@ -23,7 +23,7 @@ import (
 
 const (
 	defaultConfigFilename = "config.toml"
-	sampleConfigFilename = "sample-config.toml"
+	sampleConfigFilename  = "sample-config.toml"
 	defaultLogLevel       = "info"
 	defaultLogDirname     = "logs"
 	defaultRPCMaxClients  = 10
@@ -35,7 +35,7 @@ const (
 var (
 	defaultAppDataDir  = utils.AppDataDir("qitwallet", false)
 	DefaultConfigFile  = filepath.Join("./", defaultConfigFilename)
-	SampleConfigFile  = filepath.Join("./", sampleConfigFilename)
+	SampleConfigFile   = filepath.Join("./", sampleConfigFilename)
 	defaultRPCKeyFile  = filepath.Join(defaultAppDataDir, "rpc.key")
 	defaultRPCCertFile = filepath.Join(defaultAppDataDir, "rpc.cert")
 	defaultLogDir      = filepath.Join(defaultAppDataDir, defaultLogDirname)
@@ -66,7 +66,8 @@ type Config struct {
 	DisableRPC    bool
 	DisableTLS    bool
 
-	Confirmations int64
+	Confirmations    int64
+	CoinbaseMaturity int64
 
 	// tx fee
 	MinTxFee int64
@@ -137,7 +138,7 @@ func NewDefaultConfig() (cfg *Config) {
 		AppDataDir: defaultAppDataDir,
 		DebugLevel: defaultLogLevel,
 		LogDir:     defaultLogDir,
-		ConfigFile:"config.toml",
+		ConfigFile: "config.toml",
 
 		Network: "testnet",
 
@@ -152,19 +153,20 @@ func NewDefaultConfig() (cfg *Config) {
 
 		APIs: []string{"account", "wallet", "qitmeerd"},
 
-		QServer:        "127.0.0.1:18130",
-		QUser:          "",
-		QPass:          "",
-		QCert:          "",
-		QNoTLS:         true,
-		QTLSSkipVerify: true,
-		QProxy:         "",
-		QProxyUser:     "",
-		QProxyPass:     "",
-		WalletPass:     "public",
-		MinTxFee:		DefaultMinRelayTxFee,
-		Confirmations:		10,
-		UI:true,
+		QServer:          "127.0.0.1:18130",
+		QUser:            "",
+		QPass:            "",
+		QCert:            "",
+		QNoTLS:           true,
+		QTLSSkipVerify:   true,
+		QProxy:           "",
+		QProxyUser:       "",
+		QProxyPass:       "",
+		WalletPass:       "public",
+		MinTxFee:         DefaultMinRelayTxFee,
+		Confirmations:    10,
+		CoinbaseMaturity: 740,
+		UI:               true,
 	}
 	return
 }
