@@ -1,4 +1,3 @@
-
 package wtxmgr
 
 import (
@@ -113,7 +112,6 @@ func (s *Store) unMinedTxDetails(ns walletdb.ReadBucket, txHash *hash.Hash, v []
 	if it.err != nil {
 		return nil, it.err
 	}
-
 
 	for i, output := range details.MsgTx.TxIn {
 		opKey := canonicalOutPoint(&output.PreviousOut.Hash,
@@ -383,7 +381,6 @@ func (s *Store) PreviousPkScripts(ns walletdb.ReadBucket, rec *TxRecord, block *
 	if block == nil {
 		for _, input := range rec.MsgTx.TxIn {
 			prevOut := &input.PreviousOut
-
 
 			v := existsRawUnMined(ns, prevOut.Hash[:])
 			if v != nil {

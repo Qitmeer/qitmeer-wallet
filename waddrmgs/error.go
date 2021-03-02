@@ -7,7 +7,6 @@ package waddrmgr
 import (
 	"fmt"
 	"strconv"
-
 )
 
 var (

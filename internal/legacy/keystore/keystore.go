@@ -14,6 +14,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"github.com/Qitmeer/qitmeer-wallet/utils"
 	"github.com/Qitmeer/qitmeer/common/hash"
 	chainhash "github.com/Qitmeer/qitmeer/common/hash"
 	"github.com/Qitmeer/qitmeer/core/address"
@@ -23,7 +24,6 @@ import (
 	qitec "github.com/Qitmeer/qitmeer/crypto/ecc/secp256k1"
 	"github.com/Qitmeer/qitmeer/engine/txscript"
 	chaincfg "github.com/Qitmeer/qitmeer/params"
-	"github.com/Qitmeer/qitmeer-wallet/utils"
 	"io"
 	"io/ioutil"
 	"math/big"
@@ -483,7 +483,7 @@ func (net *netParams) ReadFrom(r io.Reader) (int64, error) {
 	switch protocol.Network(binary.LittleEndian.Uint32(uint32Bytes)) {
 	case protocol.MainNet:
 		*net = (netParams)(chaincfg.MainNetParams)
-	case protocol.TestNet :
+	case protocol.TestNet:
 		*net = (netParams)(chaincfg.TestNetParams)
 	case protocol.PrivNet:
 		*net = (netParams)(chaincfg.PrivNetParams)
@@ -2871,8 +2871,6 @@ func (sa *scriptAddress) ReadFrom(r io.Reader) (n int64, err error) {
 	}
 
 	sa.address = address
-
-
 
 	if !sa.flags.hasScript {
 		return n, errors.New("read in an addresss with no script")

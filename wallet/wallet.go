@@ -582,7 +582,7 @@ func (w *Wallet) getPagedBillByAddr(addr string, filter int, pageNo int, pageSiz
 				txOut.Variation -= o.Amount.Value
 			} else {
 				txOut.TxID = o.SpendTo.TxHash
-				txOut.Variation = - o.Amount.Value
+				txOut.Variation = -o.Amount.Value
 				// ToDo: add Block to SpendTo
 				txOut.BlockHash = o.Block.Hash
 				txOut.BlockOrder = uint32(o.Block.Height)
@@ -1344,7 +1344,7 @@ func (w *Wallet) SendOutputs(coin2outputs map[types.CoinID][]*types.TxOutput, ac
 									selfTxOut := types.NewTxOutput(txOutput, frompkscipt)
 									feeAmount.Value = util.CalcMinRequiredTxRelayFee(int64(tx.SerializeSize()+selfTxOut.SerializeSize()), types.Amount{Value: config.Cfg.MinTxFee, Id: coinId})
 									sendAddrTxOutput = append(sendAddrTxOutput, output)
-									allSendAddrTxOutput = append(allSendAddrTxOutput,output)
+									allSendAddrTxOutput = append(allSendAddrTxOutput, output)
 
 									if (output.Amount.Value - payAmount.Value - feeAmount.Value) >= 0 {
 										selfTxOut.Amount.Value = output.Amount.Value - payAmount.Value - feeAmount.Value
@@ -1364,7 +1364,7 @@ func (w *Wallet) SendOutputs(coin2outputs map[types.CoinID][]*types.TxOutput, ac
 									input := types.NewOutPoint(&output.TxId, output.Index)
 									tx.AddTxIn(types.NewTxInput(input, addrByte))
 									sendAddrTxOutput = append(sendAddrTxOutput, output)
-									allSendAddrTxOutput = append(allSendAddrTxOutput,output)
+									allSendAddrTxOutput = append(allSendAddrTxOutput, output)
 									payAmount.Value -= output.Amount.Value
 									if payAmount.Value == 0 {
 										feeAmount.Value = util.CalcMinRequiredTxRelayFee(int64(tx.SerializeSize()), types.Amount{Value: config.Cfg.MinTxFee, Id: coinId})
@@ -1380,7 +1380,7 @@ func (w *Wallet) SendOutputs(coin2outputs map[types.CoinID][]*types.TxOutput, ac
 										tx.AddTxOut(selfTxOut)
 									}
 									sendAddrTxOutput = append(sendAddrTxOutput, output)
-									allSendAddrTxOutput = append(allSendAddrTxOutput,output)
+									allSendAddrTxOutput = append(allSendAddrTxOutput, output)
 									feeAmount = types.Amount{Id: coinId}
 									break b
 								} else {

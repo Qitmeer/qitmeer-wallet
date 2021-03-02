@@ -103,8 +103,6 @@ func upgradeToVersion2(ns walletdb.ReadWriteBucket) error {
 	return putManagerVersion(ns, currentMgrVersion)
 }
 
-
-
 // populateBirthdayBlock is a migration that attempts to populate the birthday
 // block of the wallet. This is needed so that in the event that we need to
 // perform a rescan of the wallet, we can do so starting from this block, rather

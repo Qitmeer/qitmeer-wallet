@@ -161,13 +161,13 @@ func ReadAddrTxOutput(v []byte, txout *AddrTxOutput) (err error) {
 	copy(txout.TxId[:], v[0:32])
 	txout.Index = byteOrder.Uint32(v[32:36])
 	txout.Amount.Value = int64(byteOrder.Uint64(v[36:44]))
-	txout.Amount.Id = types.CoinID(byteOrder.Uint16(v[44:44+2]))
+	txout.Amount.Id = types.CoinID(byteOrder.Uint16(v[44 : 44+2]))
 	copy(txout.Block.Hash[:], v[44+2:76+2])
-	txout.Block.Height = int32(byteOrder.Uint32(v[88+2:92+2]))
-	txout.Spend = SpendStatus(byteOrder.Uint32(v[92+2:96+2]))
+	txout.Block.Height = int32(byteOrder.Uint32(v[88+2 : 92+2]))
+	txout.Spend = SpendStatus(byteOrder.Uint32(v[92+2 : 96+2]))
 	if len(v) == 132+2 {
 		st := SpendTo{}
-		st.Index = byteOrder.Uint32(v[96+2:100+2])
+		st.Index = byteOrder.Uint32(v[96+2 : 100+2])
 		copy(st.TxHash[:], v[100+2:132+2])
 		txout.SpendTo = &st
 	}

@@ -302,7 +302,7 @@ func (s *ScopedKeyManager) loadAccountInfo(ns walletdb.ReadBucket,
 			account)
 		return nil, managerError(ErrCrypto, str, err)
 	}
-	acctKeyPub, err := bip32.B58Deserialize(string(serializedKeyPub),bip32.DefaultBip32Version)
+	acctKeyPub, err := bip32.B58Deserialize(string(serializedKeyPub), bip32.DefaultBip32Version)
 	if err != nil {
 		str := fmt.Sprintf("failed to create extended public key for "+
 			"account %d", account)
@@ -329,7 +329,7 @@ func (s *ScopedKeyManager) loadAccountInfo(ns walletdb.ReadBucket,
 			return nil, managerError(ErrCrypto, str, err)
 		}
 
-		acctKeyPriv, err := bip32.B58Deserialize(string(decrypted),bip32.DefaultBip32Version)
+		acctKeyPriv, err := bip32.B58Deserialize(string(decrypted), bip32.DefaultBip32Version)
 		if err != nil {
 			str := fmt.Sprintf("failed to create extended private "+
 				"key for account %d", account)
@@ -387,7 +387,6 @@ func (s *ScopedKeyManager) AccountProperties(ns walletdb.ReadBucket,
 
 	props := &AccountProperties{AccountNumber: account}
 
-
 	// Since only the imported account allows imports currently, the number
 	// of imported keys for any other account is zero, and since the
 	// imported account cannot contain non-imported keys, the external and
@@ -418,7 +417,6 @@ func (s *ScopedKeyManager) AccountProperties(ns walletdb.ReadBucket,
 
 	return props, nil
 }
-
 
 // This function MUST be called with the manager lock held for writes.
 func (s *ScopedKeyManager) deriveKeyFromPath(ns walletdb.ReadBucket, account, branch,
@@ -687,7 +685,7 @@ func (s *ScopedKeyManager) nextAddresses(ns walletdb.ReadWriteBucket,
 			if err != nil {
 				// When this particular child is invalid, skip to the
 				// next index.
-				if err == bip32.ErrInvalidPrivateKey ||  err == bip32.ErrInvalidPublicKey {
+				if err == bip32.ErrInvalidPrivateKey || err == bip32.ErrInvalidPublicKey {
 					nextIndex++
 					continue
 				}
@@ -897,7 +895,7 @@ func (s *ScopedKeyManager) newAccount(ns walletdb.ReadWriteBucket,
 		str := fmt.Sprintf("failed to decrypt cointype serialized private key")
 		return managerError(ErrLocked, str, err)
 	}
-	coinTypeKeyPriv, err := bip32.B58Deserialize(string(serializedKeyPriv),bip32.DefaultBip32Version)
+	coinTypeKeyPriv, err := bip32.B58Deserialize(string(serializedKeyPriv), bip32.DefaultBip32Version)
 	zero.Bytes(serializedKeyPriv)
 	if err != nil {
 		str := fmt.Sprintf("failed to create cointype extended private key")
@@ -910,7 +908,7 @@ func (s *ScopedKeyManager) newAccount(ns walletdb.ReadWriteBucket,
 		str := "failed to convert private key for account"
 		return managerError(ErrKeyChain, str, err)
 	}
-	acctKeyPub:= acctKeyPriv.PublicKey()
+	acctKeyPub := acctKeyPriv.PublicKey()
 
 	// Encrypt the default account keys with the associated crypto keys.
 	acctPubEnc, err := s.rootManager.cryptoKeyPub.Encrypt(
@@ -940,7 +938,6 @@ func (s *ScopedKeyManager) newAccount(ns walletdb.ReadWriteBucket,
 	// Save last account metadata
 	return putLastAccount(ns, &s.scope, account)
 }
-
 
 // This function will return an error if the address manager is locked and not
 // watching-only, or not for the same network as the key trying to be imported.
@@ -1091,11 +1088,11 @@ func (s *ScopedKeyManager) AccountName(ns walletdb.ReadBucket, account uint32) (
 	return fetchAccountName(ns, &s.scope, account)
 }
 
-
 // LastAccount returns the last account stored in the manager.
 func (s *ScopedKeyManager) LastAccount(ns walletdb.ReadBucket) (uint32, error) {
 	return fetchLastAccount(ns, &s.scope)
 }
+
 // ForEachAccountAddress calls the given function with each address of the
 // given account stored in the manager, breaking early on error.
 func (s *ScopedKeyManager) ForEachAccountAddress(ns walletdb.ReadBucket,
@@ -1118,4 +1115,3 @@ func (s *ScopedKeyManager) ForEachAccountAddress(ns walletdb.ReadBucket,
 
 	return nil
 }
-

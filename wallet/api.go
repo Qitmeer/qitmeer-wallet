@@ -304,7 +304,7 @@ func (api *API) ImportPrivKey(accountName string, key string) error {
 
 type ApiAmount struct {
 	Value float64
-	Id types.CoinID
+	Id    types.CoinID
 }
 
 //SendToAddress handles a sendtoaddress RPC request by creating a new

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/Qitmeer/qitmeer-wallet/wallet"
 	"github.com/Qitmeer/qitmeer/log"
+	"github.com/mattn/go-colorable"
 	"github.com/peterh/liner"
 	"io"
 	"io/ioutil"
@@ -14,7 +15,6 @@ import (
 	"strconv"
 	"strings"
 	"syscall"
-	"github.com/mattn/go-colorable"
 	//"github.com/peterh/liner"
 )
 

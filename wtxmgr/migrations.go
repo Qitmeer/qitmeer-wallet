@@ -38,7 +38,6 @@ type MigrationManager struct {
 // migration.Manager interface.
 var _ migration.Manager = (*MigrationManager)(nil)
 
-
 // Name returns the name of the service we'll be attempting to upgrade.
 // NOTE: This method is part of the migration.Manager interface.
 func (m *MigrationManager) Name() string {

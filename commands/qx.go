@@ -12,7 +12,7 @@ var QxCmd = &cobra.Command{
 	Long:  `qitmeer wallet qx util`,
 }
 
-func AddQxCommand()  {
+func AddQxCommand() {
 	QxCmd.AddCommand(generatemnemonicCmd)
 	QxCmd.AddCommand(mnemonictoseedCmd)
 	QxCmd.AddCommand(seedtopriCmd)
@@ -154,20 +154,20 @@ var seedtoaddrCmd = &cobra.Command{
 	},
 }
 
-var pritoaddrCmd=&cobra.Command{
-	Use:"pritoaddr {pri} {string,network value: mainnet,privnet,testnet}",
-	Short:"private key to address",
+var pritoaddrCmd = &cobra.Command{
+	Use:   "pritoaddr {pri} {string,network value: mainnet,privnet,testnet}",
+	Short: "private key to address",
 	Example: `
 		pritoaddr "pri" "testnet"
 		`,
 	Args: cobra.MinimumNArgs(2),
 	Run: func(cmd *cobra.Command, args []string) {
-		if args[1]!="mainnet" && args[1]!="privnet"&&args[1]!="testnet"{
+		if args[1] != "mainnet" && args[1] != "privnet" && args[1] != "testnet" {
 			fmt.Println("Wrong network type")
 			return
 		}
-		msg,err:=priToAddr(args[0],args[1])
-		if err!=nil{
+		msg, err := priToAddr(args[0], args[1])
+		if err != nil {
 			fmt.Println(err.Error())
 			return
 		}

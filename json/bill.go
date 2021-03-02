@@ -1,7 +1,7 @@
 package json
 
 type PaymentResult struct {
-	TxID    string `json:"tx_id"`
+	TxID      string `json:"tx_id"`
 	Variation int64  `json:"variation"`
 }
 type BillResult []PaymentResult
