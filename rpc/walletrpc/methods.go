@@ -3,6 +3,7 @@ package walletrpc
 import (
 	"encoding/hex"
 	"fmt"
+	"github.com/Qitmeer/qitmeer-wallet/wtxmgr"
 	"time"
 
 	util "github.com/Qitmeer/qitmeer-wallet/utils"
@@ -41,17 +42,27 @@ func CreateNewAccount(iCmd interface{}, w *wallet.Wallet) (interface{}, error) {
 	return "succ", err
 }
 
+type CoinBalance struct {
+	Coin    string  `json:"coin"`
+	Balance float64 `json:"balance"`
+}
+
 // listAccounts handles a listaccounts request by returning a map of account
 // names to their balances.
 func ListAccounts(w *wallet.Wallet) (interface{}, error) {
-	accountBalances := map[string]float64{}
+	accountBalances := map[string][]CoinBalance{}
 	results, err := w.AccountBalances(waddrmgr.KeyScopeBIP0044)
 	if err != nil {
 		return nil, err
 	}
 	for _, result := range results {
-		accountBalances[result.AccountName] = result.AccountBalance.ToCoin()
-
+		accountBalances[result.AccountName] = []CoinBalance{}
+		for _, b := range result.AccountBalanceList {
+			accountBalances[result.AccountName] = append(accountBalances[result.AccountName], CoinBalance{
+				Coin:    wtxmgr.Coins[b.Id],
+				Balance: b.ToCoin(),
+			})
+		}
 	}
 	// Return the map.  This will be marshaled into a JSON object.
 	return accountBalances, nil
@@ -270,7 +281,7 @@ func SendToAddress(iCmd interface{}, w *wallet.Wallet) (interface{}, error) {
 
 func UpdateBlock(iCmd interface{}, w *wallet.Wallet) error {
 	cmd := iCmd.(*qitmeerjson.UpdateBlockToCmd)
-	err := w.UpdateBlock(cmd.Toheight)
+	err := w.UpdateBlock(uint64(cmd.ToOrder))
 	if err != nil {
 		return err
 	}

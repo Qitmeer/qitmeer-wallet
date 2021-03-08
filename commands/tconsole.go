@@ -246,21 +246,21 @@ func (c *Console) Interactive() {
 					}
 					if company == "i" {
 						if detail == "true" {
-							fmt.Printf("unspend:%s\n", b.UnspendAmount.String())
-							fmt.Printf("unconfirmed:%s\n", b.ConfirmAmount.String())
-							fmt.Printf("totalamount:%s\n", b.TotalAmount.String())
-							fmt.Printf("spendamount:%s\n", b.SpendAmount.String())
+							fmt.Printf("unspent:%s\n", b.UnspentAmount.String())
+							fmt.Printf("unconfirmed:%s\n", b.UnConfirmAmount.String())
+							fmt.Printf("total:%s\n", b.TotalAmount.String())
+							fmt.Printf("spend:%s\n", b.SpendAmount.String())
 						} else {
-							fmt.Printf("%s\n", b.UnspendAmount.String())
+							fmt.Printf("%s\n", b.UnspentAmount.String())
 						}
 					} else {
 						if detail == "true" {
-							fmt.Printf("unspend:%f\n", b.UnspendAmount.ToCoin())
-							fmt.Printf("unconfirmed:%f\n", b.ConfirmAmount.ToCoin())
-							fmt.Printf("totalamount:%f\n", b.TotalAmount.ToCoin())
-							fmt.Printf("spendamount:%f\n", b.SpendAmount.ToCoin())
+							fmt.Printf("unspent:%s\n", b.UnspentAmount.String())
+							fmt.Printf("unconfirmed:%s\n", b.UnConfirmAmount.String())
+							fmt.Printf("total:%s\n", b.TotalAmount.String())
+							fmt.Printf("spend:%s\n", b.SpendAmount.String())
 						} else {
-							fmt.Printf("%f\n", b.UnspendAmount.ToCoin())
+							fmt.Printf("%f\n", b.UnspentAmount.ToCoin())
 						}
 					}
 					break

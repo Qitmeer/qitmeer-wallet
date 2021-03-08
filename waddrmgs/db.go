@@ -822,9 +822,8 @@ func fetchSyncedTo(ns walletdb.ReadBucket) (*BlockStamp, error) {
 	}
 
 	var bs BlockStamp
-	bs.Height = int32(binary.LittleEndian.Uint32(buf[0:4]))
+	bs.Order = binary.LittleEndian.Uint32(buf[0:4])
 	copy(bs.Hash[:], buf[4:36])
-
 	if len(buf) == 40 {
 		bs.Timestamp = time.Unix(
 			int64(binary.LittleEndian.Uint32(buf[36:])), 0,
@@ -843,16 +842,16 @@ func PutSyncedTo(ns walletdb.ReadWriteBucket, bs *BlockStamp) error {
 	// block height exists. This prevents reorg issues in the future.
 	// We use BigEndian so that keys/values are added to the bucket in
 	// order, making writes more efficient for some database backends.
-	if bs.Height > 0 {
-		if _, err := fetchBlockHash(ns, bs.Height-1); err != nil {
+	/*	if bs.Order > 0 {
+		if _, err := fetchBlockHash(ns, bs.Order-1); err != nil {
 			return managerError(ErrDatabase, errStr, err)
 		}
-	}
+	}*/
 
 	// Store the block hash by block height.
-	height := make([]byte, 4)
-	binary.BigEndian.PutUint32(height, uint32(bs.Height))
-	err := bucket.Put(height, bs.Hash[0:32])
+	temp := make([]byte, 4)
+	binary.BigEndian.PutUint32(temp, bs.Order)
+	err := bucket.Put(temp[0:4], bs.Hash[0:32])
 	if err != nil {
 		return managerError(ErrDatabase, errStr, err)
 	}
@@ -862,10 +861,9 @@ func PutSyncedTo(ns walletdb.ReadWriteBucket, bs *BlockStamp) error {
 	//
 	// 4 bytes block height + 32 bytes hash length + 4 byte timestamp length
 	buf := make([]byte, 40)
-	binary.LittleEndian.PutUint32(buf[0:4], uint32(bs.Height))
+	binary.LittleEndian.PutUint32(buf[0:4], bs.Order)
 	copy(buf[4:36], bs.Hash[0:32])
 	binary.LittleEndian.PutUint32(buf[36:], uint32(bs.Timestamp.Unix()))
-
 	err = bucket.Put(syncedToName, buf)
 	if err != nil {
 		return managerError(ErrDatabase, errStr, err)
@@ -875,13 +873,13 @@ func PutSyncedTo(ns walletdb.ReadWriteBucket, bs *BlockStamp) error {
 
 // fetchBlockHash loads the block hash for the provided height from the
 // database.
-func fetchBlockHash(ns walletdb.ReadBucket, height int32) (*chainhash.Hash, error) {
+func fetchBlockHash(ns walletdb.ReadBucket, order uint32) (*chainhash.Hash, error) {
 	bucket := ns.NestedReadBucket(syncBucketName)
-	errStr := fmt.Sprintf("failed to fetch block hash for height %d", height)
+	errStr := fmt.Sprintf("failed to fetch block hash for height %d", order)
 
-	heightBytes := make([]byte, 4)
-	binary.BigEndian.PutUint32(heightBytes, uint32(height))
-	hashBytes := bucket.Get(heightBytes)
+	orderBytes := make([]byte, 4)
+	binary.BigEndian.PutUint32(orderBytes, order)
+	hashBytes := bucket.Get(orderBytes)
 	if hashBytes == nil {
 		err := errors.New("block not found")
 		return nil, managerError(ErrBlockNotFound, errStr, err)
@@ -913,7 +911,7 @@ func FetchStartBlock(ns walletdb.ReadBucket) (*BlockStamp, error) {
 	}
 
 	var bs BlockStamp
-	bs.Height = int32(binary.LittleEndian.Uint32(buf[0:4]))
+	bs.Order = binary.LittleEndian.Uint32(buf[0:4])
 	copy(bs.Hash[:], buf[4:36])
 	return &bs, nil
 }
@@ -927,7 +925,7 @@ func putStartBlock(ns walletdb.ReadWriteBucket, bs *BlockStamp) error {
 	//
 	// 4 bytes block height + 32 bytes hash length
 	buf := make([]byte, 36)
-	binary.LittleEndian.PutUint32(buf[0:4], uint32(bs.Height))
+	binary.LittleEndian.PutUint32(buf[0:4], uint32(bs.Order))
 	copy(buf[4:36], bs.Hash[0:32])
 
 	err := bucket.Put(startBlockName, buf)
@@ -988,7 +986,7 @@ func FetchBirthdayBlock(ns walletdb.ReadBucket) (BlockStamp, error) {
 		return block, managerError(ErrDatabase, str, nil)
 	}
 
-	block.Height = int32(binary.BigEndian.Uint32(birthdayBlock[:4]))
+	block.Order = binary.BigEndian.Uint32(birthdayBlock[:4])
 	copy(block.Hash[:], birthdayBlock[4:36])
 	t := int64(binary.BigEndian.Uint64(birthdayBlock[36:]))
 	block.Timestamp = time.Unix(t, 0)
@@ -1004,7 +1002,7 @@ func FetchBirthdayBlock(ns walletdb.ReadBucket) (BlockStamp, error) {
 //   [36:44] block timestamp
 func putBirthdayBlock(ns walletdb.ReadWriteBucket, block BlockStamp) error {
 	var birthdayBlock [44]byte
-	binary.BigEndian.PutUint32(birthdayBlock[:4], uint32(block.Height))
+	binary.BigEndian.PutUint32(birthdayBlock[:4], uint32(block.Order))
 	copy(birthdayBlock[4:36], block.Hash[:])
 	binary.BigEndian.PutUint64(birthdayBlock[36:], uint64(block.Timestamp.Unix()))
 

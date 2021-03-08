@@ -34,4 +34,5 @@ replace (
 	golang.org/x/text => github.com/golang/text v0.3.2
 	golang.org/x/tools => github.com/golang/tools v0.0.0-20190710184609-286818132824
 	gopkg.in/yaml.v2 => github.com/go-yaml/yaml v2.1.0+incompatible
+	github.com/Qitmeer/qitmeer v0.10.0-dev.0.20210124080746-76d668c40e09 => ../qitmeer-james
 )

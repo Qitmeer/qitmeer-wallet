@@ -366,7 +366,7 @@ func sendToAddress(address string, amount float64) (interface{}, error) {
 }
 func updateblock(height int64) error {
 	cmd := &qitmeerjson.UpdateBlockToCmd{
-		Toheight: height,
+		ToOrder: height,
 	}
 	err := walletrpc.UpdateBlock(cmd, w)
 	if err != nil {
@@ -376,7 +376,7 @@ func updateblock(height int64) error {
 	return nil
 }
 func syncheight() error {
-	fmt.Printf("%d\n", w.Manager.SyncedTo().Height)
+	fmt.Printf("%d\n", w.Manager.SyncedTo().Order)
 	return nil
 }
 

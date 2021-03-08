@@ -229,7 +229,7 @@ type SendToAddressCmd struct {
 	CommentTo *string
 }
 type UpdateBlockToCmd struct {
-	Toheight int64
+	ToOrder int64
 }
 
 // SetAccountCmd defines the setaccount JSON-RPC command.

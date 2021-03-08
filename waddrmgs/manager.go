@@ -459,7 +459,7 @@ func Create(ns walletdb.ReadWriteBucket, seed, pubPassphrase, privPassphrase []b
 		str := "failed to encrypt crypto script key"
 		return managerError(ErrCrypto, str, err)
 	}
-	createdAt := &BlockStamp{Hash: *chainParams.GenesisHash, Height: 0}
+	createdAt := &BlockStamp{Hash: *chainParams.GenesisHash, Order: 0}
 	// Create the initial sync state.
 	syncInfo := newSyncState(createdAt, createdAt)
 

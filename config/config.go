@@ -66,7 +66,8 @@ type Config struct {
 	DisableRPC    bool
 	DisableTLS    bool
 
-	Confirmations int64
+	Confirmations    uint32
+	CoinbaseMaturity uint32
 
 	// tx fee
 	MinTxFee int64
@@ -152,19 +153,20 @@ func NewDefaultConfig() (cfg *Config) {
 
 		APIs: []string{"account", "wallet", "qitmeerd"},
 
-		QServer:        "127.0.0.1:18130",
-		QUser:          "",
-		QPass:          "",
-		QCert:          "",
-		QNoTLS:         true,
-		QTLSSkipVerify: true,
-		QProxy:         "",
-		QProxyUser:     "",
-		QProxyPass:     "",
-		WalletPass:     "public",
-		MinTxFee:       DefaultMinRelayTxFee,
-		Confirmations:  10,
-		UI:             true,
+		QServer:          "127.0.0.1:18130",
+		QUser:            "",
+		QPass:            "",
+		QCert:            "",
+		QNoTLS:           true,
+		QTLSSkipVerify:   true,
+		QProxy:           "",
+		QProxyUser:       "",
+		QProxyPass:       "",
+		WalletPass:       "public",
+		MinTxFee:         DefaultMinRelayTxFee,
+		Confirmations:    10,
+		CoinbaseMaturity: 720,
+		UI:               true,
 	}
 	return
 }

@@ -34,7 +34,7 @@ func NewAPI(cfg *config.Config, wt *Wallet) *API {
 
 //SyncStats block update stats
 type SyncStats struct {
-	Height int32
+	Order uint32
 }
 
 // SyncStats block update stats
@@ -42,7 +42,7 @@ func (api *API) SyncStats() (*SyncStats, error) {
 
 	stats := &SyncStats{}
 
-	stats.Height = api.wt.SyncHeight //api.wt.Manager.SyncedTo().Height
+	stats.Order = api.wt.SyncOrder() //api.wt.Manager.SyncedTo().Height
 
 	return stats, nil
 }
@@ -66,7 +66,7 @@ func (api *API) Lock() error {
 }
 
 // GetAccountsAndBalance List all accounts[{account,balance}]
-func (api *API) GetAccountsAndBalance() (map[string]*Balance, error) {
+func (api *API) GetAccountsAndBalance(coin string) (map[string]*Balance, error) {
 	accountsBalances := make(map[string]*Balance)
 	aaas, err := api.wt.GetAccountAndAddress(waddrmgr.KeyScopeBIP0044)
 	if err != nil {
@@ -82,10 +82,10 @@ func (api *API) GetAccountsAndBalance() (map[string]*Balance, error) {
 		accountBalance := accountsBalances[aaa.AccountName]
 
 		for _, addr := range aaa.AddrsOutput {
-			accountBalance.ConfirmAmount.Value += addr.balance.ConfirmAmount.Value
-			accountBalance.SpendAmount.Value += addr.balance.SpendAmount.Value
-			accountBalance.TotalAmount.Value += addr.balance.TotalAmount.Value
-			accountBalance.UnspendAmount.Value += addr.balance.UnspendAmount.Value
+			accountBalance.TotalAmount.Value += addr.balanceMap[wtxmgr.CoinIDs[coin]].TotalAmount.Value
+			accountBalance.SpendAmount.Value += addr.balanceMap[wtxmgr.CoinIDs[coin]].SpendAmount.Value
+			accountBalance.UnspentAmount.Value += addr.balanceMap[wtxmgr.CoinIDs[coin]].UnspentAmount.Value
+			accountBalance.UnConfirmAmount.Value += addr.balanceMap[wtxmgr.CoinIDs[coin]].UnConfirmAmount.Value
 		}
 
 	}
@@ -93,30 +93,30 @@ func (api *API) GetAccountsAndBalance() (map[string]*Balance, error) {
 }
 
 // GetBalanceByAccount get account balance
-func (api *API) GetBalanceByAccount(name string) (*Balance, error) {
+func (api *API) GetBalanceByAccount(name string, coin string) (*Balance, error) {
 	results, err := api.wt.GetAccountAndAddress(waddrmgr.KeyScopeBIP0044)
 	if err != nil {
 		return nil, err
 	}
 
 	accountBalance := &Balance{}
-
 	for _, result := range results {
 		if result.AccountName == name {
 			for _, addr := range result.AddrsOutput {
-				accountBalance.ConfirmAmount.Value += addr.balance.ConfirmAmount.Value
-				accountBalance.SpendAmount.Value += addr.balance.SpendAmount.Value
-				accountBalance.TotalAmount.Value += addr.balance.TotalAmount.Value
-				accountBalance.UnspendAmount.Value += addr.balance.UnspendAmount.Value
+				accountBalance.TotalAmount.Value += addr.balanceMap[wtxmgr.CoinIDs[coin]].TotalAmount.Value
+				accountBalance.SpendAmount.Value += addr.balanceMap[wtxmgr.CoinIDs[coin]].SpendAmount.Value
+				accountBalance.UnspentAmount.Value += addr.balanceMap[wtxmgr.CoinIDs[coin]].UnspentAmount.Value
+				accountBalance.UnConfirmAmount.Value += addr.balanceMap[wtxmgr.CoinIDs[coin]].UnConfirmAmount.Value
 			}
 		}
 	}
+
 	return accountBalance, nil
 }
 
 // GetUTxo addr unSpend UTxo
-func (api *API) GetUTxo(addr string) ([]wtxmgr.UTxo, error) {
-	results, err := api.wt.GetUtxo(addr)
+func (api *API) GetUTxo(addr string, coin string) ([]wtxmgr.UTxo, error) {
+	results, err := api.wt.GetUtxo(addr, coin)
 	if err != nil {
 		return nil, err
 	}
@@ -367,7 +367,7 @@ func (api *API) SendToAddressByAccount(accountName string, addressStr string, am
 }
 
 //GetBalanceByAddr get balance by address
-func (api *API) GetBalanceByAddr(addrStr string) (*Balance, error) {
+func (api *API) GetBalanceByAddr(addrStr string) (map[types.CoinID]Balance, error) {
 	m, err := api.wt.GetBalance(addrStr)
 	if err != nil {
 		return nil, err

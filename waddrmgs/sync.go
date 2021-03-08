@@ -14,7 +14,7 @@ import (
 // a point in the blockchain that an address manager element is
 // synced to.
 type BlockStamp struct {
-	Height    int32
+	Order     uint32
 	Hash      hash.Hash
 	Timestamp time.Time
 }
@@ -82,12 +82,12 @@ func (m *Manager) SyncedTo() BlockStamp {
 // BlockHash returns the block hash at a particular block height. This
 // information is useful for comparing against the chain back-end to see if a
 // reorg is taking place and how far back it goes.
-func (m *Manager) BlockHash(ns walletdb.ReadBucket, height int32) (
+func (m *Manager) BlockHash(ns walletdb.ReadBucket, order uint32) (
 	*hash.Hash, error) {
 	m.mtx.Lock()
 	defer m.mtx.Unlock()
 
-	return fetchBlockHash(ns, height)
+	return fetchBlockHash(ns, order)
 }
 
 // Birthday returns the birthday, or earliest time a key could have been used,

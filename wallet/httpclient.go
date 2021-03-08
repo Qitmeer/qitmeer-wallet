@@ -160,7 +160,7 @@ func (cfg *httpConfig) CheckSyncUpdate(localheight int64) (bool, error) {
 		return false, err
 	}
 	log.Trace(fmt.Sprintf("blockheight:%v,localheight:%v", blockHeight, localheight))
-	if (blockHeight - localheight) < (config.Cfg.Confirmations + syncDiffNum) {
+	if uint32(blockHeight-localheight) < (config.Cfg.Confirmations + syncDiffNum) {
 		return true, nil
 	} else {
 		return false, fmt.Errorf("db Update incomplete")

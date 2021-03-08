@@ -162,7 +162,7 @@ func populateBirthdayBlock(ns walletdb.ReadWriteBucket) error {
 
 	// Now that we have the height estimate, we can fetch the corresponding
 	// block and set it as our birthday block.
-	birthdayHash, err := fetchBlockHash(ns, birthdayHeight)
+	birthdayHash, err := fetchBlockHash(ns, uint32(birthdayHeight))
 
 	// To ensure we record a height that is known to us from the chain,
 	// we'll make sure this height estimate can be found. Otherwise, we'll
@@ -172,7 +172,7 @@ func populateBirthdayBlock(ns walletdb.ReadWriteBucket) error {
 		if birthdayHeight < 0 {
 			birthdayHeight = 0
 		}
-		birthdayHash, err = fetchBlockHash(ns, birthdayHeight)
+		birthdayHash, err = fetchBlockHash(ns, uint32(birthdayHeight))
 	}
 	if err != nil {
 		return err
@@ -184,8 +184,8 @@ func populateBirthdayBlock(ns walletdb.ReadWriteBucket) error {
 	// NOTE: The timestamp of the birthday block isn't set since we do not
 	// store each block's timestamp.
 	return putBirthdayBlock(ns, BlockStamp{
-		Height: birthdayHeight,
-		Hash:   *birthdayHash,
+		Order: uint32(birthdayHeight),
+		Hash:  *birthdayHash,
 	})
 }
 
