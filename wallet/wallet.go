@@ -1094,37 +1094,6 @@ func (w *Wallet) handleBlockSynced(order int64) error {
 }
 
 func (w *Wallet) UpdateBlock(toOrder uint64) error {
-	/*var blockCount string
-	var err error
-	if toHeight == 0 {
-		blockCount, err = w.HttpClient.getblockCount()
-		if err != nil {
-			return err
-		}
-	} else {
-		blockCount = strconv.FormatInt(toHeight, strIntBase)
-	}
-	blockHeight, err := strconv.ParseInt(blockCount, strIntBase, strIntBitSize32)
-	if err != nil {
-		return err
-	}
-	h := int64(w.Manager.SyncedTo().Height)
-	if h < blockHeight {
-		log.Trace(fmt.Sprintf("localheight:%d,blockHeight:%d", h, blockHeight))
-		for h < blockHeight {
-			err := w.handleBlockSynced(h)
-			if err != nil {
-				return err
-			} else {
-				w.SyncHeight = int32(h)
-				_, _ = fmt.Fprintf(os.Stdout, "update blcok:%s/%s\r", strconv.FormatInt(h, 10), strconv.FormatInt(blockHeight-1, 10))
-				h++
-			}
-		}
-		fmt.Print("\nsucc\n")
-	} else {
-		fmt.Println("Block data is up to date")
-	}*/
 	w.syncAll = true
 	var latestScanTxid string
 	w.syncLatest = false
@@ -1144,7 +1113,6 @@ func (w *Wallet) UpdateBlock(toOrder uint64) error {
 
 	ntfnHandlers := client.NotificationHandlers{
 		OnTxConfirm: func(txConfirm *cmds.TxConfirmResult) {
-			log.Info("OnTxConfirm", "txConfirm", txConfirm)
 			if err := w.updateTxConfirm(txConfirm); err != nil {
 				log.Warn("updateTxConfirm", "error", err)
 			}
@@ -1209,7 +1177,7 @@ func (w *Wallet) UpdateBlock(toOrder uint64) error {
 
 	go w.notifyTxConfirmed()
 
-	go w.notifyScanTxByAddr(toOrder, addrs)
+	go w.notifyScanTxByAddr(uint64(w.ToOrder()), addrs)
 
 	w.notificationRpc.WaitForShutdown()
 	log.Info("Stop notify sync process")
