@@ -6,6 +6,8 @@ import (
 	"crypto/x509"
 	"encoding/json"
 	"fmt"
+	clijson "github.com/Qitmeer/qitmeer-wallet/json"
+	"github.com/Qitmeer/qitmeer/common/hash"
 	"github.com/Qitmeer/qitmeer/log"
 	"io/ioutil"
 	"net"
@@ -188,9 +190,27 @@ func (cfg *httpConfig) getBlock(hash string, isDetail bool) (string, error) {
 	params := []interface{}{hash, isDetail}
 	return cfg.getResString("getBlock", params)
 }
+
 func (cfg *httpConfig) getBlockByOrder(i int64) ([]byte, error) {
 	params := []interface{}{i, true}
 	return cfg.getResByte("getBlockByOrder", params)
+}
+
+func (cfg *httpConfig) getBlockHashByOrder(i int64) (*hash.Hash, error) {
+	params := []interface{}{i, true}
+	bytes, err := cfg.getResByte("getBlockByOrder", params)
+	if err != nil {
+		return nil, err
+	}
+	var block clijson.BlockHttpResult
+	if err := json.Unmarshal(bytes, &block); err != nil {
+		return nil, err
+	}
+	blockHash, err := hash.NewHashFromStr(block.Hash)
+	if err != nil {
+		return nil, err
+	}
+	return blockHash, nil
 }
 func (cfg *httpConfig) isBlue(blockHash string) (bool, error) {
 	params := []interface{}{blockHash}

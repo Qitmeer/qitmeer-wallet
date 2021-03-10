@@ -42,7 +42,7 @@ func (api *API) SyncStats() (*SyncStats, error) {
 
 	stats := &SyncStats{}
 
-	stats.Order = api.wt.SyncOrder() //api.wt.Manager.SyncedTo().Height
+	stats.Order = api.wt.getSyncOrder() //api.wt.Manager.SyncedTo().Height
 
 	return stats, nil
 }

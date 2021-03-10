@@ -93,6 +93,9 @@ type Wallet struct {
 	syncLatest bool
 	syncOrder  uint32
 	toOrder    uint32
+	syncQuit   chan struct{}
+	syncWg     *sync.WaitGroup
+	scanEnd    chan struct{}
 	orderMutex sync.RWMutex
 }
 
@@ -338,6 +341,7 @@ func Open(db walletdb.DB, pubPass []byte, _ *waddrmgr.OpenCallbacks,
 
 	w := &Wallet{
 		wg:             &sync.WaitGroup{},
+		syncWg:         &sync.WaitGroup{},
 		cfg:            cfg,
 		db:             db,
 		Manager:        addrMgr,
@@ -347,6 +351,8 @@ func Open(db walletdb.DB, pubPass []byte, _ *waddrmgr.OpenCallbacks,
 		lockState:      make(chan bool),
 		chainParams:    params,
 		quit:           make(chan struct{}),
+		syncQuit:       make(chan struct{}, 1),
+		scanEnd:        make(chan struct{}, 1),
 	}
 
 	return w, nil
@@ -1094,22 +1100,26 @@ func (w *Wallet) handleBlockSynced(order int64) error {
 }
 
 func (w *Wallet) UpdateBlock(toOrder uint64) error {
-	w.syncAll = true
-	var latestScanTxid string
+	var latestScanTxId string
+	var err error
 	w.syncLatest = false
+	w.syncAll = true
+	w.syncQuit = make(chan struct{}, 1)
 	if toOrder != 0 {
 		w.syncAll = false
 	}
-	var err error
+
 	addrs, err := w.walletAddress()
 	if err != nil {
 		return err
 	}
-	err = w.updateSyncToOrder(toOrder)
+
+	err = w.updateSyncToOrder(uint32(toOrder))
 	if err != nil {
 		return err
 	}
-	w.SetOrder(w.Manager.SyncedTo().Order)
+	w.setOrder(w.Manager.SyncedTo().Order)
+	w.scanEnd <- struct{}{}
 
 	ntfnHandlers := client.NotificationHandlers{
 		OnTxConfirm: func(txConfirm *cmds.TxConfirmResult) {
@@ -1125,7 +1135,7 @@ func (w *Wallet) UpdateBlock(toOrder uint64) error {
 				if tx.BlockHash == "" {
 					return
 				}
-				if tx.Order > uint64(w.ToOrder()) {
+				if tx.Order >= uint64(w.getToOrder()) {
 					return
 				}
 			}
@@ -1139,26 +1149,42 @@ func (w *Wallet) UpdateBlock(toOrder uint64) error {
 				log.Error("OnTxAcceptedVerbose insert tx", "error", err)
 				return
 			}
+
 			blockHash, _ := hash.NewHashFromStr(tx.BlockHash)
 			err = w.updateBlockTemp(*blockHash, uint32(tx.Order))
 			if err != nil {
 				return
 			}
-			w.SetOrder(uint32(tx.Order))
+			w.setOrder(uint32(tx.Order))
 			if w.syncLatest {
 				_, _ = fmt.Fprintf(os.Stdout, "update new transaction:%d %s\r", tx.Order, tx.Txid)
 			}
-			if latestScanTxid != "" && latestScanTxid == tx.Txid {
+			if latestScanTxId != "" && latestScanTxId == tx.Txid {
 				w.syncLatest = true
+				w.scanEnd <- struct{}{}
+
+				hash, err := w.HttpClient.getBlockHashByOrder(int64(w.getToOrder() - 1))
+				if err != nil {
+					log.Warn("get block hash by order", "error", err)
+					return
+				}
+				err = w.updateBlockTemp(*hash, w.getToOrder()-1)
+				if err != nil {
+					return
+				}
 			}
 
 		},
 		OnRescanProgress: func(rescanPro *cmds.RescanProgressNtfn) {
 			//log.Info("scan block progress", "order", rescanPro.Order)
-			_, _ = fmt.Fprintf(os.Stdout, "update history blcok:%d/%d\r", rescanPro.Order, w.ToOrder()-1)
+			_, _ = fmt.Fprintf(os.Stdout, "update history blcok:%d/%d\r", rescanPro.Order, w.getToOrder()-1)
 		},
 		OnRescanFinish: func(rescanFinish *cmds.RescanFinishedNtfn) {
-			latestScanTxid = rescanFinish.LastTxHash
+			latestScanTxId = rescanFinish.LastTxHash
+		},
+		OnNodeExit: func(nodeExit *cmds.NodeExitNtfn) {
+			w.notificationRpc.Shutdown()
+			w.stopSync()
 		},
 	}
 
@@ -1175,65 +1201,70 @@ func (w *Wallet) UpdateBlock(toOrder uint64) error {
 		return err
 	}
 
+	w.syncWg.Add(1)
 	go w.notifyTxConfirmed()
 
-	go w.notifyScanTxByAddr(uint64(w.ToOrder()), addrs)
+	w.syncWg.Add(1)
+	go w.notifyScanTxByAddr(addrs)
 
 	w.notificationRpc.WaitForShutdown()
+	w.syncWg.Wait()
+
 	log.Info("Stop notify sync process")
 	return nil
 }
 
-func (w *Wallet) notifyScanTxByAddr(toOrder uint64, addrs []string) {
-	quit := w.quitChan()
-	t := time.NewTicker(time.Second * 1)
+func (w *Wallet) notifyScanTxByAddr(addrs []string) {
+	defer w.syncWg.Done()
 	var startScan bool
+
 	for {
 		select {
-		case <-quit:
+		case <-w.syncQuit:
 			log.Info("Stop scan block")
 			return
-		case <-t.C:
-			for !w.syncLatest && startScan {
-				time.Sleep(1 * time.Second)
-			}
-			if !w.syncAll && (startScan || uint32(toOrder) <= w.SyncOrder()+1) {
-				fmt.Fprintf(os.Stdout, "update history blcok:%d/%d\n", w.syncOrder, w.ToOrder()-1)
+		case <-w.scanEnd:
+			if !w.syncAll && (startScan || w.getToOrder() <= w.getSyncOrder()+1) {
+				fmt.Fprintf(os.Stdout, "update history blcok:%d/%d\n", w.getSyncOrder(), w.getToOrder()-1)
 				w.notificationRpc.Shutdown()
 				return
 			} else {
 				startScan = true
-				w.updateSyncToOrder(toOrder)
-				if w.ToOrder() > w.SyncOrder()+1 {
+				if w.getToOrder() > w.getSyncOrder()+1 {
 					w.syncLatest = false
-					log.Info("notification rescan block", "start", w.SyncOrder(), "end", w.ToOrder()-1)
-					err := w.notificationRpc.Rescan(uint64(w.SyncOrder()), uint64(w.ToOrder()), addrs, nil)
+					log.Info("notification rescan block", "start", w.getSyncOrder(), "end", w.getToOrder()-1)
+					err := w.notificationRpc.Rescan(uint64(w.getSyncOrder()), uint64(w.getToOrder()), addrs, nil)
 					if err != nil {
 						return
 					}
 				} else {
-					fmt.Fprintf(os.Stdout, "update history blcok:%d/%d\r", w.syncOrder, w.ToOrder()-1)
+					w.syncLatest = true
+					fmt.Fprintf(os.Stdout, "update history blcok:%d/%d\r", w.getSyncOrder(), w.getToOrder()-1)
 					return
 				}
 			}
+		default:
+			time.Sleep(time.Second * 5)
 		}
 	}
-
-	return
 }
 
-func (w *Wallet) updateSyncToOrder(toOrder uint64) error {
+func (w *Wallet) updateSyncToOrder(toOrder uint32) error {
 	maxOrder, err := w.maxBlockOrder()
 	if err != nil {
 		return err
 	}
 	if toOrder == 0 {
-		toOrder = maxOrder
-	} else if toOrder > maxOrder {
+		toOrder = uint32(maxOrder)
+	} else if toOrder > uint32(maxOrder) {
 		return fmt.Errorf("the target Order %d cannot be larger than the number of existing blocks  %d on the node", toOrder, maxOrder)
 	}
-	w.SetToOrder(uint32(toOrder))
+	w.setToOrder(toOrder)
 	return nil
+}
+
+func (w *Wallet) stopSync() {
+	close(w.syncQuit)
 }
 
 func (w *Wallet) updateBlockTemp(hash hash.Hash, localOrder uint32) error {
@@ -1266,13 +1297,13 @@ func (w *Wallet) notifyNewTransaction() error {
 }
 
 func (w *Wallet) notifyTxConfirmed() {
-	quit := w.quitChan()
+	defer w.syncWg.Done()
+
 	t := time.NewTicker(time.Second * 30)
 	for {
 		select {
-		case <-quit:
+		case <-w.syncQuit:
 			log.Info("Stop notify tx confirmed block")
-			w.wg.Done()
 			return
 		case <-t.C:
 			unTxs := []cmds.TxConfirm{}
@@ -1313,28 +1344,28 @@ func (w *Wallet) notifyTxConfirmed() {
 	}
 }
 
-func (w *Wallet) SetOrder(syncOrder uint32) {
+func (w *Wallet) setOrder(syncOrder uint32) {
 	w.orderMutex.Lock()
 	defer w.orderMutex.Unlock()
 
 	w.syncOrder = syncOrder
 }
 
-func (w *Wallet) SetToOrder(toOrder uint32) {
+func (w *Wallet) setToOrder(toOrder uint32) {
 	w.orderMutex.Lock()
 	defer w.orderMutex.Unlock()
 
 	w.toOrder = toOrder
 }
 
-func (w *Wallet) SyncOrder() uint32 {
+func (w *Wallet) getSyncOrder() uint32 {
 	w.orderMutex.RLock()
 	defer w.orderMutex.RUnlock()
 
 	return w.syncOrder
 }
 
-func (w *Wallet) ToOrder() uint32 {
+func (w *Wallet) getToOrder() uint32 {
 	w.orderMutex.RLock()
 	defer w.orderMutex.RUnlock()
 
@@ -1342,16 +1373,41 @@ func (w *Wallet) ToOrder() uint32 {
 }
 
 func (w *Wallet) walletAddress() ([]string, error) {
-	addresses := []string{}
-	aaaRs, err := w.GetAccountAndAddress(waddrmgr.KeyScopeBIP0044)
+	manager, err := w.Manager.FetchScopedKeyManager(waddrmgr.KeyScopeBIP0044)
 	if err != nil {
 		return nil, err
 	}
-	for _, aaaRs := range aaaRs {
-		for _, addrOut := range aaaRs.AddrsOutput {
-			addresses = append(addresses, addrOut.Addr)
+	var results []AccountAndAddressResult
+	var addresses = []string{}
+	err = walletdb.View(w.db, func(tx walletdb.ReadTx) error {
+		addrNs := tx.ReadBucket(waddrmgrNamespaceKey)
+		lastAcct, err := manager.LastAccount(addrNs)
+		if err != nil {
+			return err
 		}
+		results = make([]AccountAndAddressResult, lastAcct+2)
+		for i := range results[:len(results)-1] {
+			accountName, err := manager.AccountName(addrNs, uint32(i))
+			if err != nil {
+				return err
+			}
+			results[i].AccountNumber = uint32(i)
+			results[i].AccountName = accountName
+		}
+		results[len(results)-1].AccountNumber = waddrmgr.ImportedAddrAccount
+		results[len(results)-1].AccountName = waddrmgr.ImportedAddrAccountName
+		for k := range results {
+			adds, _ := w.AccountAddresses(results[k].AccountNumber)
+			for _, addr := range adds {
+				addresses = append(addresses, addr.String())
+			}
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, err
 	}
+
 	return addresses, nil
 }
 
