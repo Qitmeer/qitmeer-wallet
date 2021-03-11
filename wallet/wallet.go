@@ -1880,7 +1880,7 @@ func (w *Wallet) SendOutputs(coin2outputs map[types.CoinID][]*types.TxOutput, ac
 
 					for _, output := range addrOutput.TxoutputMap[coinId] {
 						output.Address = addrOutput.Addr
-						if output.Spend == wtxmgr.SpendStatusUnspent {
+						if output.Spend == wtxmgr.SpendStatusUnspent && output.Status == wtxmgr.TxStatusConfirmed {
 							if payAmount.Value > 0 && feeAmount.Value == 0 {
 								if output.Amount.Value > payAmount.Value {
 									input := types.NewOutPoint(&output.TxId, output.Index)
@@ -1917,7 +1917,7 @@ func (w *Wallet) SendOutputs(coin2outputs map[types.CoinID][]*types.TxOutput, ac
 										feeAmount.Value = 0
 									}
 								}
-							} else if payAmount.Value == 0 && feeAmount.Value > 0 {
+							} else if payAmount.Value == 0 && feeAmount.Value >= 0 {
 								if output.Amount.Value >= feeAmount.Value {
 									input := types.NewOutPoint(&output.TxId, output.Index)
 									tx.AddTxIn(types.NewTxInput(input, addrByte))
@@ -2097,7 +2097,7 @@ func makeOutputs(pairs map[string]types.Amount) (map[types.CoinID][]*types.TxOut
 		}
 		outputs, ok := coin2outputs[amt.Id]
 		if ok {
-			outputs = append(outputs, types.NewTxOutput(amt, pkScript))
+			coin2outputs[amt.Id] = append(outputs, types.NewTxOutput(amt, pkScript))
 		} else {
 			coin2outputs[amt.Id] = []*types.TxOutput{types.NewTxOutput(amt, pkScript)}
 		}

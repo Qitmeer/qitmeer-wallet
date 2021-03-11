@@ -2,6 +2,7 @@ package wallet
 
 import (
 	"encoding/hex"
+	"fmt"
 	corejson "github.com/Qitmeer/qitmeer/core/json"
 	"time"
 
@@ -304,7 +305,7 @@ func (api *API) ImportPrivKey(accountName string, key string) error {
 
 type ApiAmount struct {
 	Value float64
-	Id    types.CoinID
+	Coin  string
 }
 
 //SendToAddress handles a sendtoaddress RPC request by creating a new
@@ -312,14 +313,20 @@ type ApiAmount struct {
 //payment address.  Leftover inputs not sent to the payment address or a fee
 //for the miner are sent back to a new address in the wallet.  Upon success,
 //the TxID for the created transaction is returned.
-func (api *API) SendToAddress(addressStr string, amount ApiAmount) (string, error) {
+func (api *API) SendToAddress(addressStr string, amount float64, coin string) (string, error) {
 
 	// Check that signed integer parameters are positive.
-	if amount.Value < 0 {
+	if amount < 0 {
 		return "", qitmeerjson.ErrNeedPositiveAmount
 	}
 
-	amt := types.Amount{Value: int64(amount.Value * types.AtomsPerCoin), Id: amount.Id}
+	var amt types.Amount
+	id, ok := wtxmgr.CoinIDs[coin]
+	if ok {
+		amt = types.Amount{Value: int64(amount * types.AtomsPerCoin), Id: id}
+	} else {
+		return "", fmt.Errorf("there is no %s", coin)
+	}
 
 	// Mock up map of address and amount pairs.
 	pairs := map[string]types.Amount{
@@ -329,14 +336,21 @@ func (api *API) SendToAddress(addressStr string, amount ApiAmount) (string, erro
 	return api.wt.SendPairs(pairs, waddrmgr.AccountMergePayNum, txrules.DefaultRelayFeePerKb)
 }
 
-func (api *API) SendToMany(addAmounts map[string]ApiAmount) (string, error) {
+func (api *API) SendToMany(addAmounts map[string]float64, coin string) (string, error) {
 
 	pairs := make(map[string]types.Amount)
 	for addr, amount := range addAmounts {
-		if amount.Value < 0 {
+		if amount < 0 {
 			return "", qitmeerjson.ErrNeedPositiveAmount
 		}
-		amt := types.Amount{Value: int64(amount.Value * types.AtomsPerCoin), Id: amount.Id}
+		var amt types.Amount
+		id, ok := wtxmgr.CoinIDs[coin]
+		if ok {
+			amt = types.Amount{Value: int64(amount * types.AtomsPerCoin), Id: id}
+		} else {
+			return "", fmt.Errorf("there is no %s", coin)
+		}
+
 		pairs[addr] = amt
 	}
 
@@ -344,7 +358,7 @@ func (api *API) SendToMany(addAmounts map[string]ApiAmount) (string, error) {
 }
 
 // SendToAddressByAccount by account
-func (api *API) SendToAddressByAccount(accountName string, addressStr string, amount ApiAmount, comment string, commentTo string) (string, error) {
+func (api *API) SendToAddressByAccount(accountName string, addressStr string, amount float64, coin string, comment string, commentTo string) (string, error) {
 
 	accountNum, err := api.wt.AccountNumber(waddrmgr.KeyScopeBIP0044, accountName)
 	if err != nil {
@@ -352,11 +366,17 @@ func (api *API) SendToAddressByAccount(accountName string, addressStr string, am
 	}
 
 	// Check that signed integer parameters are positive.
-	if amount.Value < 0 {
+	if amount < 0 {
 		return "", qitmeerjson.ErrNeedPositiveAmount
 	}
 
-	amt := types.Amount{Value: int64(amount.Value * types.AtomsPerCoin), Id: amount.Id}
+	var amt types.Amount
+	id, ok := wtxmgr.CoinIDs[coin]
+	if ok {
+		amt = types.Amount{Value: int64(amount * types.AtomsPerCoin), Id: id}
+	} else {
+		return "", fmt.Errorf("there is no %s", coin)
+	}
 
 	// Mock up map of address and amount pairs.
 	pairs := map[string]types.Amount{
