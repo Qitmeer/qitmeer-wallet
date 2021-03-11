@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/Qitmeer/qitmeer-wallet/walletdb"
 	"github.com/Qitmeer/qitmeer-wallet/walletdb/migration"
+	"github.com/Qitmeer/qitmeer-wallet/wtxmgr"
 	"github.com/Qitmeer/qitmeer/log"
 	chaincfg "github.com/Qitmeer/qitmeer/params"
 	"time"
@@ -193,7 +194,7 @@ func populateBirthdayBlock(ns walletdb.ReadWriteBucket) error {
 // synced block to its birthday block. This essentially serves as a migration to
 // force a rescan of the wallet.
 func resetSyncedBlockToBirthday(ns walletdb.ReadWriteBucket) error {
-	syncBucket := ns.NestedReadWriteBucket(syncBucketName)
+	syncBucket := ns.NestedReadWriteBucket(wtxmgr.BucketSync)
 	if syncBucket == nil {
 		return errors.New("sync bucket does not exist")
 	}

@@ -225,6 +225,7 @@ type SendManyCmd struct {
 type SendToAddressCmd struct {
 	Address   string
 	Amount    float64
+	Coin      string
 	Comment   *string
 	CommentTo *string
 }

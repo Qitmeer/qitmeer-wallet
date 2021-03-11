@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/Qitmeer/qitmeer-wallet/walletdb"
+	"github.com/Qitmeer/qitmeer-wallet/wtxmgr"
 	chainhash "github.com/Qitmeer/qitmeer/common/hash"
 	"time"
 )
@@ -228,10 +229,6 @@ var (
 	// public key. This key is encrypted with the master public crypto
 	// encryption key. This reside under the main bucket.
 	masterHDPubName = []byte("mhdpub")
-
-	// syncBucketName is the name of the bucket that stores the current
-	// sync state of the root manager.
-	syncBucketName = []byte("sync")
 
 	// Db related key names (main bucket).
 	mgrVersionName    = []byte("mgrver")
@@ -809,7 +806,7 @@ func serializeScriptAddress(encryptedHash, encryptedScript []byte) []byte {
 // fetchSyncedTo loads the block stamp the manager is synced to from the
 // database.
 func fetchSyncedTo(ns walletdb.ReadBucket) (*BlockStamp, error) {
-	bucket := ns.NestedReadBucket(syncBucketName)
+	bucket := ns.NestedReadBucket(wtxmgr.BucketSync)
 
 	// The serialized synced to format is:
 	//   <blockheight><blockhash><timestamp>
@@ -835,7 +832,7 @@ func fetchSyncedTo(ns walletdb.ReadBucket) (*BlockStamp, error) {
 
 // PutSyncedTo stores the provided synced to blockstamp to the database.
 func PutSyncedTo(ns walletdb.ReadWriteBucket, bs *BlockStamp) error {
-	bucket := ns.NestedReadWriteBucket(syncBucketName)
+	bucket := ns.NestedReadWriteBucket(wtxmgr.BucketSync)
 	errStr := fmt.Sprintf("failed to store sync information %v", bs.Hash)
 
 	// If the block height is greater than zero, check that the previous
@@ -874,7 +871,7 @@ func PutSyncedTo(ns walletdb.ReadWriteBucket, bs *BlockStamp) error {
 // fetchBlockHash loads the block hash for the provided height from the
 // database.
 func fetchBlockHash(ns walletdb.ReadBucket, order uint32) (*chainhash.Hash, error) {
-	bucket := ns.NestedReadBucket(syncBucketName)
+	bucket := ns.NestedReadBucket(wtxmgr.BucketSync)
 	errStr := fmt.Sprintf("failed to fetch block hash for height %d", order)
 
 	orderBytes := make([]byte, 4)
@@ -898,7 +895,7 @@ func fetchBlockHash(ns walletdb.ReadBucket, order uint32) (*chainhash.Hash, erro
 // FetchStartBlock loads the start block stamp for the manager from the
 // database.
 func FetchStartBlock(ns walletdb.ReadBucket) (*BlockStamp, error) {
-	bucket := ns.NestedReadBucket(syncBucketName)
+	bucket := ns.NestedReadBucket(wtxmgr.BucketSync)
 
 	// The serialized start block format is:
 	//   <blockheight><blockhash>
@@ -918,7 +915,7 @@ func FetchStartBlock(ns walletdb.ReadBucket) (*BlockStamp, error) {
 
 // putStartBlock stores the provided start block stamp to the database.
 func putStartBlock(ns walletdb.ReadWriteBucket, bs *BlockStamp) error {
-	bucket := ns.NestedReadWriteBucket(syncBucketName)
+	bucket := ns.NestedReadWriteBucket(wtxmgr.BucketSync)
 
 	// The serialized start block format is:
 	//   <blockheight><blockhash>
@@ -940,7 +937,7 @@ func putStartBlock(ns walletdb.ReadWriteBucket, bs *BlockStamp) error {
 func fetchBirthday(ns walletdb.ReadBucket) (time.Time, error) {
 	var t time.Time
 
-	bucket := ns.NestedReadBucket(syncBucketName)
+	bucket := ns.NestedReadBucket(wtxmgr.BucketSync)
 	birthdayTimestamp := bucket.Get(birthdayName)
 	if len(birthdayTimestamp) != 8 {
 		str := "malformed birthday stored in database"
@@ -957,7 +954,7 @@ func putBirthday(ns walletdb.ReadWriteBucket, t time.Time) error {
 	var birthdayTimestamp [8]byte
 	binary.BigEndian.PutUint64(birthdayTimestamp[:], uint64(t.Unix()))
 
-	bucket := ns.NestedReadWriteBucket(syncBucketName)
+	bucket := ns.NestedReadWriteBucket(wtxmgr.BucketSync)
 	if err := bucket.Put(birthdayName, birthdayTimestamp[:]); err != nil {
 		str := "failed to store birthday"
 		return managerError(ErrDatabase, str, err)
@@ -975,7 +972,7 @@ func putBirthday(ns walletdb.ReadWriteBucket, t time.Time) error {
 func FetchBirthdayBlock(ns walletdb.ReadBucket) (BlockStamp, error) {
 	var block BlockStamp
 
-	bucket := ns.NestedReadBucket(syncBucketName)
+	bucket := ns.NestedReadBucket(wtxmgr.BucketSync)
 	birthdayBlock := bucket.Get(birthdayBlockName)
 	if birthdayBlock == nil {
 		str := "birthday block not set"
@@ -1006,7 +1003,7 @@ func putBirthdayBlock(ns walletdb.ReadWriteBucket, block BlockStamp) error {
 	copy(birthdayBlock[4:36], block.Hash[:])
 	binary.BigEndian.PutUint64(birthdayBlock[36:], uint64(block.Timestamp.Unix()))
 
-	bucket := ns.NestedReadWriteBucket(syncBucketName)
+	bucket := ns.NestedReadWriteBucket(wtxmgr.BucketSync)
 	if err := bucket.Put(birthdayBlockName, birthdayBlock[:]); err != nil {
 		str := "failed to store birthday block"
 		return managerError(ErrDatabase, str, err)
@@ -1018,7 +1015,7 @@ func putBirthdayBlock(ns walletdb.ReadWriteBucket, block BlockStamp) error {
 // fetchBirthdayBlockVerification retrieves the bit that determines whether the
 // wallet has verified that its birthday block is correct.
 func fetchBirthdayBlockVerification(ns walletdb.ReadBucket) bool {
-	bucket := ns.NestedReadBucket(syncBucketName)
+	bucket := ns.NestedReadBucket(wtxmgr.BucketSync)
 	verifiedValue := bucket.Get(birthdayBlockVerifiedName)
 
 	// If there is no verification status, we can assume it has not been
@@ -1046,7 +1043,7 @@ func putBirthdayBlockVerification(ns walletdb.ReadWriteBucket, verified bool) er
 	var verifiedBytes [2]byte
 	binary.BigEndian.PutUint16(verifiedBytes[:], verifiedValue)
 
-	bucket := ns.NestedReadWriteBucket(syncBucketName)
+	bucket := ns.NestedReadWriteBucket(wtxmgr.BucketSync)
 	err := bucket.Put(birthdayBlockVerifiedName, verifiedBytes[:])
 	if err != nil {
 		str := "failed to store birthday block verification"
@@ -1071,7 +1068,7 @@ func managerExists(ns walletdb.ReadBucket) bool {
 // as the version and creation date. In addition to creating the key space for
 // the root address manager, we'll also create internal scopes for all the
 // default manager scope types.
-func createManagerNS(ns walletdb.ReadWriteBucket, defaultScopes map[KeyScope]ScopeAddrSchema) error {
+func CreateManagerNS(ns walletdb.ReadWriteBucket, defaultScopes map[KeyScope]ScopeAddrSchema) error {
 
 	// First, we'll create all the relevant buckets that stem off of the
 	// main bucket.
@@ -1080,7 +1077,7 @@ func createManagerNS(ns walletdb.ReadWriteBucket, defaultScopes map[KeyScope]Sco
 		str := "failed to create main bucket"
 		return managerError(ErrDatabase, str, err)
 	}
-	_, err = ns.CreateBucket(syncBucketName)
+	_, err = ns.CreateBucket(wtxmgr.BucketSync)
 	if err != nil {
 		str := "failed to create sync bucket"
 		return managerError(ErrDatabase, str, err)

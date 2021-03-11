@@ -261,7 +261,18 @@ func SendToAddress(iCmd interface{}, w *wallet.Wallet) (interface{}, error) {
 		}
 	}
 
-	amt, err := types.NewAmount(cmd.Amount)
+	var amt *types.Amount
+	var err error
+	switch cmd.Coin {
+	case "MEER":
+		amt, err = types.NewAmount(cmd.Amount)
+		amt.Id = types.MEERID
+	case "QIT":
+		amt, err = types.NewAmount(cmd.Amount)
+		amt.Id = types.QITID
+	default:
+		return nil, fmt.Errorf("There is no %s ", cmd.Coin)
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -287,6 +298,15 @@ func UpdateBlock(iCmd interface{}, w *wallet.Wallet) error {
 	}
 	return nil
 }
+
+func ClearTxData(w *wallet.Wallet) error {
+	err := w.ClearTxData()
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 func GetTx(txId string, w *wallet.Wallet) (interface{}, error) {
 	tx, err := w.GetTx(txId)
 	if err != nil {
@@ -294,6 +314,7 @@ func GetTx(txId string, w *wallet.Wallet) (interface{}, error) {
 	}
 	return tx, nil
 }
+
 func GetBalance(iCmd interface{}, w *wallet.Wallet) (interface{}, error) {
 	cmd := iCmd.(*qitmeerjson.GetBalanceByAddressCmd)
 	m, err := w.GetBalance(cmd.Address)

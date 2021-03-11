@@ -32,6 +32,7 @@ func AddQcCommand() {
 	QcCmd.AddCommand(newListAccountsBalance())
 	QcCmd.AddCommand(newGetTxByTxIdCmd())
 	QcCmd.AddCommand(getTxSpendInfoCmd)
+	QcCmd.AddCommand(clearTxData)
 }
 
 var createWalletCmd = &cobra.Command{
@@ -109,21 +110,33 @@ var getBalanceCmd = &cobra.Command{
 		}
 		if company == "i" {
 			if detail == "true" {
-				fmt.Printf("unspent:%s\n", b.UnspentAmount.String())
-				fmt.Printf("unconfirmed:%s\n", b.UnConfirmAmount.String())
-				fmt.Printf("total:%s\n", b.TotalAmount.String())
-				fmt.Printf("spend:%s\n", b.SpendAmount.String())
+				for _, v := range b {
+					fmt.Printf("unspent:%s\n", v.UnspentAmount.String())
+					fmt.Printf("unconfirmed:%s\n", v.UnConfirmAmount.String())
+					fmt.Printf("total:%s\n", v.TotalAmount.String())
+					fmt.Printf("spend:%s\n", v.SpendAmount.String())
+					fmt.Println()
+				}
 			} else {
-				fmt.Printf("%s\n", b.UnspentAmount.String())
+				for _, v := range b {
+					fmt.Printf("%s\n", v.UnspentAmount.String())
+					fmt.Println()
+				}
 			}
 		} else {
 			if detail == "true" {
-				fmt.Printf("unspent:%s\n", b.UnspentAmount.String())
-				fmt.Printf("unconfirmed:%s\n", b.UnConfirmAmount.String())
-				fmt.Printf("total:%s\n", b.TotalAmount.String())
-				fmt.Printf("spend:%s\n", b.SpendAmount.String())
+				for _, v := range b {
+					fmt.Printf("unspent:%f\n", v.UnspentAmount.ToCoin())
+					fmt.Printf("unconfirmed:%f\n", v.UnConfirmAmount.ToCoin())
+					fmt.Printf("total:%f\n", v.TotalAmount.ToCoin())
+					fmt.Printf("spend:%f\n", v.SpendAmount.ToCoin())
+					fmt.Println()
+				}
 			} else {
-				fmt.Printf("%f\n", b.UnspentAmount.ToCoin())
+				for _, v := range b {
+					fmt.Printf("%f\n", v.UnspentAmount.ToCoin())
+					fmt.Println()
+				}
 			}
 		}
 
@@ -211,30 +224,51 @@ var getTxSpendInfoCmd = &cobra.Command{
 	},
 }
 
-var sendToAddressCmd = &cobra.Command{
-	Use:   "sendtoaddress {address} {amount} {pripassword} ",
-	Short: "send transaction ",
+var clearTxData = &cobra.Command{
+	Use:   "clearTxData",
+	Short: "clearTxData",
 	Example: `
-		sendtoaddress TmWMuY9q5dUutUTGikhqTVKrnDMG34dEgb5 10 pripassword
+		clearTxData
+		clearTxData
 		`,
-	Args: cobra.MinimumNArgs(3),
+	Args: cobra.MinimumNArgs(0),
 	Run: func(cmd *cobra.Command, args []string) {
 		err := OpenWallet()
 		if err != nil {
 			fmt.Println(err.Error())
 			return
 		}
-		f32, err := strconv.ParseFloat(args[1], 32)
-		if err != nil {
-			log.Error("sendtoaddress ", "error", err.Error())
+		if err := ClearTxData(); err != nil {
+			fmt.Println(err.Error())
 			return
 		}
-		err = UnLock(args[2])
+	},
+}
+
+var sendToAddressCmd = &cobra.Command{
+	Use:   "sendtoaddress {address} {amount} {pripassword} ",
+	Short: "send transaction ",
+	Example: `
+		sendtoaddress TmWMuY9q5dUutUTGikhqTVKrnDMG34dEgb5 MEER 10 pripassword
+		`,
+	Args: cobra.MinimumNArgs(4),
+	Run: func(cmd *cobra.Command, args []string) {
+		err := OpenWallet()
 		if err != nil {
 			fmt.Println(err.Error())
 			return
 		}
-		sendToAddress(args[0], float64(f32))
+		f32, err := strconv.ParseFloat(args[2], 32)
+		if err != nil {
+			log.Error("sendtoaddress ", "error", err.Error())
+			return
+		}
+		err = UnLock(args[3])
+		if err != nil {
+			fmt.Println(err.Error())
+			return
+		}
+		sendToAddress(args[0], float64(f32), args[1])
 	},
 }
 

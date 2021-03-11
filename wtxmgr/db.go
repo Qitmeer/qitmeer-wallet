@@ -35,6 +35,7 @@ var (
 	BucketAddrtxin       = []byte("in")
 	BucketAddrtxout      = []byte("out")
 	BucketTxJson         = []byte("txjson")
+	BucketSync           = []byte("sync")
 )
 
 // Root (namespace) bucket keys
@@ -134,9 +135,9 @@ func valueBlockRecord(block *BlockMeta, txHash *hash.Hash) []byte {
 func ValueAddrTxOutput(txout *AddrTxOutput) []byte {
 	var v []byte
 	if txout.SpendTo == nil {
-		v = make([]byte, 132)
+		v = make([]byte, 133)
 	} else {
-		v = make([]byte, 168)
+		v = make([]byte, 169)
 	}
 	copy(v, txout.TxId[:])
 	byteOrder.PutUint32(v[32:36], txout.Index)
@@ -146,14 +147,19 @@ func ValueAddrTxOutput(txout *AddrTxOutput) []byte {
 	byteOrder.PutUint32(v[90:94], uint32(txout.Block.Order))
 	byteOrder.PutUint32(v[94:98], uint32(txout.Spend))
 	byteOrder.PutUint16(v[98:100], uint16(txout.Status))
-	copy(v[100:132], txout.SpendTo.TxId[:])
-	if len(v) == 168 {
-		byteOrder.PutUint32(v[132:136], txout.SpendTo.Index)
-		copy(v[136:168], txout.SpendTo.TxId[:])
+	if txout.IsBlue {
+		copy(v[100:101], []byte{1})
+	} else {
+		copy(v[100:101], []byte{0})
+	}
+	copy(v[101:133], txout.SpendTo.TxId[:])
+	if len(v) == 169 {
+		byteOrder.PutUint32(v[133:137], txout.SpendTo.Index)
+		copy(v[137:169], txout.SpendTo.TxId[:])
 	}
 	return v
 }
-func ReadAddrTxOutput(v []byte, txout *AddrTxOutput) (err error) {
+func ReadAddrTxOutput(addr string, v []byte, txout *AddrTxOutput) (err error) {
 	defer func() {
 		if rev := recover(); rev != nil {
 			errMsg := fmt.Sprintf("ReadAddrTxOutput recover: %s", rev)
@@ -161,7 +167,7 @@ func ReadAddrTxOutput(v []byte, txout *AddrTxOutput) (err error) {
 		}
 	}()
 	txId := hash.Hash{}
-
+	txout.Address = addr
 	copy(txout.TxId[:], v[0:32])
 	txout.Index = byteOrder.Uint32(v[32:36])
 	txout.Amount.Value = int64(byteOrder.Uint64(v[36:44]))
@@ -170,13 +176,16 @@ func ReadAddrTxOutput(v []byte, txout *AddrTxOutput) (err error) {
 	txout.Block.Order = int32(byteOrder.Uint32(v[90:94]))
 	txout.Spend = SpendStatus(byteOrder.Uint32(v[94:98]))
 	txout.Status = TxStatus(byteOrder.Uint16(v[98:100]))
-	copy(txId[:], v[100:132])
+	if bytes.Compare(v[100:101], []byte{1}) == 0 {
+		txout.IsBlue = true
+	}
+	copy(txId[:], v[101:133])
 	txout.SpendTo.TxId = txId
 
-	if len(v) == 168 {
+	if len(v) == 169 {
 		st := SpendTo{}
-		st.Index = byteOrder.Uint32(v[132:136])
-		copy(st.TxId[:], v[136:168])
+		st.Index = byteOrder.Uint32(v[133:137])
+		copy(st.TxId[:], v[137:169])
 		txout.SpendTo = &st
 	}
 	return nil
@@ -1300,58 +1309,42 @@ func createBuckets(ns walletdb.ReadWriteBucket) error {
 // deleteBuckets deletes all of the descendants buckets required for the
 // transaction store to properly carry its duties.
 func deleteBuckets(ns walletdb.ReadWriteBucket) error {
-	if err := ns.DeleteNestedBucket(bucketBlocks); err != nil {
-		str := "failed to delete blocks bucket"
-		return storeError(ErrDatabase, str, err)
-	}
-	if err := ns.DeleteNestedBucket(bucketTxRecords); err != nil {
-		str := "failed to delete tx records bucket"
-		return storeError(ErrDatabase, str, err)
-	}
-	if err := ns.DeleteNestedBucket(bucketCredits); err != nil {
-		str := "failed to delete credits bucket"
-		return storeError(ErrDatabase, str, err)
-	}
-	if err := ns.DeleteNestedBucket(bucketDebits); err != nil {
-		str := "failed to delete debits bucket"
-		return storeError(ErrDatabase, str, err)
-	}
-	if err := ns.DeleteNestedBucket(bucketUnspent); err != nil {
-		str := "failed to delete unspent bucket"
-		return storeError(ErrDatabase, str, err)
-	}
-	if err := ns.DeleteNestedBucket(bucketUnMined); err != nil {
-		str := "failed to delete unMined bucket"
-		return storeError(ErrDatabase, str, err)
-	}
-	if err := ns.DeleteNestedBucket(bucketUnMinedCredits); err != nil {
-		str := "failed to delete unMined credits bucket"
-		return storeError(ErrDatabase, str, err)
-	}
-	if err := ns.DeleteNestedBucket(bucketUnMinedInputs); err != nil {
-		str := "failed to delete unMined inputs bucket"
-		return storeError(ErrDatabase, str, err)
-	}
+	ns.DeleteNestedBucket(bucketBlocks)
+	ns.DeleteNestedBucket(bucketTxRecords)
+	ns.DeleteNestedBucket(bucketCredits)
+	ns.DeleteNestedBucket(bucketDebits)
+	ns.DeleteNestedBucket(bucketUnspent)
+	ns.DeleteNestedBucket(bucketUnMined)
+	ns.DeleteNestedBucket(bucketUnMinedCredits)
+	ns.DeleteNestedBucket(bucketUnMinedInputs)
 
 	for _, coin := range Coins {
-		if err := ns.DeleteNestedBucket(CoinBucket(BucketAddrtxin, coin)); err != nil {
-			str := fmt.Sprintf("failed to delete unMined %s addrtxin bucket", coin)
-			return storeError(ErrDatabase, str, err)
-		}
-		if err := ns.DeleteNestedBucket(CoinBucket(BucketAddrtxout, coin)); err != nil {
-			str := fmt.Sprintf("failed to delete unMined %s addrtxout bucket", coin)
-			return storeError(ErrDatabase, str, err)
-		}
+		err := ns.DeleteNestedBucket(CoinBucket(BucketAddrtxin, coin))
+		fmt.Println(err)
+		err = ns.DeleteNestedBucket(CoinBucket(BucketAddrtxout, coin))
+		fmt.Println(err)
 	}
 
-	if err := ns.DeleteNestedBucket(BucketTxJson); err != nil {
-		str := "failed to delete unMined BucketTxJson bucket"
-		return storeError(ErrDatabase, str, err)
+	ns.DeleteNestedBucket(BucketTxJson)
+	ns.DeleteNestedBucket(BucketUnConfirmed)
+	return nil
+}
+
+func DropTransactionHistory(ns walletdb.ReadWriteBucket) error {
+
+	// To drop the store's transaction history, we'll need to remove all of
+	// the relevant descendant buckets and key/value pairs.
+	if err := deleteBuckets(ns); err != nil {
+		return err
 	}
-	if err := ns.DeleteNestedBucket(BucketUnConfirmed); err != nil {
-		str := "failed to delete unconfirmed bucket"
-		return storeError(ErrDatabase, str, err)
-	}
+	//ns.Delete(rootMinedBalance)
+
+	// With everything removed, we'll now recreate our buckets.
+	///if err := createBuckets(ns); err != nil {
+	//return err
+	//}
+
+	// Finally, we'll insert a 0 value for our mined balance.
 	return nil
 }
 

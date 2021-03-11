@@ -390,7 +390,7 @@ func Create(ns walletdb.ReadWriteBucket, seed, pubPassphrase, privPassphrase []b
 	}
 
 	// Perform the initial bucket creation and database namespace setup.
-	if err := createManagerNS(ns, ScopeAddrMap); err != nil {
+	if err := CreateManagerNS(ns, ScopeAddrMap); err != nil {
 		return maybeConvertDbError(err)
 	}
 

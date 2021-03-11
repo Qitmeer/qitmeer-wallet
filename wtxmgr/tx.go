@@ -228,7 +228,7 @@ func (s *Store) InsertAddrTxOut(ns walletdb.ReadWriteBucket, txOut *AddrTxOutput
 			return err
 		} else {
 			addTxOutPut := NewAddrTxOutput()
-			err := ReadAddrTxOutput(oldTxOut, addTxOutPut)
+			err := ReadAddrTxOutput(txOut.Address, oldTxOut, addTxOutPut)
 			if err != nil {
 				return err
 			}
@@ -260,12 +260,12 @@ func (s *Store) GetAddrTxOut(ns walletdb.ReadWriteBucket, address string, point 
 	outRw := ns.NestedReadWriteBucket([]byte(address))
 	k := canonicalOutPoint(&point.Hash, point.OutIndex)
 	txOut := outRw.Get(k)
-	addTxOutPut := AddrTxOutput{}
-	err := ReadAddrTxOutput(txOut, &addTxOutPut)
+	addTxOutPut := NewAddrTxOutput()
+	err := ReadAddrTxOutput(address, txOut, addTxOutPut)
 	if err != nil {
 		return nil, err
 	}
-	return &addTxOutPut, nil
+	return addTxOutPut, nil
 }
 
 // updateMinedBalance updates the mined balance within the store, if changed,
