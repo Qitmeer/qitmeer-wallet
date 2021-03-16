@@ -122,7 +122,7 @@ func (w *Wallet) Start() {
 	go func() {
 
 		//updateBlockTicker := time.NewTicker(webUpdateBlockTicker * time.Second)
-		updateBlockTicker := time.NewTicker(1 * time.Second)
+		updateBlockTicker := time.NewTicker(5 * time.Second)
 		for {
 			select {
 			case <-updateBlockTicker.C:
@@ -1121,7 +1121,6 @@ func (w *Wallet) ClearTxData() error {
 }
 
 func (w *Wallet) UpdateBlock(toOrder uint64) error {
-	var latestScanTxId string
 	var err error
 	w.syncLatest = false
 	w.syncAll = true
@@ -1147,6 +1146,7 @@ func (w *Wallet) UpdateBlock(toOrder uint64) error {
 			if err := w.updateTxConfirm(txConfirm); err != nil {
 				log.Warn("updateTxConfirm", "error", err)
 			}
+			fmt.Printf("Confirm %d %d %s\n", txConfirm.Order, txConfirm.Confirms, txConfirm.Tx)
 		},
 		OnTxAcceptedVerbose: func(c *client.Client, tx *j.DecodeRawTransactionResult) {
 			if tx.Duplicate {
@@ -1180,20 +1180,6 @@ func (w *Wallet) UpdateBlock(toOrder uint64) error {
 			if w.syncLatest {
 				_, _ = fmt.Fprintf(os.Stdout, "update new transaction:%d %s\r", tx.Order, tx.Txid)
 			}
-			if latestScanTxId != "" && latestScanTxId == tx.Txid {
-				w.syncLatest = true
-				w.scanEnd <- struct{}{}
-
-				hash, err := w.HttpClient.getBlockHashByOrder(int64(w.getToOrder() - 1))
-				if err != nil {
-					log.Warn("get block hash by order", "error", err)
-					return
-				}
-				err = w.updateBlockTemp(*hash, w.getToOrder()-1)
-				if err != nil {
-					return
-				}
-			}
 
 		},
 		OnRescanProgress: func(rescanPro *cmds.RescanProgressNtfn) {
@@ -1201,7 +1187,17 @@ func (w *Wallet) UpdateBlock(toOrder uint64) error {
 			_, _ = fmt.Fprintf(os.Stdout, "update history blcok:%d/%d\r", rescanPro.Order, w.getToOrder()-1)
 		},
 		OnRescanFinish: func(rescanFinish *cmds.RescanFinishedNtfn) {
-			latestScanTxId = rescanFinish.LastTxHash
+			w.syncLatest = true
+			w.scanEnd <- struct{}{}
+			hash, err := w.HttpClient.getBlockHashByOrder(int64(w.getToOrder() - 1))
+			if err != nil {
+				log.Warn("get block hash by order", "error", err)
+				return
+			}
+			err = w.updateBlockTemp(*hash, w.getToOrder()-1)
+			if err != nil {
+				return
+			}
 		},
 		OnNodeExit: func(nodeExit *cmds.NodeExitNtfn) {
 			w.notificationRpc.Shutdown()
@@ -1320,7 +1316,7 @@ func (w *Wallet) notifyNewTransaction() error {
 func (w *Wallet) notifyTxConfirmed() {
 	defer w.syncWg.Done()
 
-	t := time.NewTicker(time.Second * 5)
+	t := time.NewTicker(time.Second * 30)
 	for {
 		select {
 		case <-w.syncQuit:
