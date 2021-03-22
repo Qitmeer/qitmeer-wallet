@@ -387,7 +387,7 @@ func (api *API) SendToAddressByAccount(accountName string, addressStr string, am
 }
 
 //GetBalanceByAddr get balance by address
-func (api *API) GetBalanceByAddr(addrStr string) (map[types.CoinID]Balance, error) {
+func (api *API) GetBalanceByAddr(addrStr string) (map[string]Balance, error) {
 	m, err := api.wt.GetBalance(addrStr)
 	if err != nil {
 		return nil, err

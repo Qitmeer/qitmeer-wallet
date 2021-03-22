@@ -93,14 +93,14 @@ var pritopubCmd = &cobra.Command{
 	},
 }
 var pubtoaddrCmd = &cobra.Command{
-	Use:   "pubtoaddr {public key} {string,network value: mainnet,privnet,testnet}",
+	Use:   "pubtoaddr {public key} {string,network value: mainnet,privnet,testnet,mixnet}",
 	Short: "public key to address",
 	Example: `
 		pubtoaddr "pub" "testnet"
 		`,
 	Args: cobra.MinimumNArgs(2),
 	Run: func(cmd *cobra.Command, args []string) {
-		if args[1] != "mainnet" && args[1] != "privnet" && args[1] != "testnet" {
+		if args[1] != "mainnet" && args[1] != "privnet" && args[1] != "testnet" && args[1] != "mixnet" {
 			fmt.Println("Wrong network type")
 			return
 		}
@@ -114,14 +114,14 @@ var pubtoaddrCmd = &cobra.Command{
 }
 
 var mnemonictoaddrCmd = &cobra.Command{
-	Use:   "mnemonictoaddr {mnemonic} {string,network value: mainnet,privnet,testnet}",
+	Use:   "mnemonictoaddr {mnemonic} {string,network value: mainnet,privnet,testnet,mixnet}",
 	Short: "mnemonic to address",
 	Example: `
 		mnemonictoaddr "mnemonic" "testnet"
 		`,
 	Args: cobra.MinimumNArgs(2),
 	Run: func(cmd *cobra.Command, args []string) {
-		if args[1] != "mainnet" && args[1] != "privnet" && args[1] != "testnet" {
+		if args[1] != "mainnet" && args[1] != "privnet" && args[1] != "testnet" && args[1] != "mixnet" {
 			fmt.Println("Wrong network type")
 			return
 		}
@@ -134,14 +134,14 @@ var mnemonictoaddrCmd = &cobra.Command{
 	},
 }
 var seedtoaddrCmd = &cobra.Command{
-	Use:   "seedtoaddr {seed} {string,network value: mainnet,privnet,testnet}",
+	Use:   "seedtoaddr {seed} {string,network value: mainnet,privnet,testnet,mixnet}",
 	Short: "seed to address",
 	Example: `
 		seedtoaddr "seed" "testnet"
 		`,
 	Args: cobra.MinimumNArgs(2),
 	Run: func(cmd *cobra.Command, args []string) {
-		if args[1] != "mainnet" && args[1] != "privnet" && args[1] != "testnet" {
+		if args[1] != "mainnet" && args[1] != "privnet" && args[1] != "testnet" && args[1] != "mixnet" {
 			fmt.Println("Wrong network type")
 			return
 		}
@@ -155,14 +155,14 @@ var seedtoaddrCmd = &cobra.Command{
 }
 
 var pritoaddrCmd = &cobra.Command{
-	Use:   "pritoaddr {pri} {string,network value: mainnet,privnet,testnet}",
+	Use:   "pritoaddr {pri} {string,network value: mainnet,privnet,testnet,mixnet}",
 	Short: "private key to address",
 	Example: `
 		pritoaddr "pri" "testnet"
 		`,
 	Args: cobra.MinimumNArgs(2),
 	Run: func(cmd *cobra.Command, args []string) {
-		if args[1] != "mainnet" && args[1] != "privnet" && args[1] != "testnet" {
+		if args[1] != "mainnet" && args[1] != "privnet" && args[1] != "testnet" && args[1] != "mixnet" {
 			fmt.Println("Wrong network type")
 			return
 		}

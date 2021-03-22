@@ -17,11 +17,14 @@ import (
 var Coins = map[types.CoinID]string{
 	types.MEERID: "MEER",
 	types.QITID:  "QIT",
+	types.METID:  "MET",
+	types.TERID:  "TER",
 }
-
 var CoinIDs = map[string]types.CoinID{
 	"MEER": types.MEERID,
 	"QIT":  types.QITID,
+	"MET":  types.METID,
+	"TER":  types.TERID,
 }
 
 // Block contains the minimum amount of data to uniquely identify any block on

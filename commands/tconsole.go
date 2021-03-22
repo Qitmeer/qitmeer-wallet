@@ -247,30 +247,30 @@ func (c *Console) Interactive() {
 					if company == "i" {
 						if detail == "true" {
 							for _, v := range b {
-								fmt.Printf("unspent:%s\n", v.UnspentAmount.String())
-								fmt.Printf("unconfirmed:%s\n", v.UnConfirmAmount.String())
-								fmt.Printf("total:%s\n", v.TotalAmount.String())
-								fmt.Printf("spend:%s\n", v.SpendAmount.String())
+								fmt.Printf("unspent:%d\n", v.UnspentAmount.Value)
+								fmt.Printf("unconfirmed:%d\n", v.UnConfirmAmount.Value)
+								fmt.Printf("total:%d\n", v.TotalAmount.Value)
+								fmt.Printf("spend:%d\n", v.SpendAmount.Value)
 								fmt.Println()
 							}
 						} else {
 							for _, v := range b {
-								fmt.Printf("%s\n", v.UnspentAmount.String())
+								fmt.Printf("%d\n", v.UnspentAmount.Value)
 								fmt.Println()
 							}
 						}
 					} else {
 						if detail == "true" {
 							for _, v := range b {
-								fmt.Printf("unspent:%f\n", v.UnspentAmount.ToCoin())
-								fmt.Printf("unconfirmed:%f\n", v.UnConfirmAmount.ToCoin())
-								fmt.Printf("total:%f\n", v.TotalAmount.ToCoin())
-								fmt.Printf("spend:%f\n", v.SpendAmount.ToCoin())
+								fmt.Printf("unspent:%.8f\n", v.UnspentAmount.ToCoin())
+								fmt.Printf("unconfirmed:%.8f\n", v.UnConfirmAmount.ToCoin())
+								fmt.Printf("total:%.8f\n", v.TotalAmount.ToCoin())
+								fmt.Printf("spend:%.8f\n", v.SpendAmount.ToCoin())
 								fmt.Println()
 							}
 						} else {
 							for _, v := range b {
-								fmt.Printf("%f\n", v.UnspentAmount.ToCoin())
+								fmt.Printf("%.8f\n", v.UnspentAmount.ToCoin())
 								fmt.Println()
 							}
 						}

@@ -707,7 +707,8 @@ func (w *Wallet) getPagedBillByAddr(addr string, filter int, pageNo int, pageSiz
 	return nil, nil
 }
 
-func (w *Wallet) GetBalance(addr string) (map[types.CoinID]Balance, error) {
+func (w *Wallet) GetBalance(addr string) (map[string]Balance, error) {
+	balanceMap := map[string]Balance{}
 	if addr == "" {
 		return nil, errors.New("addr is nil")
 	}
@@ -715,7 +716,10 @@ func (w *Wallet) GetBalance(addr string) (map[types.CoinID]Balance, error) {
 	if err != nil {
 		return nil, err
 	}
-	return res.balanceMap, nil
+	for key, val := range res.balanceMap {
+		balanceMap[wtxmgr.Coins[key]] = val
+	}
+	return balanceMap, nil
 }
 func (w *Wallet) GetTxSpendInfo(txId string) ([]*wtxmgr.AddrTxOutput, error) {
 	var atos []*wtxmgr.AddrTxOutput
@@ -1176,7 +1180,8 @@ func (w *Wallet) UpdateBlock(toOrder uint64) error {
 			if err != nil {
 				return
 			}
-			w.setOrder(uint32(tx.Order))
+			fmt.Println(tx.Order)
+
 			if w.syncLatest {
 				_, _ = fmt.Fprintf(os.Stdout, "update new transaction:%d %s\r", tx.Order, tx.Txid)
 			}
@@ -1187,8 +1192,10 @@ func (w *Wallet) UpdateBlock(toOrder uint64) error {
 			_, _ = fmt.Fprintf(os.Stdout, "update history blcok:%d/%d\r", rescanPro.Order, w.getToOrder()-1)
 		},
 		OnRescanFinish: func(rescanFinish *cmds.RescanFinishedNtfn) {
-			w.syncLatest = true
-			w.scanEnd <- struct{}{}
+			defer func() {
+				w.scanEnd <- struct{}{}
+			}()
+
 			hash, err := w.HttpClient.getBlockHashByOrder(int64(w.getToOrder() - 1))
 			if err != nil {
 				log.Warn("get block hash by order", "error", err)
@@ -1198,6 +1205,8 @@ func (w *Wallet) UpdateBlock(toOrder uint64) error {
 			if err != nil {
 				return
 			}
+			w.setOrder(w.getToOrder() - 1)
+
 		},
 		OnNodeExit: func(nodeExit *cmds.NodeExitNtfn) {
 			w.notificationRpc.Shutdown()
@@ -1242,11 +1251,15 @@ func (w *Wallet) notifyScanTxByAddr(addrs []string) {
 			return
 		case <-w.scanEnd:
 			if !w.syncAll && (startScan || w.getToOrder() <= w.getSyncOrder()+1) {
-				fmt.Fprintf(os.Stdout, "update history blcok:%d/%d\n", w.getSyncOrder(), w.getToOrder()-1)
+				fmt.Fprintf(os.Stdout, "update history block:%d/%d\n", w.getSyncOrder(), w.getToOrder()-1)
 				w.notificationRpc.Shutdown()
 				return
 			} else {
 				startScan = true
+				if err := w.updateSyncToOrder(0); err != nil {
+					w.stopSync()
+					break
+				}
 				if w.getToOrder() > w.getSyncOrder()+1 {
 					w.syncLatest = false
 					log.Info("notification rescan block", "start", w.getSyncOrder(), "end", w.getToOrder()-1)
@@ -1256,7 +1269,7 @@ func (w *Wallet) notifyScanTxByAddr(addrs []string) {
 					}
 				} else {
 					w.syncLatest = true
-					fmt.Fprintf(os.Stdout, "update history blcok:%d/%d\r", w.getSyncOrder(), w.getToOrder()-1)
+					fmt.Fprintf(os.Stdout, "update history block:%d/%d\r", w.getSyncOrder(), w.getToOrder()-1)
 					return
 				}
 			}
@@ -1831,6 +1844,7 @@ var syncSendOutputs = new(sync.Mutex)
 func (w *Wallet) SendOutputs(coin2outputs map[types.CoinID][]*types.TxOutput, account int64, satPerKb int64) (*string, error) {
 	// Ensure the outputs to be created adhere to the network's consensus
 	// rules.
+
 	syncSendOutputs.Lock()
 	defer syncSendOutputs.Unlock()
 
@@ -1884,7 +1898,7 @@ func (w *Wallet) SendOutputs(coin2outputs map[types.CoinID][]*types.TxOutput, ac
 									txOutput := types.Amount{Value: output.Amount.Value - payAmount.Value, Id: coinId}
 									selfTxOut := types.NewTxOutput(txOutput, frompkscipt)
 									//feeAmount.Value = util.CalcMinRequiredTxRelayFee(int64(tx.SerializeSize()+selfTxOut.SerializeSize()), types.Amount{Value: config.Cfg.MinTxFee, Id: coinId})
-									feeAmount.Value = 0
+									feeAmount.Value = 100000000
 									sendAddrTxOutput = append(sendAddrTxOutput, output)
 									allSendAddrTxOutput = append(allSendAddrTxOutput, output)
 
@@ -1910,7 +1924,7 @@ func (w *Wallet) SendOutputs(coin2outputs map[types.CoinID][]*types.TxOutput, ac
 									payAmount.Value -= output.Amount.Value
 									if payAmount.Value == 0 {
 										//feeAmount.Value = util.CalcMinRequiredTxRelayFee(int64(tx.SerializeSize()), types.Amount{Value: config.Cfg.MinTxFee, Id: coinId})
-										feeAmount.Value = 0
+										feeAmount.Value = 100000000
 									}
 								}
 							} else if payAmount.Value == 0 && feeAmount.Value >= 0 {
@@ -1924,7 +1938,7 @@ func (w *Wallet) SendOutputs(coin2outputs map[types.CoinID][]*types.TxOutput, ac
 									}
 									sendAddrTxOutput = append(sendAddrTxOutput, output)
 									allSendAddrTxOutput = append(allSendAddrTxOutput, output)
-									feeAmount = types.Amount{Id: coinId}
+									feeAmount = types.Amount{Id: coinId, Value: 100000000}
 									break b
 								} else {
 									log.Trace("utxo < feeAmount")

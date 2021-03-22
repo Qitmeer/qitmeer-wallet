@@ -4,7 +4,7 @@ go 1.12
 
 require (
 	github.com/BurntSushi/toml v0.3.1
-	github.com/Qitmeer/qitmeer v0.10.0-dev.0.20210124080746-76d668c40e09
+	github.com/Qitmeer/qitmeer v0.10.0-dev.0.20210321045840-2408274f4887
 	github.com/davecgh/go-spew v1.1.1
 	github.com/deckarep/golang-set v1.7.1
 	github.com/jrick/logrotate v1.0.0
@@ -21,7 +21,6 @@ require (
 )
 
 replace (
-	github.com/Qitmeer/qitmeer v0.10.0-dev.0.20210124080746-76d668c40e09 => ../qitmeer-james
 	go.etcd.io/bbolt => github.com/etcd-io/bbolt v1.3.3
 	golang.org/x/crypto => github.com/golang/crypto v0.0.0-20190701094942-4def268fd1a4
 	golang.org/x/net => github.com/golang/net v0.0.0-20190628185345-da137c7871d7

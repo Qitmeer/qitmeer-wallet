@@ -127,7 +127,7 @@ if you have golang environment, you can build it by yourself
    #configFile="" #Your config.toml profile directory
    #appDataDir="" # Your DB storage path
    #logDir="" # log path
-   #network="mainnet" #network mainnet,testnet,privnet default testnet
+   #network="mainnet" #network mainnet,testnet,privnet,mixnet default testnet
    network="testnet"
    #Qitmeerd
    QServer="127.0.0.1:8131"
