@@ -13,6 +13,8 @@ func GetNetParams(name string) *params.Params {
 		return &params.TestNetParams
 	case "privnet":
 		return &params.PrivNetParams
+	case "mixnet":
+		return &params.MixNetParams
 	default:
 		return &params.TestNetParams
 	}
