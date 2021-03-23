@@ -114,8 +114,6 @@ func NewJSONCodec(rwc io.ReadWriteCloser) ServerCodec {
 
 // isBatch returns true when the first non-whitespace characters is '['
 func isBatch(msg json.RawMessage) bool {
-	x, _ := msg.MarshalJSON()
-	fmt.Println(string(x))
 	for _, c := range msg {
 		// skip insignificant whitespace (http://www.ietf.org/rfc/rfc4627.txt)
 		if c == 0x20 || c == 0x09 || c == 0x0a || c == 0x0d {

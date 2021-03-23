@@ -3,7 +3,6 @@ package walletrpc
 import (
 	"encoding/hex"
 	"fmt"
-	"github.com/Qitmeer/qitmeer-wallet/wtxmgr"
 	"time"
 
 	util "github.com/Qitmeer/qitmeer-wallet/utils"
@@ -59,7 +58,7 @@ func ListAccounts(w *wallet.Wallet) (interface{}, error) {
 		accountBalances[result.AccountName] = []CoinBalance{}
 		for _, b := range result.AccountBalanceList {
 			accountBalances[result.AccountName] = append(accountBalances[result.AccountName], CoinBalance{
-				Coin:    wtxmgr.Coins[b.Id],
+				Coin:    b.Id.Name(),
 				Balance: b.ToCoin(),
 			})
 		}

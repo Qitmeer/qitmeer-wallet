@@ -61,6 +61,8 @@ var (
 	wtxmgrNamespaceKey   = []byte("wtxmgr")
 )
 
+const CoinBaseMaturity = 720
+
 var UploadRun = false
 
 type Wallet struct {
@@ -491,9 +493,9 @@ func (w *Wallet) getAddrTxOutputByCoin(addr, coin string) (wtxmgr.AddrTxOutputs,
 
 func (w *Wallet) getAddrAndAddrTxOutputByAddr(addr string) (*AddrAndAddrTxOutput, error) {
 	ato := NewAddrAndAddrTxOutput()
-	for id, coin := range wtxmgr.Coins {
+	for _, id := range types.CoinIDList {
 		b := Balance{}
-		txOuts, err := w.getAddrTxOutputByCoin(addr, coin)
+		txOuts, err := w.getAddrTxOutputByCoin(addr, id.Name())
 		if err != nil {
 			return nil, err
 		}
@@ -717,7 +719,7 @@ func (w *Wallet) GetBalance(addr string) (map[string]Balance, error) {
 		return nil, err
 	}
 	for key, val := range res.balanceMap {
-		balanceMap[wtxmgr.Coins[key]] = val
+		balanceMap[key.Name()] = val
 	}
 	return balanceMap, nil
 }
@@ -783,8 +785,7 @@ func (w *Wallet) insertTx(order uint32, txins []wtxmgr.TxInputPoint, txouts []wt
 			}
 		}
 		for _, txo := range txouts {
-			coin := wtxmgr.Coins[txo.Amount.Id]
-			outNs := ns.NestedReadWriteBucket(wtxmgr.CoinBucket(wtxmgr.BucketAddrtxout, coin))
+			outNs := ns.NestedReadWriteBucket(wtxmgr.CoinBucket(wtxmgr.BucketAddrtxout, txo.Amount.Id.Name()))
 			err := w.TxStore.InsertAddrTxOut(outNs, &txo)
 			if err != nil {
 				return err
@@ -857,12 +858,12 @@ func (w *Wallet) parseTx(tx *j.DecodeRawTransactionResult) ([]wtxmgr.TxInputPoin
 		Txsvalid:      tx.Txvalid,
 	}
 	txRaws = append(txRaws, tr)
-	tin, tout, txStatus, isCoinBase, err := parseTx(tr, uint32(tr.BlockOrder), tx.IsBlue)
+	tin, tout, txStatus, isCoinBase, err := w.parseTxDetail(tr, uint32(tr.BlockOrder), tx.IsBlue)
 	if err != nil {
 		return nil, nil, nil, nil, err
 	} else {
 		if isCoinBase {
-			confirmations = config.Cfg.CoinbaseMaturity
+			confirmations = uint32(w.chainParams.CoinbaseMaturity)
 		}
 		status = append(status, wtxmgr.TxConfirmed{
 			TxId:          tr.Txid,
@@ -875,41 +876,7 @@ func (w *Wallet) parseTx(tx *j.DecodeRawTransactionResult) ([]wtxmgr.TxInputPoin
 	return txIns, txOuts, status, txRaws, nil
 }
 
-func (w *Wallet) SyncTx(order int64) (clijson.BlockHttpResult, error) {
-	var block clijson.BlockHttpResult
-	blockByte, err := w.HttpClient.getBlockByOrder(order)
-	if err != nil {
-		return block, err
-	}
-	if err := json.Unmarshal(blockByte, &block); err == nil {
-		if !block.Txsvalid {
-			log.Trace(fmt.Sprintf("block:%v err,txsvalid is false", block.Hash))
-			return block, nil
-		}
-		isBlue, err := w.HttpClient.isBlue(block.Hash)
-		if err != nil {
-			return block, err
-		}
-		block.IsBlue = isBlue
-		if !block.IsBlue {
-			log.Trace(fmt.Sprintf("block:%v is not blue", block.Hash))
-		}
-		txIns, txOuts, status, trRs, err := parseBlockTxs(block)
-		if err != nil {
-			return block, err
-		}
-		err = w.insertTx(block.Order, txIns, txOuts, status, trRs)
-		if err != nil {
-			return block, err
-		}
-	} else {
-		log.Error(err.Error())
-		return block, err
-	}
-	return block, nil
-}
-
-func parseTx(tr corejson.TxRawResult, order uint32, isBlue bool) ([]wtxmgr.TxInputPoint, []wtxmgr.AddrTxOutput, wtxmgr.TxStatus, bool, error) {
+func (w *Wallet) parseTxDetail(tr corejson.TxRawResult, order uint32, isBlue bool) ([]wtxmgr.TxInputPoint, []wtxmgr.AddrTxOutput, wtxmgr.TxStatus, bool, error) {
 	var txins []wtxmgr.TxInputPoint
 	var txouts []wtxmgr.AddrTxOutput
 	var isCoinBase bool
@@ -957,7 +924,7 @@ func parseTx(tr corejson.TxRawResult, order uint32, isBlue bool) ([]wtxmgr.TxInp
 			}
 		}
 	}
-	txStatus := txStatus(uint32(tr.Confirmations), tr.Txsvalid, isBlue, isCoinBase, inMemPool)
+	txStatus := w.txStatus(uint32(tr.Confirmations), tr.Txsvalid, isBlue, isCoinBase, inMemPool)
 	for index, vo := range tr.Vout {
 		if len(vo.ScriptPubKey.Addresses) == 0 {
 			continue
@@ -983,9 +950,9 @@ func parseTx(tr corejson.TxRawResult, order uint32, isBlue bool) ([]wtxmgr.TxInp
 	return txins, txouts, txStatus, isCoinBase, nil
 }
 
-func txStatus(confirmations uint32, txsvalid, isBlue, isCoinBase, inMemPool bool) wtxmgr.TxStatus {
+func (w *Wallet) txStatus(confirmations uint32, txsvalid, isBlue, isCoinBase, inMemPool bool) wtxmgr.TxStatus {
 	if isCoinBase {
-		if confirmations < config.Cfg.CoinbaseMaturity {
+		if confirmations < uint32(w.chainParams.CoinbaseMaturity) {
 			return wtxmgr.TxStatusUnConfirmed
 		} else if !txsvalid {
 			return wtxmgr.TxStatusFailed
@@ -1006,34 +973,6 @@ func txStatus(confirmations uint32, txsvalid, isBlue, isCoinBase, inMemPool bool
 			return wtxmgr.TxStatusConfirmed
 		}
 	}
-}
-
-func parseBlockTxs(block clijson.BlockHttpResult) ([]wtxmgr.TxInputPoint, []wtxmgr.AddrTxOutput, []wtxmgr.TxConfirmed, []corejson.TxRawResult, error) {
-	var txIns []wtxmgr.TxInputPoint
-	var txOuts []wtxmgr.AddrTxOutput
-	var status []wtxmgr.TxConfirmed
-	var tx []corejson.TxRawResult
-	var confirmations uint32
-	for _, tr := range block.Transactions {
-		confirmations = config.Cfg.Confirmations
-		tx = append(tx, tr)
-		tin, tout, txStatus, isCoinBase, err := parseTx(tr, block.Order, block.IsBlue)
-		if err != nil {
-			return nil, nil, nil, nil, err
-		} else {
-			if isCoinBase {
-				confirmations = config.Cfg.CoinbaseMaturity
-			}
-			status = append(status, wtxmgr.TxConfirmed{
-				TxId:          tr.Txid,
-				Confirmations: confirmations,
-				TxStatus:      txStatus,
-			})
-			txIns = append(txIns, tin...)
-			txOuts = append(txOuts, tout...)
-		}
-	}
-	return txIns, txOuts, status, nil, nil
 }
 
 func (w *Wallet) GetSyncBlockHeight() uint32 {
@@ -1073,32 +1012,6 @@ func (w *Wallet) SetSyncedToNum(order int64) error {
 		log.Error(err.Error())
 		return err
 	}
-}
-
-func (w *Wallet) handleBlockSynced(order int64) error {
-	br, er := w.SyncTx(order)
-	if er != nil {
-		return er
-	}
-	hs, err := hash.NewHashFromStr(br.Hash)
-	if err != nil {
-		return fmt.Errorf("blockhash string to hash  err:%s", err.Error())
-	}
-	if br.Confirmations > config.Cfg.Confirmations {
-		stamp := &waddrmgr.BlockStamp{Hash: *hs, Order: br.Order}
-		err = walletdb.Update(w.db, func(tx walletdb.ReadWriteTx) error {
-			ns := tx.ReadWriteBucket(waddrmgrNamespaceKey)
-			err := w.Manager.SetSyncedTo(ns, stamp)
-			if err != nil {
-				return err
-			}
-			return nil
-		})
-		if err != nil {
-			return err
-		}
-	}
-	return nil
 }
 
 func (w *Wallet) ClearTxData() error {
@@ -1446,7 +1359,7 @@ func (w *Wallet) updateTxConfirm(confirmRs *cmds.TxConfirmResult) error {
 		log.Error("wallet can not find tx", "txid", confirmRs.Tx)
 		return err
 	}
-	status := txStatus(uint32(confirmRs.Confirms), confirmRs.IsValid, confirmRs.IsBlue, wtxmgr.TxRawIsCoinBase(tx), false)
+	status := w.txStatus(uint32(confirmRs.Confirms), confirmRs.IsValid, confirmRs.IsBlue, wtxmgr.TxRawIsCoinBase(tx), false)
 	if status < wtxmgr.TxStatusConfirmed {
 		log.Warn("updateTxConfirm tx status is unconfirmed", "TxConfirmResult", confirmRs)
 		return nil
@@ -1548,7 +1461,7 @@ func (w *Wallet) AccountBalances(scope waddrmgr.KeyScope) ([]AccountBalanceResul
 		return nil, err
 	}
 	results := make([]AccountBalanceResult, len(aaaRs))
-	for id, _ := range wtxmgr.Coins {
+	for _, id := range types.CoinIDList {
 		for index, aaa := range aaaRs {
 			results[index].AccountNumber = aaa.AccountNumber
 			results[index].AccountName = aaa.AccountName
@@ -1977,7 +1890,7 @@ func (w *Wallet) SendOutputs(coin2outputs map[types.CoinID][]*types.TxOutput, ac
 	err = walletdb.Update(w.db, func(tx walletdb.ReadWriteTx) error {
 		ns := tx.ReadWriteBucket(wtxmgrNamespaceKey)
 		for _, txoutput := range allSendAddrTxOutput {
-			outns := ns.NestedReadWriteBucket(wtxmgr.CoinBucket(wtxmgr.BucketAddrtxout, wtxmgr.Coins[txoutput.Amount.Id]))
+			outns := ns.NestedReadWriteBucket(wtxmgr.CoinBucket(wtxmgr.BucketAddrtxout, txoutput.Amount.Id.Name()))
 			txoutput.Spend = wtxmgr.SpendStatusSpend
 			err = w.TxStore.UpdateAddrTxOut(outns, &txoutput)
 			if err != nil {

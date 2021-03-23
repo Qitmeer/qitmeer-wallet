@@ -101,7 +101,6 @@ func bindFlags() error {
 	pf.Bool("disabletls", uc.DisableTLS, "disable TLS for the RPC server")
 
 	pf.Uint32("confirmations", uc.Confirmations, "Number of transaction confirmations ")
-	pf.Uint32("coinbaseMaturity", uc.CoinbaseMaturity, "Number of CoinBase confirmations ")
 	pf.Int64("mintxfee", uc.MinTxFee, "The minimum transaction fee in QIT/kB default 20000 (aka. 0.0002 MEER/KB)")
 	pf.StringArray("apis", uc.APIs, "enabled APIs")
 
