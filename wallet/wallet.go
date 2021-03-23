@@ -1180,7 +1180,6 @@ func (w *Wallet) UpdateBlock(toOrder uint64) error {
 			if err != nil {
 				return
 			}
-			fmt.Println(tx.Order)
 
 			if w.syncLatest {
 				_, _ = fmt.Fprintf(os.Stdout, "update new transaction:%d %s\r", tx.Order, tx.Txid)
