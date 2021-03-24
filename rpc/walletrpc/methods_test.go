@@ -40,7 +40,7 @@ func TestGetSyncHeight(t *testing.T) {
 		log.Error("openWallet fail", "err", err.Error())
 		return
 	}
-	fmt.Printf("TestGetSyncHeight: %v\n", w.Manager.SyncedTo().Order)
+	fmt.Printf("TestGetSyncOrder: %v\n", w.Manager.SyncedTo().Order)
 }
 
 func openWallet() (*wallet.Wallet, error) {

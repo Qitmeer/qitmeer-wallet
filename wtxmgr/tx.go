@@ -14,13 +14,6 @@ import (
 	"github.com/Qitmeer/qitmeer/params"
 )
 
-var CoinIDs = map[string]types.CoinID{
-	"MEER": types.MEERID,
-	"QIT":  types.QITID,
-	"MET":  types.METID,
-	"TER":  types.TERID,
-}
-
 // Block contains the minimum amount of data to uniquely identify any block on
 // either the best or side chain.
 type Block struct {
@@ -560,13 +553,12 @@ func IsCoinBaseTx(tx *types.Transaction) bool {
 }
 
 func TxRawIsCoinBase(tx corejson.TxRawResult) bool {
-	var isCoinBase bool
 	for _, vin := range tx.Vin {
 		if vin.Coinbase != "" {
 			return true
 		}
 	}
-	return isCoinBase
+	return false
 }
 
 func (s *Store) rollback(ns walletdb.ReadWriteBucket, height int32) error {
@@ -904,7 +896,7 @@ func (s *Store) UnspentOutputs(ns walletdb.ReadBucket) ([]Credit, error) {
 //
 // Balance may return unexpected results if syncHeight is lower than the block
 // height of the most recent mined transaction in the store.
-func (s *Store) Balance(ns walletdb.ReadBucket, minConf int32, syncHeight int32, coinId types.CoinID) (types.Amount, error) {
+func (s *Store) Balance(ns walletdb.ReadBucket, minConf int32, syncOrder int32, coinId types.CoinID) (types.Amount, error) {
 	bal, err := fetchMinedBalance(ns, coinId)
 	if err != nil {
 		return types.Amount{}, err
@@ -948,12 +940,12 @@ func (s *Store) Balance(ns walletdb.ReadBucket, minConf int32, syncHeight int32,
 	if coinBaseMaturity > stopConf {
 		stopConf = coinBaseMaturity
 	}
-	lastHeight := syncHeight - stopConf
+	lastOrder := syncOrder - stopConf
 	blockIt := makeReadReverseBlockIterator(ns)
 	for blockIt.prev() {
 		block := &blockIt.elem
 
-		if block.Order < lastHeight {
+		if block.Order < lastOrder {
 			break
 		}
 
@@ -984,7 +976,7 @@ func (s *Store) Balance(ns walletdb.ReadBucket, minConf int32, syncHeight int32,
 				if spent {
 					continue
 				}
-				confirms := syncHeight - block.Order + 1
+				confirms := syncOrder - block.Order + 1
 				if confirms < minConf || (IsCoinBaseTx(&rec.MsgTx) &&
 					confirms < coinBaseMaturity) {
 					bal.Value -= amt.Value

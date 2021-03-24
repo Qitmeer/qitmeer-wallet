@@ -2,7 +2,6 @@ package wallet
 
 import (
 	"encoding/hex"
-	"fmt"
 	corejson "github.com/Qitmeer/qitmeer/core/json"
 	"time"
 
@@ -83,10 +82,10 @@ func (api *API) GetAccountsAndBalance(coin string) (map[string]*Balance, error) 
 		accountBalance := accountsBalances[aaa.AccountName]
 
 		for _, addr := range aaa.AddrsOutput {
-			accountBalance.TotalAmount.Value += addr.balanceMap[wtxmgr.CoinIDs[coin]].TotalAmount.Value
-			accountBalance.SpendAmount.Value += addr.balanceMap[wtxmgr.CoinIDs[coin]].SpendAmount.Value
-			accountBalance.UnspentAmount.Value += addr.balanceMap[wtxmgr.CoinIDs[coin]].UnspentAmount.Value
-			accountBalance.UnConfirmAmount.Value += addr.balanceMap[wtxmgr.CoinIDs[coin]].UnConfirmAmount.Value
+			accountBalance.TotalAmount.Value += addr.balanceMap[types.NewCoinID(coin)].TotalAmount.Value
+			accountBalance.SpendAmount.Value += addr.balanceMap[types.NewCoinID(coin)].SpendAmount.Value
+			accountBalance.UnspentAmount.Value += addr.balanceMap[types.NewCoinID(coin)].UnspentAmount.Value
+			accountBalance.UnConfirmAmount.Value += addr.balanceMap[types.NewCoinID(coin)].UnConfirmAmount.Value
 		}
 
 	}
@@ -104,10 +103,10 @@ func (api *API) GetBalanceByAccount(name string, coin string) (*Balance, error) 
 	for _, result := range results {
 		if result.AccountName == name {
 			for _, addr := range result.AddrsOutput {
-				accountBalance.TotalAmount.Value += addr.balanceMap[wtxmgr.CoinIDs[coin]].TotalAmount.Value
-				accountBalance.SpendAmount.Value += addr.balanceMap[wtxmgr.CoinIDs[coin]].SpendAmount.Value
-				accountBalance.UnspentAmount.Value += addr.balanceMap[wtxmgr.CoinIDs[coin]].UnspentAmount.Value
-				accountBalance.UnConfirmAmount.Value += addr.balanceMap[wtxmgr.CoinIDs[coin]].UnConfirmAmount.Value
+				accountBalance.TotalAmount.Value += addr.balanceMap[types.NewCoinID(coin)].TotalAmount.Value
+				accountBalance.SpendAmount.Value += addr.balanceMap[types.NewCoinID(coin)].SpendAmount.Value
+				accountBalance.UnspentAmount.Value += addr.balanceMap[types.NewCoinID(coin)].UnspentAmount.Value
+				accountBalance.UnConfirmAmount.Value += addr.balanceMap[types.NewCoinID(coin)].UnConfirmAmount.Value
 			}
 		}
 	}
@@ -320,13 +319,8 @@ func (api *API) SendToAddress(addressStr string, amount float64, coin string) (s
 		return "", qitmeerjson.ErrNeedPositiveAmount
 	}
 
-	var amt types.Amount
-	id, ok := wtxmgr.CoinIDs[coin]
-	if ok {
-		amt = types.Amount{Value: int64(amount * types.AtomsPerCoin), Id: id}
-	} else {
-		return "", fmt.Errorf("there is no %s", coin)
-	}
+	coinId := types.NewCoinID(coin)
+	amt := types.Amount{Value: int64(amount * types.AtomsPerCoin), Id: coinId}
 
 	// Mock up map of address and amount pairs.
 	pairs := map[string]types.Amount{
@@ -343,13 +337,8 @@ func (api *API) SendToMany(addAmounts map[string]float64, coin string) (string, 
 		if amount < 0 {
 			return "", qitmeerjson.ErrNeedPositiveAmount
 		}
-		var amt types.Amount
-		id, ok := wtxmgr.CoinIDs[coin]
-		if ok {
-			amt = types.Amount{Value: int64(amount * types.AtomsPerCoin), Id: id}
-		} else {
-			return "", fmt.Errorf("there is no %s", coin)
-		}
+		coinId := types.NewCoinID(coin)
+		amt := types.Amount{Value: int64(amount * types.AtomsPerCoin), Id: coinId}
 
 		pairs[addr] = amt
 	}
@@ -370,13 +359,8 @@ func (api *API) SendToAddressByAccount(accountName string, addressStr string, am
 		return "", qitmeerjson.ErrNeedPositiveAmount
 	}
 
-	var amt types.Amount
-	id, ok := wtxmgr.CoinIDs[coin]
-	if ok {
-		amt = types.Amount{Value: int64(amount * types.AtomsPerCoin), Id: id}
-	} else {
-		return "", fmt.Errorf("there is no %s", coin)
-	}
+	coinId := types.NewCoinID(coin)
+	amt := types.Amount{Value: int64(amount * types.AtomsPerCoin), Id: coinId}
 
 	// Mock up map of address and amount pairs.
 	pairs := map[string]types.Amount{

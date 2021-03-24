@@ -1763,6 +1763,7 @@ func (w *Wallet) SendOutputs(coin2outputs map[types.CoinID][]*types.TxOutput, ac
 	tx := types.NewTransaction()
 	allSendAddrTxOutput := make([]wtxmgr.AddrTxOutput, 0)
 	for coinId, outputs := range coin2outputs {
+		fees := w.fees(coinId)
 		payAmount := types.Amount{Id: coinId}
 		feeAmount := types.Amount{Id: coinId}
 		for _, output := range outputs {
@@ -1810,7 +1811,7 @@ func (w *Wallet) SendOutputs(coin2outputs map[types.CoinID][]*types.TxOutput, ac
 									txOutput := types.Amount{Value: output.Amount.Value - payAmount.Value, Id: coinId}
 									selfTxOut := types.NewTxOutput(txOutput, frompkscipt)
 									//feeAmount.Value = util.CalcMinRequiredTxRelayFee(int64(tx.SerializeSize()+selfTxOut.SerializeSize()), types.Amount{Value: config.Cfg.MinTxFee, Id: coinId})
-									feeAmount.Value = 100000000
+									feeAmount.Value = fees
 									sendAddrTxOutput = append(sendAddrTxOutput, output)
 									allSendAddrTxOutput = append(allSendAddrTxOutput, output)
 
@@ -1836,7 +1837,7 @@ func (w *Wallet) SendOutputs(coin2outputs map[types.CoinID][]*types.TxOutput, ac
 									payAmount.Value -= output.Amount.Value
 									if payAmount.Value == 0 {
 										//feeAmount.Value = util.CalcMinRequiredTxRelayFee(int64(tx.SerializeSize()), types.Amount{Value: config.Cfg.MinTxFee, Id: coinId})
-										feeAmount.Value = 100000000
+										feeAmount.Value = fees
 									}
 								}
 							} else if payAmount.Value == 0 && feeAmount.Value >= 0 {
@@ -1850,7 +1851,7 @@ func (w *Wallet) SendOutputs(coin2outputs map[types.CoinID][]*types.TxOutput, ac
 									}
 									sendAddrTxOutput = append(sendAddrTxOutput, output)
 									allSendAddrTxOutput = append(allSendAddrTxOutput, output)
-									feeAmount = types.Amount{Id: coinId, Value: 100000000}
+									feeAmount = types.Amount{Id: coinId, Value: fees}
 									break b
 								} else {
 									log.Trace("utxo < feeAmount")
@@ -1907,6 +1908,21 @@ func (w *Wallet) SendOutputs(coin2outputs map[types.CoinID][]*types.TxOutput, ac
 	}
 
 	return &msg, nil
+}
+
+func (w *Wallet) fees(coinId types.CoinID) int64 {
+	switch coinId {
+	case types.MEERID:
+		return 0
+	case types.QITID:
+		return 0
+	case types.METID:
+		return 1 * types.AtomsPerCoin
+	case types.TERID:
+		return 1 * types.AtomsPerCoin
+	default:
+		return 0
+	}
 }
 
 // Multi address merge signature
