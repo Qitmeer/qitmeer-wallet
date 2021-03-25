@@ -1,8 +1,10 @@
 package wtxmgr
 
 import (
+	"encoding/json"
 	"fmt"
 	"github.com/Qitmeer/qitmeer/common/math"
+	corejson "github.com/Qitmeer/qitmeer/core/json"
 	"time"
 
 	"github.com/Qitmeer/qitmeer-wallet/walletdb"
@@ -15,8 +17,8 @@ import (
 // Block contains the minimum amount of data to uniquely identify any block on
 // either the best or side chain.
 type Block struct {
-	Hash   hash.Hash
-	Height int32
+	Hash  hash.Hash
+	Order int32
 }
 
 // BlockMeta contains the unique identification for a block and any metadata
@@ -36,8 +38,8 @@ type blockRecord struct {
 }
 
 type SpendTo struct {
-	Index  uint32
-	TxHash hash.Hash
+	Index uint32
+	TxId  hash.Hash
 	//Block  Block
 }
 
@@ -54,7 +56,12 @@ type AddrTxOutput struct {
 	Block   Block
 	Spend   SpendStatus
 	SpendTo *SpendTo
+	Status  TxStatus
 	IsBlue  bool
+}
+
+func NewAddrTxOutput() *AddrTxOutput {
+	return &AddrTxOutput{SpendTo: &SpendTo{}}
 }
 
 type AddrTxOutputs []AddrTxOutput
@@ -64,16 +71,47 @@ func (s AddrTxOutputs) Len() int { return len(s) }
 func (s AddrTxOutputs) Swap(i, j int) { s[i], s[j] = s[j], s[i] }
 
 func (s AddrTxOutputs) Less(i, j int) bool {
-	return s[i].Block.Height < s[j].Block.Height
+	return s[i].Block.Order < s[j].Block.Order
 }
 
-type SpendStatus int32
+type TxConfirmed struct {
+	TxId          string
+	Confirmations uint32
+	TxStatus
+}
+
+type SpendStatus uint16
 
 const (
-	SpendStatusUnspent     SpendStatus = 0
-	SpendStatusSpend       SpendStatus = 1
-	SpendStatusUnconfirmed SpendStatus = 2
+	SpendStatusUnspent SpendStatus = 0
+	SpendStatusSpend   SpendStatus = 1
 )
+
+type TxStatus uint16
+
+const (
+	TxStatusMemPool     TxStatus = 0
+	TxStatusUnConfirmed TxStatus = 1
+	TxStatusConfirmed   TxStatus = 2
+	TxStatusFailed      TxStatus = 3
+	TxStatusRead        TxStatus = 4
+)
+
+type UnconfirmTx struct {
+	Order         uint32
+	Confirmations uint32
+}
+
+func (u *UnconfirmTx) Marshal() []byte {
+	bytes, _ := json.Marshal(u)
+	return bytes
+}
+
+func UnMarshalUnconfirmTx(bytes []byte) (*UnconfirmTx, error) {
+	u := &UnconfirmTx{}
+	err := json.Unmarshal(bytes, u)
+	return u, err
+}
 
 type UTxo struct {
 	TxId   string
@@ -172,18 +210,15 @@ func (s *Store) InsertAddrTxOut(ns walletdb.ReadWriteBucket, txOut *AddrTxOutput
 		return err
 	} else {
 		k := canonicalOutPoint(&txOut.TxId, txOut.Index)
-		if !txOut.IsBlue {
-			return outRw.Delete(k)
-		}
 		v := ValueAddrTxOutput(txOut)
 
-		txOut := outRw.Get(k)
-		if txOut == nil || len(txOut) == 0 {
+		oldTxOut := outRw.Get(k)
+		if oldTxOut == nil || len(oldTxOut) == 0 {
 			err := outRw.Put(k, v)
 			return err
 		} else {
-			addTxOutPut := AddrTxOutput{}
-			err := ReadAddrTxOutput(txOut, &addTxOutPut)
+			addTxOutPut := NewAddrTxOutput()
+			err := ReadAddrTxOutput(txOut.Address, oldTxOut, addTxOutPut)
 			if err != nil {
 				return err
 			}
@@ -191,7 +226,11 @@ func (s *Store) InsertAddrTxOut(ns walletdb.ReadWriteBucket, txOut *AddrTxOutput
 				err := outRw.Put(k, v)
 				return err
 			} else {
-				return nil
+				txOut.SpendTo = addTxOutPut.SpendTo
+				txOut.Spend = addTxOutPut.Spend
+				v := ValueAddrTxOutput(txOut)
+				err := outRw.Put(k, v)
+				return err
 			}
 		}
 	}
@@ -211,12 +250,12 @@ func (s *Store) GetAddrTxOut(ns walletdb.ReadWriteBucket, address string, point 
 	outRw := ns.NestedReadWriteBucket([]byte(address))
 	k := canonicalOutPoint(&point.Hash, point.OutIndex)
 	txOut := outRw.Get(k)
-	addTxOutPut := AddrTxOutput{}
-	err := ReadAddrTxOutput(txOut, &addTxOutPut)
+	addTxOutPut := NewAddrTxOutput()
+	err := ReadAddrTxOutput(address, txOut, addTxOutPut)
 	if err != nil {
 		return nil, err
 	}
-	return &addTxOutPut, nil
+	return addTxOutPut, nil
 }
 
 // updateMinedBalance updates the mined balance within the store, if changed,
@@ -373,7 +412,7 @@ func (s *Store) insertMinedTx(ns walletdb.ReadWriteBucket, rec *TxRecord,
 	// block, insert a block record first. Otherwise, update it by adding
 	// the transaction hash to the set of transactions from this block.
 	var err error
-	blockKey, blockValue := existsBlockRecord(ns, block.Height)
+	blockKey, blockValue := existsBlockRecord(ns, uint32(block.Order))
 	if blockValue == nil {
 		err = putBlockRecord(ns, block, &rec.Hash)
 	} else {
@@ -400,7 +439,7 @@ func (s *Store) insertMinedTx(ns walletdb.ReadWriteBucket, rec *TxRecord,
 	// we'll need to remove it from the unMined bucket.
 	if v := existsRawUnMined(ns, rec.Hash[:]); v != nil {
 		log.Info(fmt.Sprintf("Marking unconfirmed transaction %v mined in block %d",
-			&rec.Hash, block.Height))
+			&rec.Hash, block.Order))
 
 		if err := s.deleteUnMinedTx(ns, rec); err != nil {
 			return err
@@ -513,6 +552,15 @@ func IsCoinBaseTx(tx *types.Transaction) bool {
 	return true
 }
 
+func TxRawIsCoinBase(tx corejson.TxRawResult) bool {
+	for _, vin := range tx.Vin {
+		if vin.Coinbase != "" {
+			return true
+		}
+	}
+	return false
+}
+
 func (s *Store) rollback(ns walletdb.ReadWriteBucket, height int32) error {
 	minedBalance, err := fetchMinedBalance(ns, types.MEERID)
 	if err != nil {
@@ -532,13 +580,13 @@ func (s *Store) rollback(ns walletdb.ReadWriteBucket, height int32) error {
 	it := makeReverseBlockIterator(ns)
 	for it.prev() {
 		b := &it.elem
-		if it.elem.Height < height {
+		if it.elem.Order < height {
 			break
 		}
 
-		heightsToRemove = append(heightsToRemove, it.elem.Height)
+		heightsToRemove = append(heightsToRemove, it.elem.Order)
 
-		log.Info("Rolling back transactions", "transactions", len(b.transactions), "block", b.Hash, "height", b.Height)
+		log.Info("Rolling back transactions", "transactions", len(b.transactions), "block", b.Hash, "height", b.Order)
 
 		for i := range b.transactions {
 			txHash := &b.transactions[i]
@@ -695,7 +743,7 @@ func (s *Store) rollback(ns walletdb.ReadWriteBucket, height int32) error {
 			}
 		}
 
-		it.reposition(it.elem.Height)
+		it.reposition(uint32(it.elem.Order))
 
 	}
 	if it.err != nil {
@@ -705,7 +753,7 @@ func (s *Store) rollback(ns walletdb.ReadWriteBucket, height int32) error {
 	// Delete the block records outside of the iteration since cursor deletion
 	// is broken.
 	for _, h := range heightsToRemove {
-		err = deleteBlockRecord(ns, h)
+		err = deleteBlockRecord(ns, uint32(h))
 		if err != nil {
 			return err
 		}
@@ -762,7 +810,7 @@ func (s *Store) UnspentOutputs(ns walletdb.ReadBucket) ([]Credit, error) {
 			return err
 		}
 
-		blockTime, err := fetchBlockTime(ns, block.Height)
+		blockTime, err := fetchBlockTime(ns, uint32(block.Order))
 		if err != nil {
 			return err
 		}
@@ -820,7 +868,7 @@ func (s *Store) UnspentOutputs(ns walletdb.ReadBucket) ([]Credit, error) {
 		cred := Credit{
 			TxOutPoint: op,
 			BlockMeta: BlockMeta{
-				Block: Block{Height: -1},
+				Block: Block{Order: -1},
 			},
 			Amount:       types.Amount(txOut.Amount),
 			PkScript:     txOut.PkScript,
@@ -848,7 +896,7 @@ func (s *Store) UnspentOutputs(ns walletdb.ReadBucket) ([]Credit, error) {
 //
 // Balance may return unexpected results if syncHeight is lower than the block
 // height of the most recent mined transaction in the store.
-func (s *Store) Balance(ns walletdb.ReadBucket, minConf int32, syncHeight int32, coinId types.CoinID) (types.Amount, error) {
+func (s *Store) Balance(ns walletdb.ReadBucket, minConf int32, syncOrder int32, coinId types.CoinID) (types.Amount, error) {
 	bal, err := fetchMinedBalance(ns, coinId)
 	if err != nil {
 		return types.Amount{}, err
@@ -892,12 +940,12 @@ func (s *Store) Balance(ns walletdb.ReadBucket, minConf int32, syncHeight int32,
 	if coinBaseMaturity > stopConf {
 		stopConf = coinBaseMaturity
 	}
-	lastHeight := syncHeight - stopConf
+	lastOrder := syncOrder - stopConf
 	blockIt := makeReadReverseBlockIterator(ns)
 	for blockIt.prev() {
 		block := &blockIt.elem
 
-		if block.Height < lastHeight {
+		if block.Order < lastOrder {
 			break
 		}
 
@@ -928,7 +976,7 @@ func (s *Store) Balance(ns walletdb.ReadBucket, minConf int32, syncHeight int32,
 				if spent {
 					continue
 				}
-				confirms := syncHeight - block.Height + 1
+				confirms := syncOrder - block.Order + 1
 				if confirms < minConf || (IsCoinBaseTx(&rec.MsgTx) &&
 					confirms < coinBaseMaturity) {
 					bal.Value -= amt.Value

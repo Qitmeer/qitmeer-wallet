@@ -10,6 +10,7 @@ import (
 	waddrmgr "github.com/Qitmeer/qitmeer-wallet/waddrmgs"
 	"github.com/Qitmeer/qitmeer-wallet/wallet"
 	"github.com/Qitmeer/qitmeer-wallet/wtxmgr"
+	"github.com/Qitmeer/qitmeer/core/types"
 	"github.com/Qitmeer/qitmeer/crypto/bip39"
 	"github.com/Qitmeer/qitmeer/crypto/ecc/secp256k1"
 	"github.com/Qitmeer/qitmeer/qx"
@@ -133,7 +134,7 @@ func printHelp() {
 	fmt.Println("\t<importWifPrivKey> : Import wif format private key. Parameter: [priKey]")
 	fmt.Println("\t<dumpPrivKey> : Export wif format private key by address. Parameter: [address]")
 	fmt.Println("\t<getAccountAndAddress> : Check all accounts and addresses. Parameter: []")
-	fmt.Println("\t<sendToAddress> : Transfer transaction. Parameter: [address] [num]")
+	fmt.Println("\t<sendToAddress> : Transfer transaction. Parameter: [address] [coin] [num]")
 	fmt.Println("\t<updateblock> : Update Wallet Block. Parameter: []")
 	fmt.Println("\t<syncheight> : Current Synchronized Data Height. Parameter: []")
 	fmt.Println("\t<unlock> : Unlock Wallet. Parameter: [password]")
@@ -169,7 +170,7 @@ func createNewAccount(arg string) error {
 	fmt.Printf("%s", msg)
 	return nil
 }
-func getBalance(addr string) (*wallet.Balance, error) {
+func getBalance(addr string) (map[types.CoinID]wallet.Balance, error) {
 	cmd := &qitmeerjson.GetBalanceByAddressCmd{
 		Address: addr,
 	}
@@ -178,7 +179,7 @@ func getBalance(addr string) (*wallet.Balance, error) {
 		fmt.Println("getBalance", "err", err.Error())
 		return nil, err
 	}
-	r := b.(*wallet.Balance)
+	r := b.(map[types.CoinID]wallet.Balance)
 	return r, nil
 }
 
@@ -351,10 +352,11 @@ func getAccountAndAddress() (interface{}, error) {
 	}
 	return msg, nil
 }
-func sendToAddress(address string, amount float64) (interface{}, error) {
+func sendToAddress(address string, amount float64, coin string) (interface{}, error) {
 	cmd := &qitmeerjson.SendToAddressCmd{
 		Address: address,
 		Amount:  amount,
+		Coin:    coin,
 	}
 	msg, err := walletrpc.SendToAddress(cmd, w)
 	if err != nil {
@@ -366,7 +368,7 @@ func sendToAddress(address string, amount float64) (interface{}, error) {
 }
 func updateblock(height int64) error {
 	cmd := &qitmeerjson.UpdateBlockToCmd{
-		Toheight: height,
+		ToOrder: height,
 	}
 	err := walletrpc.UpdateBlock(cmd, w)
 	if err != nil {
@@ -376,7 +378,16 @@ func updateblock(height int64) error {
 	return nil
 }
 func syncheight() error {
-	fmt.Printf("%d\n", w.Manager.SyncedTo().Height)
+	fmt.Printf("%d\n", w.Manager.SyncedTo().Order)
+	return nil
+}
+
+func ClearTxData() error {
+	err := walletrpc.ClearTxData(w)
+	if err != nil {
+		fmt.Println("clearTxData:", "error", err.Error())
+		return err
+	}
 	return nil
 }
 

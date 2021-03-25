@@ -1,6 +1,5 @@
 package qitmeerjson
 
-
 import (
 	"errors"
 	"fmt"
@@ -107,6 +106,7 @@ func (e Error) Error() string {
 func makeError(c ErrorCode, desc string) Error {
 	return Error{ErrorCode: c, Description: desc}
 }
+
 // TODO(jrick): There are several error paths which 'replace' various errors
 // with a more appropiate error from the btcjson package.  Create a map of
 // these replacements so they can be handled once after an RPC handler has
@@ -137,9 +137,9 @@ type (
 // Wallet JSON errors
 const (
 	ErrRPCWallet                    RPCErrorCode = -4
-	ErrRPCNoTxInfo          RPCErrorCode = -5
+	ErrRPCNoTxInfo                  RPCErrorCode = -5
 	ErrRPCWalletInsufficientFunds   RPCErrorCode = -6
-	ErrRPCInvalidParameter    RPCErrorCode = -8
+	ErrRPCInvalidParameter          RPCErrorCode = -8
 	ErrRPCWalletInvalidAccountName  RPCErrorCode = -11
 	ErrRPCWalletKeypoolRanOut       RPCErrorCode = -12
 	ErrRPCWalletUnlockNeeded        RPCErrorCode = -13
@@ -147,14 +147,15 @@ const (
 	ErrRPCWalletWrongEncState       RPCErrorCode = -15
 	ErrRPCWalletEncryptionFailed    RPCErrorCode = -16
 	ErrRPCWalletAlreadyUnlocked     RPCErrorCode = -17
-	ErrRPCInvalidAddressOrKey RPCErrorCode = -18
-
+	ErrRPCInvalidAddressOrKey       RPCErrorCode = -18
 )
+
 // RPCErrorCode represents an error code to be used as a part of an RPCError
 // which is in turn used in a JSON-RPC Response object.
 //
 // A specific type is used to help ensure the wrong errors aren't used.
 type RPCErrorCode int
+
 // RPCError represents an error that is used as a part of a JSON-RPC Response
 // object.
 type RPCError struct {
@@ -176,11 +177,13 @@ func NewRPCError(code RPCErrorCode, message string) *RPCError {
 		Message: message,
 	}
 }
+
 // Errors that are specific to btcd.
 const (
 	ErrRPCNoWallet      RPCErrorCode = -1
 	ErrRPCUnimplemented RPCErrorCode = -1
 )
+
 // Errors variables that are defined once here to avoid duplication below.
 var (
 	ErrRPCInvalidRequest = &RPCError{

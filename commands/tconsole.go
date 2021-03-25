@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/Qitmeer/qitmeer-wallet/wallet"
 	"github.com/Qitmeer/qitmeer/log"
+	"github.com/mattn/go-colorable"
 	"github.com/peterh/liner"
 	"io"
 	"io/ioutil"
@@ -14,7 +15,6 @@ import (
 	"strconv"
 	"strings"
 	"syscall"
-	"github.com/mattn/go-colorable"
 	//"github.com/peterh/liner"
 )
 
@@ -246,21 +246,33 @@ func (c *Console) Interactive() {
 					}
 					if company == "i" {
 						if detail == "true" {
-							fmt.Printf("unspend:%s\n", b.UnspendAmount.String())
-							fmt.Printf("unconfirmed:%s\n", b.ConfirmAmount.String())
-							fmt.Printf("totalamount:%s\n", b.TotalAmount.String())
-							fmt.Printf("spendamount:%s\n", b.SpendAmount.String())
+							for _, v := range b {
+								fmt.Printf("unspent:%d\n", v.UnspentAmount.Value)
+								fmt.Printf("unconfirmed:%d\n", v.UnConfirmAmount.Value)
+								fmt.Printf("total:%d\n", v.TotalAmount.Value)
+								fmt.Printf("spend:%d\n", v.SpendAmount.Value)
+								fmt.Println()
+							}
 						} else {
-							fmt.Printf("%s\n", b.UnspendAmount.String())
+							for _, v := range b {
+								fmt.Printf("%d\n", v.UnspentAmount.Value)
+								fmt.Println()
+							}
 						}
 					} else {
 						if detail == "true" {
-							fmt.Printf("unspend:%f\n", b.UnspendAmount.ToCoin())
-							fmt.Printf("unconfirmed:%f\n", b.ConfirmAmount.ToCoin())
-							fmt.Printf("totalamount:%f\n", b.TotalAmount.ToCoin())
-							fmt.Printf("spendamount:%f\n", b.SpendAmount.ToCoin())
+							for _, v := range b {
+								fmt.Printf("unspent:%.8f\n", v.UnspentAmount.ToCoin())
+								fmt.Printf("unconfirmed:%.8f\n", v.UnConfirmAmount.ToCoin())
+								fmt.Printf("total:%.8f\n", v.TotalAmount.ToCoin())
+								fmt.Printf("spend:%.8f\n", v.SpendAmount.ToCoin())
+								fmt.Println()
+							}
 						} else {
-							fmt.Printf("%f\n", b.UnspendAmount.ToCoin())
+							for _, v := range b {
+								fmt.Printf("%.8f\n", v.UnspentAmount.ToCoin())
+								fmt.Println()
+							}
 						}
 					}
 					break
@@ -365,7 +377,7 @@ func (c *Console) Interactive() {
 						fmt.Println("getAccountAndAddress err :", err.Error())
 						break
 					}
-					sendToAddress(arg1, float64(f32))
+					sendToAddress(arg1, float64(f32), arg2)
 					break
 				case "updateblock":
 					updateblock(0)

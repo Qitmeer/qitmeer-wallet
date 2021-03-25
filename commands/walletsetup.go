@@ -11,18 +11,18 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/Qitmeer/qitmeer/crypto/bip32"
-	btcec "github.com/Qitmeer/qitmeer/crypto/ecc/secp256k1"
 	"github.com/Qitmeer/qitmeer-wallet/config"
 	"github.com/Qitmeer/qitmeer-wallet/internal/legacy/keystore"
 	"github.com/Qitmeer/qitmeer-wallet/internal/prompt"
 	"github.com/Qitmeer/qitmeer-wallet/utils"
 	waddrmgr "github.com/Qitmeer/qitmeer-wallet/waddrmgs"
+	"github.com/Qitmeer/qitmeer/crypto/bip32"
+	btcec "github.com/Qitmeer/qitmeer/crypto/ecc/secp256k1"
 
-	"github.com/Qitmeer/qitmeer/crypto/ecc/secp256k1"
-	chaincfg "github.com/Qitmeer/qitmeer/params"
 	"github.com/Qitmeer/qitmeer-wallet/wallet"
 	"github.com/Qitmeer/qitmeer-wallet/walletdb"
+	"github.com/Qitmeer/qitmeer/crypto/ecc/secp256k1"
+	chaincfg "github.com/Qitmeer/qitmeer/params"
 )
 
 // networkDir returns the directory name of a network directory to hold wallet
@@ -89,7 +89,7 @@ func createSimulationWallet() error {
 // createWallet prompts the user for information needed to generate a new wallet
 // and generates the wallet accordingly.  The new wallet will reside at the
 // provided path.
-func createWallet() (*wallet.Wallet,error) {
+func createWallet() (*wallet.Wallet, error) {
 	dbDir := networkDir(config.Cfg.AppDataDir, config.ActiveNet)
 	loader := wallet.NewLoader(config.ActiveNet, dbDir, 250, &config.Config{})
 
@@ -103,12 +103,12 @@ func createWallet() (*wallet.Wallet,error) {
 	if err != nil && !os.IsNotExist(err) {
 		// A stat error not due to a non-existant file should be
 		// returned to the caller.
-		return nil,err
+		return nil, err
 	} else if err == nil {
 		// Keystore file exists.
 		legacyKeyStore, err = keystore.OpenDir(netDir)
 		if err != nil {
-			return nil,err
+			return nil, err
 		}
 	}
 
@@ -118,7 +118,7 @@ func createWallet() (*wallet.Wallet,error) {
 	reader := bufio.NewReader(os.Stdin)
 	privPass, err := prompt.PrivatePass(reader, legacyKeyStore)
 	if err != nil {
-		return nil,err
+		return nil, err
 	}
 
 	// When there exists a legacy keystore, unlock it now and set up a
@@ -127,7 +127,7 @@ func createWallet() (*wallet.Wallet,error) {
 	if legacyKeyStore != nil {
 		err = legacyKeyStore.Unlock(privPass)
 		if err != nil {
-			return nil,err
+			return nil, err
 		}
 
 		// Import the addresses in the legacy keystore to the new wallet if
@@ -169,7 +169,7 @@ func createWallet() (*wallet.Wallet,error) {
 	pubPass, err := prompt.PublicPass(reader, privPass,
 		[]byte(wallet.InsecurePubPassphrase), []byte(config.Cfg.WalletPass))
 	if err != nil {
-		return nil,err
+		return nil, err
 	}
 	fmt.Println("pubPass:", string(pubPass))
 	// Ascertain the wallet generation seed.  This will either be an
@@ -177,38 +177,38 @@ func createWallet() (*wallet.Wallet,error) {
 	// value the user has entered which has already been validated.
 	seed, err := prompt.Seed(reader)
 	if err != nil {
-		return nil,err
+		return nil, err
 	}
 	seedKey, err := bip32.NewMasterKey(seed)
 	if err != nil {
 		fmt.Println("failed to derive master extended key.")
-		return nil,err
+		return nil, err
 	}
 	fmt.Println("Creating the wallet...")
 	w, err := loader.CreateNewWallet(pubPass, privPass, seed, time.Now())
 	if err != nil {
-		return nil,err
+		return nil, err
 	}
 	fmt.Printf("pri:%x\n", seedKey.Key)
 	pri, _ := secp256k1.PrivKeyFromBytes(seedKey.Key)
 	wif, err := utils.NewWIF(pri, w.ChainParams(), true)
 	if err != nil {
 		fmt.Println("private key decode failed:", err.Error())
-		return nil,err
+		return nil, err
 	}
 	if !wif.IsForNet(w.ChainParams()) {
 		fmt.Println("Key is not intended for", w.ChainParams().Name, err.Error())
-		return nil,err
+		return nil, err
 	}
 	w.UnLockManager(privPass)
 	_, err = w.ImportPrivateKey(waddrmgr.KeyScopeBIP0044, wif)
 	if err != nil {
 		fmt.Println("ImportPrivateKey err:", err.Error())
-		return nil,err
+		return nil, err
 	}
 	//w.Manager.Close()
 	fmt.Println("The wallet has been created successfully.")
-	return w,nil
+	return w, nil
 }
 
 // convertLegacyKeystore converts all of the addresses in the passed legacy

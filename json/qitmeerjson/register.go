@@ -270,6 +270,3 @@ func MustRegisterCmd(method string, cmd interface{}, flags UsageFlag) {
 			err))
 	}
 }
-
-
-

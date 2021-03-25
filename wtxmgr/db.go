@@ -31,9 +31,11 @@ var (
 	bucketUnMined        = []byte("m")
 	bucketUnMinedCredits = []byte("mc")
 	bucketUnMinedInputs  = []byte("mi")
+	BucketUnConfirmed    = []byte("uc")
 	BucketAddrtxin       = []byte("in")
 	BucketAddrtxout      = []byte("out")
 	BucketTxJson         = []byte("txjson")
+	BucketSync           = []byte("sync")
 )
 
 // Root (namespace) bucket keys
@@ -116,9 +118,9 @@ func readCanonicalOutPoint(k []byte, op *types.TxOutPoint) error {
 //   [44:]   For each transaction hash:
 //             Hash (32 bytes)
 
-func keyBlockRecord(height int32) []byte {
+func keyBlockRecord(order uint32) []byte {
 	k := make([]byte, 4)
-	byteOrder.PutUint32(k, uint32(height))
+	byteOrder.PutUint32(k, order)
 	return k
 }
 
@@ -133,42 +135,57 @@ func valueBlockRecord(block *BlockMeta, txHash *hash.Hash) []byte {
 func ValueAddrTxOutput(txout *AddrTxOutput) []byte {
 	var v []byte
 	if txout.SpendTo == nil {
-		v = make([]byte, 96+2)
+		v = make([]byte, 133)
 	} else {
-		v = make([]byte, 96+36+2)
+		v = make([]byte, 169)
 	}
 	copy(v, txout.TxId[:])
 	byteOrder.PutUint32(v[32:36], txout.Index)
 	byteOrder.PutUint64(v[36:44], uint64(txout.Amount.Value))
-	byteOrder.PutUint16(v[44:44+2], uint16(txout.Amount.Id))
-	copy(v[44+2:76+2], txout.Block.Hash[:])
-	byteOrder.PutUint32(v[88+2:92+2], uint32(txout.Block.Height))
-	byteOrder.PutUint32(v[92+2:96+2], uint32(txout.Spend))
-	if len(v) == 132+2 {
-		byteOrder.PutUint32(v[96+2:100+2], txout.SpendTo.Index)
-		copy(v[100+2:132+2], txout.SpendTo.TxHash[:])
+	byteOrder.PutUint16(v[44:46], uint16(txout.Amount.Id))
+	copy(v[46:78], txout.Block.Hash[:])
+	byteOrder.PutUint32(v[90:94], uint32(txout.Block.Order))
+	byteOrder.PutUint32(v[94:98], uint32(txout.Spend))
+	byteOrder.PutUint16(v[98:100], uint16(txout.Status))
+	if txout.IsBlue {
+		copy(v[100:101], []byte{1})
+	} else {
+		copy(v[100:101], []byte{0})
+	}
+	copy(v[101:133], txout.SpendTo.TxId[:])
+	if len(v) == 169 {
+		byteOrder.PutUint32(v[133:137], txout.SpendTo.Index)
+		copy(v[137:169], txout.SpendTo.TxId[:])
 	}
 	return v
 }
-func ReadAddrTxOutput(v []byte, txout *AddrTxOutput) (err error) {
+func ReadAddrTxOutput(addr string, v []byte, txout *AddrTxOutput) (err error) {
 	defer func() {
 		if rev := recover(); rev != nil {
 			errMsg := fmt.Sprintf("ReadAddrTxOutput recover: %s", rev)
 			err = errors.New(errMsg)
 		}
 	}()
-
+	txId := hash.Hash{}
+	txout.Address = addr
 	copy(txout.TxId[:], v[0:32])
 	txout.Index = byteOrder.Uint32(v[32:36])
 	txout.Amount.Value = int64(byteOrder.Uint64(v[36:44]))
-	txout.Amount.Id = types.CoinID(byteOrder.Uint16(v[44:44+2]))
-	copy(txout.Block.Hash[:], v[44+2:76+2])
-	txout.Block.Height = int32(byteOrder.Uint32(v[88+2:92+2]))
-	txout.Spend = SpendStatus(byteOrder.Uint32(v[92+2:96+2]))
-	if len(v) == 132+2 {
+	txout.Amount.Id = types.CoinID(byteOrder.Uint16(v[44:46]))
+	copy(txout.Block.Hash[:], v[46:78])
+	txout.Block.Order = int32(byteOrder.Uint32(v[90:94]))
+	txout.Spend = SpendStatus(byteOrder.Uint32(v[94:98]))
+	txout.Status = TxStatus(byteOrder.Uint16(v[98:100]))
+	if bytes.Compare(v[100:101], []byte{1}) == 0 {
+		txout.IsBlue = true
+	}
+	copy(txId[:], v[101:133])
+	txout.SpendTo.TxId = txId
+
+	if len(v) == 169 {
 		st := SpendTo{}
-		st.Index = byteOrder.Uint32(v[96+2:100+2])
-		copy(st.TxHash[:], v[100+2:132+2])
+		st.Index = byteOrder.Uint32(v[133:137])
+		copy(st.TxId[:], v[137:169])
 		txout.SpendTo = &st
 	}
 	return nil
@@ -198,13 +215,13 @@ func putRawBlockRecord(ns walletdb.ReadWriteBucket, k, v []byte) error {
 }
 
 func putBlockRecord(ns walletdb.ReadWriteBucket, block *BlockMeta, txHash *hash.Hash) error {
-	k := keyBlockRecord(block.Height)
+	k := keyBlockRecord(uint32(block.Order))
 	v := valueBlockRecord(block, txHash)
 	return putRawBlockRecord(ns, k, v)
 }
 
-func fetchBlockTime(ns walletdb.ReadBucket, height int32) (time.Time, error) {
-	k := keyBlockRecord(height)
+func fetchBlockTime(ns walletdb.ReadBucket, order uint32) (time.Time, error) {
+	k := keyBlockRecord(order)
 	v := ns.NestedReadBucket(bucketBlocks).Get(k)
 	if len(v) < 44 {
 		str := fmt.Sprintf("%s: short read (expected %d bytes, read %d)",
@@ -214,8 +231,8 @@ func fetchBlockTime(ns walletdb.ReadBucket, height int32) (time.Time, error) {
 	return time.Unix(int64(byteOrder.Uint64(v[32:40])), 0), nil
 }
 
-func existsBlockRecord(ns walletdb.ReadBucket, height int32) (k, v []byte) {
-	k = keyBlockRecord(height)
+func existsBlockRecord(ns walletdb.ReadBucket, order uint32) (k, v []byte) {
+	k = keyBlockRecord(order)
 	v = ns.NestedReadBucket(bucketBlocks).Get(k)
 	return
 }
@@ -239,7 +256,7 @@ func readRawBlockRecord(k, v []byte, block *blockRecord) error {
 		return storeError(ErrData, str, nil)
 	}
 
-	block.Height = int32(byteOrder.Uint32(k))
+	block.Order = int32(byteOrder.Uint32(k))
 	copy(block.Hash[:], v)
 	block.Time = time.Unix(int64(byteOrder.Uint64(v[32:40])), 0)
 	block.transactions = make([]hash.Hash, numTransactions)
@@ -346,12 +363,12 @@ func (it *blockIterator) prev() bool {
 	return true
 }
 
-func (it *blockIterator) reposition(height int32) {
-	it.c.Seek(keyBlockRecord(height))
+func (it *blockIterator) reposition(order uint32) {
+	it.c.Seek(keyBlockRecord(order))
 }
 
-func deleteBlockRecord(ns walletdb.ReadWriteBucket, height int32) error {
-	k := keyBlockRecord(height)
+func deleteBlockRecord(ns walletdb.ReadWriteBucket, order uint32) error {
+	k := keyBlockRecord(order)
 	return ns.NestedReadWriteBucket(bucketBlocks).Delete(k)
 }
 
@@ -373,7 +390,7 @@ func deleteBlockRecord(ns walletdb.ReadWriteBucket, height int32) error {
 func keyTxRecord(txHash *hash.Hash, block *Block) []byte {
 	k := make([]byte, 68)
 	copy(k, txHash[:])
-	byteOrder.PutUint32(k[32:36], uint32(block.Height))
+	byteOrder.PutUint32(k[32:36], uint32(block.Order))
 	copy(k[36:68], block.Hash[:])
 	return k
 }
@@ -435,7 +452,7 @@ func readRawTxRecordBlock(k []byte, block *Block) error {
 			bucketTxRecords, 68, len(k))
 		return storeError(ErrData, str, nil)
 	}
-	block.Height = int32(byteOrder.Uint32(k[32:36]))
+	block.Order = int32(byteOrder.Uint32(k[32:36]))
 	copy(block.Hash[:], k[36:68])
 	return nil
 }
@@ -522,7 +539,7 @@ func latestTxRecord(ns walletdb.ReadBucket, txHash *hash.Hash) (k, v []byte) {
 func keyCredit(txHash *hash.Hash, index uint32, block *Block) []byte {
 	k := make([]byte, 72)
 	copy(k, txHash[:])
-	byteOrder.PutUint32(k[32:36], uint32(block.Height))
+	byteOrder.PutUint32(k[32:36], uint32(block.Order))
 	copy(k[36:68], block.Hash[:])
 	byteOrder.PutUint32(k[68:72], index)
 	return k
@@ -623,7 +640,7 @@ func spendCredit(ns walletdb.ReadWriteBucket, k []byte, spender *indexedIncidenc
 	v = newv
 	v[8+4] |= 1 << 0
 	copy(v[9+2:41+2], spender.txHash[:])
-	byteOrder.PutUint32(v[41+2:45+2], uint32(spender.block.Height))
+	byteOrder.PutUint32(v[41+2:45+2], uint32(spender.block.Order))
 	copy(v[45+2:77+2], spender.block.Hash[:])
 	byteOrder.PutUint32(v[77+2:81+2], spender.index)
 
@@ -744,7 +761,7 @@ func (it *creditIterator) next() bool {
 
 func valueUnspent(block *Block) []byte {
 	v := make([]byte, 36)
-	byteOrder.PutUint32(v, uint32(block.Height))
+	byteOrder.PutUint32(v, uint32(block.Order))
 	copy(v[4:36], block.Hash[:])
 	return v
 }
@@ -774,7 +791,7 @@ func readUnspentBlock(v []byte, block *Block) error {
 		str := "short unspent value"
 		return storeError(ErrData, str, nil)
 	}
-	block.Height = int32(byteOrder.Uint32(v))
+	block.Order = int32(byteOrder.Uint32(v))
 	copy(block.Hash[:], v[4:36])
 	return nil
 }
@@ -836,7 +853,7 @@ func deleteRawUnspent(ns walletdb.ReadWriteBucket, k []byte) error {
 func keyDebit(txHash *hash.Hash, index uint32, block *Block) []byte {
 	k := make([]byte, 72)
 	copy(k, txHash[:])
-	byteOrder.PutUint32(k[32:36], uint32(block.Height))
+	byteOrder.PutUint32(k[32:36], uint32(block.Order))
 	copy(k[36:68], block.Hash[:])
 	byteOrder.PutUint32(k[68:72], index)
 	return k
@@ -1266,71 +1283,73 @@ func createBuckets(ns walletdb.ReadWriteBucket) error {
 		str := "failed to create unMined inputs bucket"
 		return storeError(ErrDatabase, str, err)
 	}
-	if _, err := ns.CreateBucket(BucketAddrtxin); err != nil {
-		str := "failed to create unMined addrtxin bucket"
-		return storeError(ErrDatabase, str, err)
+
+	for _, id := range types.CoinIDList {
+		if _, err := ns.CreateBucket(CoinBucket(BucketAddrtxin, id.Name())); err != nil {
+			str := fmt.Sprintf("failed to create unMined %s addrtxin bucket", id.Name())
+			return storeError(ErrDatabase, str, err)
+		}
+		if _, err := ns.CreateBucket(CoinBucket(BucketAddrtxout, id.Name())); err != nil {
+			str := fmt.Sprintf("failed to create unMined %s addrtxout bucket", id.Name())
+			return storeError(ErrDatabase, str, err)
+		}
 	}
-	if _, err := ns.CreateBucket(BucketAddrtxout); err != nil {
-		str := "failed to create unMined addrtxout bucket"
-		return storeError(ErrDatabase, str, err)
-	}
+
 	if _, err := ns.CreateBucket(BucketTxJson); err != nil {
 		str := "failed to create unMined BucketTxJson bucket"
 		return storeError(ErrDatabase, str, err)
 	}
-
+	if _, err := ns.CreateBucket(BucketUnConfirmed); err != nil {
+		str := "failed to create unconfirmed bucket"
+		return storeError(ErrDatabase, str, err)
+	}
 	return nil
 }
 
 // deleteBuckets deletes all of the descendants buckets required for the
 // transaction store to properly carry its duties.
 func deleteBuckets(ns walletdb.ReadWriteBucket) error {
-	if err := ns.DeleteNestedBucket(bucketBlocks); err != nil {
-		str := "failed to delete blocks bucket"
-		return storeError(ErrDatabase, str, err)
-	}
-	if err := ns.DeleteNestedBucket(bucketTxRecords); err != nil {
-		str := "failed to delete tx records bucket"
-		return storeError(ErrDatabase, str, err)
-	}
-	if err := ns.DeleteNestedBucket(bucketCredits); err != nil {
-		str := "failed to delete credits bucket"
-		return storeError(ErrDatabase, str, err)
-	}
-	if err := ns.DeleteNestedBucket(bucketDebits); err != nil {
-		str := "failed to delete debits bucket"
-		return storeError(ErrDatabase, str, err)
-	}
-	if err := ns.DeleteNestedBucket(bucketUnspent); err != nil {
-		str := "failed to delete unspent bucket"
-		return storeError(ErrDatabase, str, err)
-	}
-	if err := ns.DeleteNestedBucket(bucketUnMined); err != nil {
-		str := "failed to delete unMined bucket"
-		return storeError(ErrDatabase, str, err)
-	}
-	if err := ns.DeleteNestedBucket(bucketUnMinedCredits); err != nil {
-		str := "failed to delete unMined credits bucket"
-		return storeError(ErrDatabase, str, err)
-	}
-	if err := ns.DeleteNestedBucket(bucketUnMinedInputs); err != nil {
-		str := "failed to delete unMined inputs bucket"
-		return storeError(ErrDatabase, str, err)
-	}
-	if err := ns.DeleteNestedBucket(BucketAddrtxout); err != nil {
-		str := "failed to delete unMined addrtxout bucket"
-		return storeError(ErrDatabase, str, err)
-	}
-	if err := ns.DeleteNestedBucket(BucketAddrtxin); err != nil {
-		str := "failed to delete unMined addrtxin bucket"
-		return storeError(ErrDatabase, str, err)
-	}
-	if err := ns.DeleteNestedBucket(BucketTxJson); err != nil {
-		str := "failed to delete unMined BucketTxJson bucket"
-		return storeError(ErrDatabase, str, err)
+	ns.DeleteNestedBucket(bucketBlocks)
+	ns.DeleteNestedBucket(bucketTxRecords)
+	ns.DeleteNestedBucket(bucketCredits)
+	ns.DeleteNestedBucket(bucketDebits)
+	ns.DeleteNestedBucket(bucketUnspent)
+	ns.DeleteNestedBucket(bucketUnMined)
+	ns.DeleteNestedBucket(bucketUnMinedCredits)
+	ns.DeleteNestedBucket(bucketUnMinedInputs)
+
+	for _, id := range types.CoinIDList {
+		err := ns.DeleteNestedBucket(CoinBucket(BucketAddrtxin, id.Name()))
+		fmt.Println(err)
+		err = ns.DeleteNestedBucket(CoinBucket(BucketAddrtxout, id.Name()))
+		fmt.Println(err)
 	}
 
+	ns.DeleteNestedBucket(BucketTxJson)
+	ns.DeleteNestedBucket(BucketUnConfirmed)
 	return nil
+}
+
+func DropTransactionHistory(ns walletdb.ReadWriteBucket) error {
+
+	// To drop the store's transaction history, we'll need to remove all of
+	// the relevant descendant buckets and key/value pairs.
+	if err := deleteBuckets(ns); err != nil {
+		return err
+	}
+	//ns.Delete(rootMinedBalance)
+
+	// With everything removed, we'll now recreate our buckets.
+	///if err := createBuckets(ns); err != nil {
+	//return err
+	//}
+
+	// Finally, we'll insert a 0 value for our mined balance.
+	return nil
+}
+
+func CoinBucket(bucket []byte, coin string) []byte {
+	return append([]byte(coin), bucket...)
 }
 
 // putVersion modifies the version of the store to reflect the given version
@@ -1355,4 +1374,17 @@ func fetchVersion(ns walletdb.ReadBucket) (uint32, error) {
 	}
 
 	return byteOrder.Uint32(v), nil
+}
+
+func Uint64ToBytes(value uint64) []byte {
+	var bigE = binary.BigEndian
+	valueBytes := make([]byte, 8)
+	bigE.PutUint64(valueBytes, value)
+	return valueBytes
+}
+
+func BytesToUin64(bytes []byte) uint64 {
+	var bigE = binary.BigEndian
+	value := bigE.Uint64(bytes)
+	return value
 }

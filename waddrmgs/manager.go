@@ -8,15 +8,15 @@ import (
 	"crypto/rand"
 	"crypto/sha512"
 	"fmt"
-	"github.com/Qitmeer/qitmeer/core/types"
-	chaincfg "github.com/Qitmeer/qitmeer/params"
 	"github.com/Qitmeer/qitmeer-wallet/internal/zero"
-	"github.com/Qitmeer/qitmeer-wallet/walletdb"
-	"sync"
-	"time"
 	"github.com/Qitmeer/qitmeer-wallet/snacl"
+	"github.com/Qitmeer/qitmeer-wallet/walletdb"
+	"github.com/Qitmeer/qitmeer/core/types"
 	"github.com/Qitmeer/qitmeer/crypto/bip32"
 	ecc "github.com/Qitmeer/qitmeer/crypto/ecc/secp256k1"
+	chaincfg "github.com/Qitmeer/qitmeer/params"
+	"sync"
+	"time"
 )
 
 const (
@@ -48,8 +48,7 @@ const (
 	DefaultAccountNum = 0
 
 	// Account combination payment mark
-	AccountMergePayNum=-1
-
+	AccountMergePayNum = -1
 
 	// defaultAccountName is the initial name of the default account.  Note
 	// that the default account may be renamed and is not a reserved name,
@@ -99,6 +98,7 @@ func isReservedAccountName(name string) bool {
 type ScryptOptions struct {
 	N, R, P int
 }
+
 // AccountProperties contains properties associated with each account, such as
 // the account name, number, and the nubmer of derived and imported keys.
 type AccountProperties struct {
@@ -108,6 +108,7 @@ type AccountProperties struct {
 	InternalKeyCount uint32
 	ImportedKeyCount uint32
 }
+
 // unlockDeriveInfo houses the information needed to derive a private key for a
 // managed address when the address manager is unlocked.  See the
 // deriveOnUnlock field in the Manager struct for more details on how this is
@@ -117,6 +118,7 @@ type unlockDeriveInfo struct {
 	branch      uint32
 	index       uint32
 }
+
 // OpenCallbacks houses caller-provided callbacks that may be called when
 // opening an existing manager.  The open blocks on the execution of these
 // functions.
@@ -180,8 +182,6 @@ type addrKey string
 // SecretKeyGenerator is the function signature of a method that can generate
 // secret keys for the address manager.
 
-
-
 // EncryptorDecryptor provides an abstraction on top of snacl.CryptoKey so that
 // our tests can use dependency injection to force the behaviour they need.
 type EncryptorDecryptor interface {
@@ -195,7 +195,6 @@ type EncryptorDecryptor interface {
 // CryptoKeyType is used to differentiate between different kinds of
 // crypto keys.
 type CryptoKeyType byte
-
 
 // newCryptoKey is used as a way to replace the new crypto key generation
 // function used so tests can provide a version that fails for testing error
@@ -211,6 +210,7 @@ func defaultNewCryptoKey() (EncryptorDecryptor, error) {
 	}
 	return &cryptoKey{*key}, nil
 }
+
 // Manager represents a concurrency safe crypto currency address manager and
 // key store.
 type Manager struct {
@@ -221,12 +221,12 @@ type Manager struct {
 
 	externalAddrSchemas map[AddressType][]KeyScope
 	internalAddrSchemas map[AddressType][]KeyScope
-	syncState    syncState
-	watchingOnly bool
-	birthday     time.Time
-	locked       bool
-	closed       bool
-	chainParams  *chaincfg.Params
+	syncState           syncState
+	watchingOnly        bool
+	birthday            time.Time
+	locked              bool
+	closed              bool
+	chainParams         *chaincfg.Params
 
 	// masterKeyPub is the secret key used to secure the cryptoKeyPub key
 	// and masterKeyPriv is the secret key used to secure the cryptoKeyPriv
@@ -297,6 +297,7 @@ func (m *Manager) WatchOnly() bool {
 func (m *Manager) watchOnly() bool {
 	return m.watchingOnly
 }
+
 // Lock performs a best try effort to remove and zero all secret keys associated
 // with the address manager.
 //
@@ -319,6 +320,7 @@ func (m *Manager) Lock() error {
 	m.lock()
 	return nil
 }
+
 // lock performs a best try effort to remove and zero all secret keys associated
 // with the address manager.
 //
@@ -347,7 +349,6 @@ func (m *Manager) Close() {
 	if m.closed {
 		return
 	}
-
 
 	// Attempt to clear private key material from memory.
 	if !m.watchingOnly && !m.locked {
@@ -389,7 +390,7 @@ func Create(ns walletdb.ReadWriteBucket, seed, pubPassphrase, privPassphrase []b
 	}
 
 	// Perform the initial bucket creation and database namespace setup.
-	if err := createManagerNS(ns,ScopeAddrMap); err != nil {
+	if err := CreateManagerNS(ns, ScopeAddrMap); err != nil {
 		return maybeConvertDbError(err)
 	}
 
@@ -399,7 +400,7 @@ func Create(ns walletdb.ReadWriteBucket, seed, pubPassphrase, privPassphrase []b
 
 	// Generate new master keys.  These master keys are used to protect the
 	// crypto keys that will be generated next.
-	masterKeyPub, err :=  newSecretKey(&pubPassphrase, config)
+	masterKeyPub, err := newSecretKey(&pubPassphrase, config)
 	if err != nil {
 		str := "failed to master public key"
 		return managerError(ErrCrypto, str, err)
@@ -458,7 +459,7 @@ func Create(ns walletdb.ReadWriteBucket, seed, pubPassphrase, privPassphrase []b
 		str := "failed to encrypt crypto script key"
 		return managerError(ErrCrypto, str, err)
 	}
-	createdAt := &BlockStamp{Hash: *chainParams.GenesisHash, Height: 0}
+	createdAt := &BlockStamp{Hash: *chainParams.GenesisHash, Order: 0}
 	// Create the initial sync state.
 	syncInfo := newSyncState(createdAt, createdAt)
 
@@ -470,12 +471,12 @@ func Create(ns walletdb.ReadWriteBucket, seed, pubPassphrase, privPassphrase []b
 		return maybeConvertDbError(err)
 	}
 	// Derive the master extended key from the seed.
-	rootKey, err :=bip32.NewMasterKey(seed)
+	rootKey, err := bip32.NewMasterKey(seed)
 	if err != nil {
 		str := "failed to derive master extended key"
 		return managerError(ErrKeyChain, str, err)
 	}
-	rootPubKey:= rootKey.PublicKey()
+	rootPubKey := rootKey.PublicKey()
 
 	// Next, for each registers default manager scope, we'll create the
 	// hardened cointype key for it, as well as the first default account.
@@ -518,7 +519,6 @@ func Create(ns walletdb.ReadWriteBucket, seed, pubPassphrase, privPassphrase []b
 		return maybeConvertDbError(err)
 	}
 
-
 	// Save the initial synced to state.
 	//log.Info("&syncInfo.syncedTo ：",&syncInfo.syncedTo)
 	err = PutSyncedTo(ns, &syncInfo.syncedTo)
@@ -555,6 +555,7 @@ func newSecretKey(passphrase *[]byte,
 	defer secretKeyGenMtx.RUnlock()
 	return secretKeyGen(passphrase, config)
 }
+
 // defaultNewSecretKey returns a new secret key.  See newSecretKey.
 func defaultNewSecretKey(passphrase *[]byte,
 	config *ScryptOptions) (*snacl.SecretKey, error) {
@@ -570,7 +571,6 @@ var (
 	// replaced in testing.
 	secretKeyGenMtx sync.RWMutex
 )
-
 
 func loadManager(ns walletdb.ReadBucket, pubPassphrase []byte,
 	chainParams *chaincfg.Params) (*Manager, error) {
@@ -651,7 +651,6 @@ func loadManager(ns walletdb.ReadBucket, pubPassphrase []byte,
 		return nil, managerError(ErrCrypto, str, err)
 	}
 	cryptoKeyPub.CopyBytes(cryptoKeyPubCT)
-
 
 	// Create the sync state struct.
 	syncInfo := newSyncState(startBlock, syncedTo)
@@ -775,6 +774,7 @@ func (m *Manager) IsLocked() bool {
 func (m *Manager) isLocked() bool {
 	return m.locked
 }
+
 // deriveAccountKey derives the extended key for an account according to the
 // hierarchy described by BIP0044 given the master node.
 //
@@ -784,6 +784,7 @@ func deriveAccountKey(coinTypeKey *bip32.Key,
 	account uint32) (*bip32.Key, error) {
 	return coinTypeKey.NewChildKey(account)
 }
+
 // ValidateAccountName validates the given account name and returns an error, if any.
 func ValidateAccountName(name string) error {
 	if name == "" {
@@ -796,6 +797,7 @@ func ValidateAccountName(name string) error {
 	}
 	return nil
 }
+
 // Address returns a managed address given the passed address if it is known to
 // the address manager. A managed address differs from the passed address in
 // that it also potentially contains extra information needed to sign
@@ -824,6 +826,7 @@ func (m *Manager) Address(ns walletdb.ReadBucket,
 	str := fmt.Sprintf("unable to find key for addr %v", address)
 	return nil, managerError(ErrAddressNotFound, str, nil)
 }
+
 // ForEachAccountAddress calls the given function with each address of
 // the given account stored in the manager, breaking early on error.
 func (m *Manager) ForEachAccountAddress(ns walletdb.ReadBucket, account uint32,
@@ -841,6 +844,7 @@ func (m *Manager) ForEachAccountAddress(ns walletdb.ReadBucket, account uint32,
 
 	return nil
 }
+
 // createManagerKeyScope creates a new key scoped for a target manager's scope.
 // This partitions key derivation for a particular purpose+coin tuple, allowing
 // multiple address derivation schems to be maintained concurrently.
@@ -865,7 +869,7 @@ func createManagerKeyScope(ns walletdb.ReadWriteBucket,
 	acctKeyPub := acctKeyPriv.PublicKey()
 
 	// Encrypt the cointype keys with the associated crypto keys.
-	coinTypeKeyPub:= coinTypeKeyPriv.PublicKey()
+	coinTypeKeyPub := coinTypeKeyPriv.PublicKey()
 
 	coinTypePubEnc, err := cryptoKeyPub.Encrypt([]byte(coinTypeKeyPub.String()))
 	if err != nil {
@@ -910,6 +914,7 @@ func createManagerKeyScope(ns walletdb.ReadWriteBucket,
 		ImportedAddrAccountName,
 	)
 }
+
 // AddrAccount returns the account to which the given address belongs. We also
 // return the scoped manager that owns the addr+account combo.
 func (m *Manager) AddrAccount(ns walletdb.ReadBucket,
@@ -939,6 +944,7 @@ func (m *Manager) AddrAccount(ns walletdb.ReadBucket,
 	str := fmt.Sprintf("unable to find key for addr %v", address)
 	return nil, 0, managerError(ErrAddressNotFound, str, nil)
 }
+
 // deriveCoinTypeKey derives the cointype key which can be used to derive the
 // extended key for an account according to the hierarchy described by BIP0044
 // given the coin type key.
@@ -1040,7 +1046,7 @@ func (m *Manager) Unlock(ns walletdb.ReadBucket, passphrase []byte) error {
 				return managerError(ErrCrypto, str, err)
 			}
 
-			acctKeyPriv, err := bip32.B58Deserialize(string(decrypted),bip32.DefaultBip32Version)
+			acctKeyPriv, err := bip32.B58Deserialize(string(decrypted), bip32.DefaultBip32Version)
 			zero.Bytes(decrypted)
 			if err != nil {
 				m.lock()

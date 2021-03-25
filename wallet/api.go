@@ -34,7 +34,7 @@ func NewAPI(cfg *config.Config, wt *Wallet) *API {
 
 //SyncStats block update stats
 type SyncStats struct {
-	Height int32
+	Order uint32
 }
 
 // SyncStats block update stats
@@ -42,7 +42,7 @@ func (api *API) SyncStats() (*SyncStats, error) {
 
 	stats := &SyncStats{}
 
-	stats.Height = api.wt.SyncHeight //api.wt.Manager.SyncedTo().Height
+	stats.Order = api.wt.getSyncOrder() //api.wt.Manager.SyncedTo().Height
 
 	return stats, nil
 }
@@ -66,7 +66,7 @@ func (api *API) Lock() error {
 }
 
 // GetAccountsAndBalance List all accounts[{account,balance}]
-func (api *API) GetAccountsAndBalance() (map[string]*Balance, error) {
+func (api *API) GetAccountsAndBalance(coin string) (map[string]*Balance, error) {
 	accountsBalances := make(map[string]*Balance)
 	aaas, err := api.wt.GetAccountAndAddress(waddrmgr.KeyScopeBIP0044)
 	if err != nil {
@@ -82,10 +82,10 @@ func (api *API) GetAccountsAndBalance() (map[string]*Balance, error) {
 		accountBalance := accountsBalances[aaa.AccountName]
 
 		for _, addr := range aaa.AddrsOutput {
-			accountBalance.ConfirmAmount.Value += addr.balance.ConfirmAmount.Value
-			accountBalance.SpendAmount.Value += addr.balance.SpendAmount.Value
-			accountBalance.TotalAmount.Value += addr.balance.TotalAmount.Value
-			accountBalance.UnspendAmount.Value += addr.balance.UnspendAmount.Value
+			accountBalance.TotalAmount.Value += addr.balanceMap[types.NewCoinID(coin)].TotalAmount.Value
+			accountBalance.SpendAmount.Value += addr.balanceMap[types.NewCoinID(coin)].SpendAmount.Value
+			accountBalance.UnspentAmount.Value += addr.balanceMap[types.NewCoinID(coin)].UnspentAmount.Value
+			accountBalance.UnConfirmAmount.Value += addr.balanceMap[types.NewCoinID(coin)].UnConfirmAmount.Value
 		}
 
 	}
@@ -93,30 +93,30 @@ func (api *API) GetAccountsAndBalance() (map[string]*Balance, error) {
 }
 
 // GetBalanceByAccount get account balance
-func (api *API) GetBalanceByAccount(name string) (*Balance, error) {
+func (api *API) GetBalanceByAccount(name string, coin string) (*Balance, error) {
 	results, err := api.wt.GetAccountAndAddress(waddrmgr.KeyScopeBIP0044)
 	if err != nil {
 		return nil, err
 	}
 
 	accountBalance := &Balance{}
-
 	for _, result := range results {
 		if result.AccountName == name {
 			for _, addr := range result.AddrsOutput {
-				accountBalance.ConfirmAmount.Value += addr.balance.ConfirmAmount.Value
-				accountBalance.SpendAmount.Value += addr.balance.SpendAmount.Value
-				accountBalance.TotalAmount.Value += addr.balance.TotalAmount.Value
-				accountBalance.UnspendAmount.Value += addr.balance.UnspendAmount.Value
+				accountBalance.TotalAmount.Value += addr.balanceMap[types.NewCoinID(coin)].TotalAmount.Value
+				accountBalance.SpendAmount.Value += addr.balanceMap[types.NewCoinID(coin)].SpendAmount.Value
+				accountBalance.UnspentAmount.Value += addr.balanceMap[types.NewCoinID(coin)].UnspentAmount.Value
+				accountBalance.UnConfirmAmount.Value += addr.balanceMap[types.NewCoinID(coin)].UnConfirmAmount.Value
 			}
 		}
 	}
+
 	return accountBalance, nil
 }
 
 // GetUTxo addr unSpend UTxo
-func (api *API) GetUTxo(addr string) ([]wtxmgr.UTxo, error) {
-	results, err := api.wt.GetUtxo(addr)
+func (api *API) GetUTxo(addr string, coin string) ([]wtxmgr.UTxo, error) {
+	results, err := api.wt.GetUtxo(addr, coin)
 	if err != nil {
 		return nil, err
 	}
@@ -304,7 +304,7 @@ func (api *API) ImportPrivKey(accountName string, key string) error {
 
 type ApiAmount struct {
 	Value float64
-	Id types.CoinID
+	Coin  string
 }
 
 //SendToAddress handles a sendtoaddress RPC request by creating a new
@@ -312,14 +312,15 @@ type ApiAmount struct {
 //payment address.  Leftover inputs not sent to the payment address or a fee
 //for the miner are sent back to a new address in the wallet.  Upon success,
 //the TxID for the created transaction is returned.
-func (api *API) SendToAddress(addressStr string, amount ApiAmount) (string, error) {
+func (api *API) SendToAddress(addressStr string, amount float64, coin string) (string, error) {
 
 	// Check that signed integer parameters are positive.
-	if amount.Value < 0 {
+	if amount < 0 {
 		return "", qitmeerjson.ErrNeedPositiveAmount
 	}
 
-	amt := types.Amount{Value: int64(amount.Value * types.AtomsPerCoin), Id: amount.Id}
+	coinId := types.NewCoinID(coin)
+	amt := types.Amount{Value: int64(amount * types.AtomsPerCoin), Id: coinId}
 
 	// Mock up map of address and amount pairs.
 	pairs := map[string]types.Amount{
@@ -329,14 +330,16 @@ func (api *API) SendToAddress(addressStr string, amount ApiAmount) (string, erro
 	return api.wt.SendPairs(pairs, waddrmgr.AccountMergePayNum, txrules.DefaultRelayFeePerKb)
 }
 
-func (api *API) SendToMany(addAmounts map[string]ApiAmount) (string, error) {
+func (api *API) SendToMany(addAmounts map[string]float64, coin string) (string, error) {
 
 	pairs := make(map[string]types.Amount)
 	for addr, amount := range addAmounts {
-		if amount.Value < 0 {
+		if amount < 0 {
 			return "", qitmeerjson.ErrNeedPositiveAmount
 		}
-		amt := types.Amount{Value: int64(amount.Value * types.AtomsPerCoin), Id: amount.Id}
+		coinId := types.NewCoinID(coin)
+		amt := types.Amount{Value: int64(amount * types.AtomsPerCoin), Id: coinId}
+
 		pairs[addr] = amt
 	}
 
@@ -344,7 +347,7 @@ func (api *API) SendToMany(addAmounts map[string]ApiAmount) (string, error) {
 }
 
 // SendToAddressByAccount by account
-func (api *API) SendToAddressByAccount(accountName string, addressStr string, amount ApiAmount, comment string, commentTo string) (string, error) {
+func (api *API) SendToAddressByAccount(accountName string, addressStr string, amount float64, coin string, comment string, commentTo string) (string, error) {
 
 	accountNum, err := api.wt.AccountNumber(waddrmgr.KeyScopeBIP0044, accountName)
 	if err != nil {
@@ -352,11 +355,12 @@ func (api *API) SendToAddressByAccount(accountName string, addressStr string, am
 	}
 
 	// Check that signed integer parameters are positive.
-	if amount.Value < 0 {
+	if amount < 0 {
 		return "", qitmeerjson.ErrNeedPositiveAmount
 	}
 
-	amt := types.Amount{Value: int64(amount.Value * types.AtomsPerCoin), Id: amount.Id}
+	coinId := types.NewCoinID(coin)
+	amt := types.Amount{Value: int64(amount * types.AtomsPerCoin), Id: coinId}
 
 	// Mock up map of address and amount pairs.
 	pairs := map[string]types.Amount{
@@ -367,7 +371,7 @@ func (api *API) SendToAddressByAccount(accountName string, addressStr string, am
 }
 
 //GetBalanceByAddr get balance by address
-func (api *API) GetBalanceByAddr(addrStr string) (*Balance, error) {
+func (api *API) GetBalanceByAddr(addrStr string) (map[string]Balance, error) {
 	m, err := api.wt.GetBalance(addrStr)
 	if err != nil {
 		return nil, err

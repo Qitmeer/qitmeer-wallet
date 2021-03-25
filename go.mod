@@ -4,18 +4,13 @@ go 1.12
 
 require (
 	github.com/BurntSushi/toml v0.3.1
-	github.com/Qitmeer/qitmeer v0.10.0-dev.0.20210124080746-76d668c40e09
-	github.com/briandowns/spinner v1.7.0
+	github.com/Qitmeer/qitmeer v0.10.0-dev.0.20210323064630-6fff2ca01478
 	github.com/davecgh/go-spew v1.1.1
 	github.com/deckarep/golang-set v1.7.1
-	github.com/jessevdk/go-flags v1.4.0
 	github.com/jrick/logrotate v1.0.0
 	github.com/julienschmidt/httprouter v1.2.0
 	github.com/mattn/go-colorable v0.1.7
-	github.com/mitchellh/go-homedir v1.1.0
 	github.com/peterh/liner v1.1.0
-	github.com/qianlnk/pgbar v0.0.0-20190929032005-46c23acad4ed
-	github.com/qianlnk/to v0.0.0-20180426070425-a52c7fda1751 // indirect
 	github.com/rakyll/statik v0.1.7
 	github.com/samuel/go-socks v0.0.0-20130725190102-f6c5f6a06ef6
 	github.com/spf13/cobra v0.0.5

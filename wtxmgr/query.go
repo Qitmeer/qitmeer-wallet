@@ -1,4 +1,3 @@
-
 package wtxmgr
 
 import (
@@ -51,7 +50,7 @@ func (s *Store) minedTxDetails(ns walletdb.ReadBucket, txHash *hash.Hash, recKey
 	if err != nil {
 		return nil, err
 	}
-	details.Block.Time, err = fetchBlockTime(ns, details.Block.Height)
+	details.Block.Time, err = fetchBlockTime(ns, uint32(details.Block.Order))
 	if err != nil {
 		return nil, err
 	}
@@ -92,7 +91,7 @@ func (s *Store) minedTxDetails(ns walletdb.ReadBucket, txHash *hash.Hash, recKey
 // hash txHash and the passed unMined record value.
 func (s *Store) unMinedTxDetails(ns walletdb.ReadBucket, txHash *hash.Hash, v []byte) (*TxDetails, error) {
 	details := TxDetails{
-		Block: BlockMeta{Block: Block{Height: -1}},
+		Block: BlockMeta{Block: Block{Order: -1}},
 	}
 	err := readRawTxRecord(txHash, v, &details.TxRecord)
 	if err != nil {
@@ -113,7 +112,6 @@ func (s *Store) unMinedTxDetails(ns walletdb.ReadBucket, txHash *hash.Hash, v []
 	if it.err != nil {
 		return nil, it.err
 	}
-
 
 	for i, output := range details.MsgTx.TxIn {
 		opKey := canonicalOutPoint(&output.PreviousOut.Hash,
@@ -254,7 +252,7 @@ func (s *Store) rangeBlockTransactions(ns walletdb.ReadBucket, begin, end int32,
 			if !it.next() {
 				return false
 			}
-			return it.elem.Height <= end
+			return it.elem.Order <= end
 		}
 	} else {
 		// Iterate in backwards order, from begin -> end.
@@ -263,7 +261,7 @@ func (s *Store) rangeBlockTransactions(ns walletdb.ReadBucket, begin, end int32,
 			if !it.prev() {
 				return false
 			}
-			return end <= it.elem.Height
+			return end <= it.elem.Order
 		}
 	}
 
@@ -282,7 +280,7 @@ func (s *Store) rangeBlockTransactions(ns walletdb.ReadBucket, begin, end int32,
 			v := existsRawTxRecord(ns, k)
 			if v == nil {
 				str := fmt.Sprintf("missing transaction %v for "+
-					"block %v", txHash, block.Height)
+					"block %v", txHash, block.Order)
 				return false, storeError(ErrData, str, nil)
 			}
 			detail := TxDetails{
@@ -383,7 +381,6 @@ func (s *Store) PreviousPkScripts(ns walletdb.ReadBucket, rec *TxRecord, block *
 	if block == nil {
 		for _, input := range rec.MsgTx.TxIn {
 			prevOut := &input.PreviousOut
-
 
 			v := existsRawUnMined(ns, prevOut.Hash[:])
 			if v != nil {

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/Qitmeer/qitmeer-wallet/walletdb"
 	"github.com/Qitmeer/qitmeer-wallet/walletdb/migration"
+	"github.com/Qitmeer/qitmeer-wallet/wtxmgr"
 	"github.com/Qitmeer/qitmeer/log"
 	chaincfg "github.com/Qitmeer/qitmeer/params"
 	"time"
@@ -103,8 +104,6 @@ func upgradeToVersion2(ns walletdb.ReadWriteBucket) error {
 	return putManagerVersion(ns, currentMgrVersion)
 }
 
-
-
 // populateBirthdayBlock is a migration that attempts to populate the birthday
 // block of the wallet. This is needed so that in the event that we need to
 // perform a rescan of the wallet, we can do so starting from this block, rather
@@ -164,7 +163,7 @@ func populateBirthdayBlock(ns walletdb.ReadWriteBucket) error {
 
 	// Now that we have the height estimate, we can fetch the corresponding
 	// block and set it as our birthday block.
-	birthdayHash, err := fetchBlockHash(ns, birthdayHeight)
+	birthdayHash, err := fetchBlockHash(ns, uint32(birthdayHeight))
 
 	// To ensure we record a height that is known to us from the chain,
 	// we'll make sure this height estimate can be found. Otherwise, we'll
@@ -174,7 +173,7 @@ func populateBirthdayBlock(ns walletdb.ReadWriteBucket) error {
 		if birthdayHeight < 0 {
 			birthdayHeight = 0
 		}
-		birthdayHash, err = fetchBlockHash(ns, birthdayHeight)
+		birthdayHash, err = fetchBlockHash(ns, uint32(birthdayHeight))
 	}
 	if err != nil {
 		return err
@@ -186,8 +185,8 @@ func populateBirthdayBlock(ns walletdb.ReadWriteBucket) error {
 	// NOTE: The timestamp of the birthday block isn't set since we do not
 	// store each block's timestamp.
 	return putBirthdayBlock(ns, BlockStamp{
-		Height: birthdayHeight,
-		Hash:   *birthdayHash,
+		Order: uint32(birthdayHeight),
+		Hash:  *birthdayHash,
 	})
 }
 
@@ -195,7 +194,7 @@ func populateBirthdayBlock(ns walletdb.ReadWriteBucket) error {
 // synced block to its birthday block. This essentially serves as a migration to
 // force a rescan of the wallet.
 func resetSyncedBlockToBirthday(ns walletdb.ReadWriteBucket) error {
-	syncBucket := ns.NestedReadWriteBucket(syncBucketName)
+	syncBucket := ns.NestedReadWriteBucket(wtxmgr.BucketSync)
 	if syncBucket == nil {
 		return errors.New("sync bucket does not exist")
 	}
