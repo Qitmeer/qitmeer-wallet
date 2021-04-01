@@ -44,12 +44,12 @@ const (
 )
 
 // NewHtpc make qitmeerd http client
-func NewHtpc() (*httpConfig, error) {
+func NewHtpc(cfg *config.Config) (*httpConfig, error) {
 
-	if config.Cfg.QitmeerdSelect != "" {
+	if cfg.QitmeerdSelect != "" {
 		var qitmeerd *client.Config
-		for _, item := range config.Cfg.Qitmeerds {
-			if item.Name == config.Cfg.QitmeerdSelect {
+		for _, item := range cfg.Qitmeerds {
+			if item.Name == cfg.QitmeerdSelect {
 				qitmeerd = item
 				break
 			}
@@ -60,15 +60,15 @@ func NewHtpc() (*httpConfig, error) {
 	}
 
 	h := &httpConfig{
-		RPCUser:       config.Cfg.QUser,
-		RPCPassword:   config.Cfg.QPass,
-		RPCServer:     config.Cfg.QServer,
-		RPCCert:       config.Cfg.QCert,
-		NoTLS:         config.Cfg.QNoTLS,
-		TLSSkipVerify: config.Cfg.QTLSSkipVerify,
-		Proxy:         config.Cfg.QProxy,
-		ProxyUser:     config.Cfg.QProxyUser,
-		ProxyPass:     config.Cfg.QProxyPass,
+		RPCUser:       cfg.QUser,
+		RPCPassword:   cfg.QPass,
+		RPCServer:     cfg.QServer,
+		RPCCert:       cfg.QCert,
+		NoTLS:         cfg.QNoTLS,
+		TLSSkipVerify: cfg.QTLSSkipVerify,
+		Proxy:         cfg.QProxy,
+		ProxyUser:     cfg.QProxyUser,
+		ProxyPass:     cfg.QProxyPass,
 	}
 	c, err := newHTTPClient(h)
 	if err != nil {
