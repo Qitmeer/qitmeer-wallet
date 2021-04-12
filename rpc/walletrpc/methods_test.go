@@ -67,7 +67,7 @@ func openWallet() (*wallet.Wallet, error) {
 		fmt.Errorf("UnLockManager err:%s", err.Error())
 		return nil, err
 	}
-	w.HttpClient, err = wallet.NewHtpc()
+	w.HttpClient, err = wallet.NewHtpc(config.Cfg)
 	if err != nil {
 		fmt.Errorf("NewHtpc err:%s", err.Error())
 		return nil, err

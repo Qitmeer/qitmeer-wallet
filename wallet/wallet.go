@@ -221,6 +221,10 @@ func NewAddrAndAddrTxOutput() *AddrAndAddrTxOutput {
 	}
 }
 
+func (w *Wallet) SetConfig(cfg *config.Config) {
+	w.cfg = cfg
+}
+
 // ImportPrivateKey imports a private key to the wallet and writes the new
 // wallet to disk.
 //
