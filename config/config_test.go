@@ -15,5 +15,7 @@ func TestSave(t *testing.T) {
 	}}
 	cfg.QitmeerdSelect = "local"
 
-	t.Log(cfg.Save("config.toml"))
+	if err := cfg.Save("config.toml");err != nil{
+		t.Log("failed to save config")
+	}
 }

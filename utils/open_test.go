@@ -10,7 +10,9 @@ func TestOpen(t *testing.T) {
 
 func TestUserDataDir(t *testing.T) {
 
-	t.Log(GetUserDataDir())
-
-	t.Log(MakeDirAll(GetUserDataDir()))
+	if dir := GetUserDataDir();dir == ""{
+		t.Errorf("Failed to get user data directory")
+	}else if err :=  MakeDirAll(dir);err != nil{
+		t.Errorf("Failed to make dir %s", dir)
+	}
 }

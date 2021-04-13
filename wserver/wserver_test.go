@@ -24,14 +24,17 @@ func TestSeed(t *testing.T) {
 		return
 	}
 	seed := hex.EncodeToString(seedBuf)
-	t.Log("seed", seed)
+	if seed == ""{
+		t.Error("failed to encode seed to string")
+	}
 
 	mnemonic, err := bip39.NewMnemonic(seedBuf)
 
-	t.Log("mnemonic", mnemonic, err)
-
 	s3, err := bip39.EntropyFromMnemonic(mnemonic)
-	t.Log("ok", hex.EncodeToString(s3) == seed, err)
+
+	if hex.EncodeToString(s3) != seed{
+		t.Errorf("generate entropy by mnemonic, Got:%s, Expected:%s", s3, seed)
+	}
 
 	//import master key addr
 	seedKey, err := bip32.NewMasterKey(seedBuf)
@@ -39,7 +42,6 @@ func TestSeed(t *testing.T) {
 		t.Logf("createWallet NewMasterKey err: %s", err)
 		return
 	}
-	t.Logf("createWallet import master key: %x\n", seedKey.Key)
 
 	pri, _ := secp256k1.PrivKeyFromBytes(seedKey.Key)
 	wif, err := utils.NewWIF(pri, activeNetParams, true)
@@ -51,9 +53,6 @@ func TestSeed(t *testing.T) {
 		t.Logf("createWallet Key is not intended for: %s %s", activeNetParams.Name, err)
 		return
 	}
-
-	t.Log(wif)
-
 }
 
 func TestGan(t *testing.T) {
