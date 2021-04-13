@@ -11,13 +11,13 @@ import (
 	"reflect"
 	"testing"
 
-	btcec "github.com/Qitmeer/qitmeer/crypto/ecc/secp256k1"
-	chaincfg "github.com/Qitmeer/qitmeer/params"
-	"github.com/Qitmeer/qitmeer/core/types"
-	"github.com/Qitmeer/qitmeer/engine/txscript"
 	"github.com/Qitmeer/qitmeer-wallet/utils"
-	"github.com/davecgh/go-spew/spew"
 	"github.com/Qitmeer/qitmeer/common/hash"
+	"github.com/Qitmeer/qitmeer/core/types"
+	btcec "github.com/Qitmeer/qitmeer/crypto/ecc/secp256k1"
+	"github.com/Qitmeer/qitmeer/engine/txscript"
+	chaincfg "github.com/Qitmeer/qitmeer/params"
+	"github.com/davecgh/go-spew/spew"
 )
 
 const dummyDir = ""
@@ -665,7 +665,7 @@ func TestWatchingWalletExport(t *testing.T) {
 		return
 	}
 	pk, _ := btcec.PrivKeyFromBytes( make([]byte, 32))
-	wif, err := util.NewWIF(pk, tstNetParams, true)
+	wif, err := utils.NewWIF(pk, tstNetParams, true)
 	if err != nil {
 		t.Fatal(err)
 	}
