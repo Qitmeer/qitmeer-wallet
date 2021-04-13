@@ -14,6 +14,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"github.com/Qitmeer/qitmeer-wallet/utils"
 	"github.com/Qitmeer/qitmeer/common/hash"
 	chainhash "github.com/Qitmeer/qitmeer/common/hash"
 	"github.com/Qitmeer/qitmeer/core/address"
@@ -23,7 +24,6 @@ import (
 	qitec "github.com/Qitmeer/qitmeer/crypto/ecc/secp256k1"
 	"github.com/Qitmeer/qitmeer/engine/txscript"
 	chaincfg "github.com/Qitmeer/qitmeer/params"
-	"github.com/Qitmeer/qitmeer-wallet/utils"
 	"io"
 	"io/ioutil"
 	"math/big"
@@ -193,7 +193,6 @@ func chainedPrivKey(privkey, pubkey, chaincode []byte) ([]byte, error) {
 	default:
 		return nil, fmt.Errorf("invalid pubkey length %d", n)
 	}
-
 	xorbytes := make([]byte, 32)
 	chainMod := chainhash.DoubleHashB(pubkey)
 	for i := range xorbytes {
