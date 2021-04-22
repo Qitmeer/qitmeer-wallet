@@ -52,8 +52,8 @@ type Config struct {
 	DebugLevel string
 	LogDir     string
 	Create     bool
-
-	Network string
+	Version    bool `short:"V" long:"version" description:"Display version information and exit"`
+	Network    string
 
 	//WalletRPC
 	UI            bool
