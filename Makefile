@@ -20,12 +20,18 @@ WIN_EXECUTABLES := \
 
 EXECUTABLES=$(UNIX_EXECUTABLES) $(WIN_EXECUTABLES)
 
-COMPRESSED_EXECUTABLES=$(UNIX_EXECUTABLES:%=%.tar.gz) $(WIN_EXECUTABLES:%.exe=%.zip) $(WIN_EXECUTABLES:%.exe=%.cn.zip)
+COMPRESSED_EXECUTABLES=$(UNIX_EXECUTABLES:%=%.tar.gz) $(WIN_EXECUTABLES:%.exe=%.zip)
 
 RELEASE_TARGETS=$(EXECUTABLES) $(COMPRESSED_EXECUTABLES)
 
-build:
-	go build -o $(GOBIN)/qitmeer-wallet $(GOFLAGS_DEV) "github.com/Qitmeer/qitmeer-wallet"
+wallet: build
+	@echo "Done building."
+	@echo "  $(shell $(GOBIN)/qitmeer-wallet --version))"
+	@echo "Run \"$(GOBIN)/qitmeer-wallet\" to launch."
+
+build:cleanBuild
+	@go build -o $(GOBIN)/qitmeer-wallet $(GOFLAGS_DEV) "github.com/Qitmeer/qitmeer-wallet"
+
 
 # amd64 release
 build/release/%: OS=$(word 3,$(subst /, ,$(@)))
@@ -41,16 +47,12 @@ build/release/%/$(EXECUTABLE).exe:
 %.zip: %.exe
 	@echo zip $(EXECUTABLE)-$(VERSION)-$(OS)-$(ARCH)
 	@zip $(EXECUTABLE)-$(VERSION)-$(OS)-$(ARCH).zip "$<"
-%.cn.zip: %.exe
-	@echo Build $(@).cn.zip
-	@echo zip $(EXECUTABLE)-$(VERSION)-$(OS)-$(ARCH)
-	@zip -j $(EXECUTABLE)-$(VERSION)-$(OS)-$(ARCH).cn.zip "$<" script/win/start.bat
 
 %.tar.gz : %
 	@echo tar $(EXECUTABLE)-$(VERSION)-$(OS)-$(ARCH)
 	@tar -zcvf $(EXECUTABLE)-$(VERSION)-$(OS)-$(ARCH).tar.gz "$<"
 
-release:cleanBuild build
+release:wallet
 	@echo "Build release version : $(VERSION)"
 	@$(MAKE) $(RELEASE_TARGETS)
 	@shasum -a 512 $(EXECUTABLES) > $(EXECUTABLE)-$(VERSION)_checksum.txt
@@ -60,7 +62,7 @@ checksum:
 cleanBuild:
 	@rm -f *.zip
 	@rm -f *.tar.gz
-	@rm -f ./build/bin/qitmeer-waellt
+	@rm -f ./build/bin/qitmeer-wallet
 	@rm -rf ./build/release
 
 webui: statik npm
