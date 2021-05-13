@@ -174,7 +174,7 @@ func (s *Store) InsertAddrTxOut(ns walletdb.ReadWriteBucket, txOut *AddrTxOutput
 	} else {
 		k := canonicalOutPoint(&txOut.TxId, txOut.Index)
 		if !txOut.IsBlue {
-			return outRw.Delete(k)
+			return nil
 		}
 		v := ValueAddrTxOutput(txOut)
 

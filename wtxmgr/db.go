@@ -149,6 +149,10 @@ func ReadAddrTxOutput(v []byte, txout *AddrTxOutput) (err error) {
 		}
 	}()
 
+	if len(v) == 96 || len(v) == 132 {
+		return readAddrTxOutputOld(v, txout)
+	}
+
 	copy(txout.TxId[:], v[0:32])
 	txout.Index = byteOrder.Uint32(v[32:36])
 	txout.Amount = types.Amount(byteOrder.Uint64(v[36:44]))
@@ -160,6 +164,29 @@ func ReadAddrTxOutput(v []byte, txout *AddrTxOutput) (err error) {
 		st := SpendTo{}
 		st.Index = byteOrder.Uint32(v[100:104])
 		copy(st.TxHash[:], v[104:136])
+		txout.SpendTo = &st
+	}
+	return nil
+}
+
+func readAddrTxOutputOld(v []byte, txout *AddrTxOutput) (err error) {
+	defer func() {
+		if rev := recover(); rev != nil {
+			errMsg := fmt.Sprintf("ReadAddrTxOutput recover: %s", rev)
+			err = errors.New(errMsg)
+		}
+	}()
+
+	copy(txout.TxId[:], v[0:32])
+	txout.Index = byteOrder.Uint32(v[32:36])
+	txout.Amount = types.Amount(byteOrder.Uint64(v[36:44]))
+	copy(txout.Block.Hash[:], v[44:76])
+	txout.Block.Height = int32(byteOrder.Uint32(v[88:92]))
+	txout.Spend = SpendStatus(byteOrder.Uint32(v[92:96]))
+	if len(v) == 132 {
+		st := SpendTo{}
+		st.Index = byteOrder.Uint32(v[96:100])
+		copy(st.TxHash[:], v[100:132])
 		txout.SpendTo = &st
 	}
 	return nil
