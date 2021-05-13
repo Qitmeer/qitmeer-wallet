@@ -62,7 +62,7 @@ checksum:
 clean:
 	@rm -f *.zip
 	@rm -f *.tar.gz
-	@rm -r *.txt
+	@rm -f *.txt
 	@rm -f ./build/bin/qitmeer-wallet
 	@rm -rf ./build/release
 
