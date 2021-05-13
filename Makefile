@@ -29,7 +29,7 @@ wallet: build
 	@echo "  $(shell $(GOBIN)/qitmeer-wallet --version))"
 	@echo "Run \"$(GOBIN)/qitmeer-wallet\" to launch."
 
-build:cleanBuild
+build: clean
 	@go build -o $(GOBIN)/qitmeer-wallet $(GOFLAGS_DEV) "github.com/Qitmeer/qitmeer-wallet"
 
 
@@ -59,11 +59,13 @@ release:wallet
 	@shasum -a 512 $(EXECUTABLE)-$(VERSION)-* >> $(EXECUTABLE)-$(VERSION)_checksum.txt
 checksum:
 	@cat $(EXECUTABLE)-$(VERSION)_checksum.txt|shasum -c
-cleanBuild:
+clean:
 	@rm -f *.zip
 	@rm -f *.tar.gz
+	@rm -r *.txt
 	@rm -f ./build/bin/qitmeer-wallet
 	@rm -rf ./build/release
+
 
 webui: statik npm
 	cd assets/src && npm run build
@@ -75,7 +77,7 @@ npm:
 	if [ ! -d assets/src/node_modules/ ]; then \
 		cd assets/src && npm install; \
 	fi
-clean:
+cleanui:
 	rm -rf assets/statik/statik.go
 	rm -rf assets/src/dist
 	rm -rf assets/src/node_modules/
