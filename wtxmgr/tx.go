@@ -48,14 +48,15 @@ type TxInputPoint struct {
 }
 
 type AddrTxOutput struct {
-	Address string
-	TxId    hash.Hash
-	Index   uint32
-	Amount  types.Amount
-	Block   Block
-	Spend   SpendStatus
-	SpendTo *SpendTo
-	IsBlue  bool
+	Address    string
+	TxId       hash.Hash
+	Index      uint32
+	Amount     types.Amount
+	Block      Block
+	Spend      SpendStatus
+	SpendTo    *SpendTo
+	IsBlue     bool
+	IsCoinbase bool
 }
 
 type AddrTxOutputs []AddrTxOutput
@@ -173,7 +174,7 @@ func (s *Store) InsertAddrTxOut(ns walletdb.ReadWriteBucket, txOut *AddrTxOutput
 		return err
 	} else {
 		k := canonicalOutPoint(&txOut.TxId, txOut.Index)
-		if !txOut.IsBlue {
+		if !txOut.IsBlue && txOut.IsCoinbase {
 			return nil
 		}
 		v := ValueAddrTxOutput(txOut)
