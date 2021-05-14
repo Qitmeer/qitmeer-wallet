@@ -795,8 +795,10 @@ func parseTx(tr corejson.TxRawResult, height, mainHeight int32, isBlue bool) ([]
 	if tr.Confirmations < config.Cfg.Confirmations {
 		spend = wtxmgr.SpendStatusUnconfirmed
 	}
+	isCoinbase := false
 	for i, vi := range tr.Vin {
 		if vi.Coinbase != "" {
+			isCoinbase = true
 			continue
 		}
 		if vi.Txid == "" && vi.Vout == 0 {
@@ -828,13 +830,14 @@ func parseTx(tr corejson.TxRawResult, height, mainHeight int32, isBlue bool) ([]
 			continue
 		} else {
 			txOut := wtxmgr.AddrTxOutput{
-				Address: vo.ScriptPubKey.Addresses[0],
-				TxId:    *txId,
-				Index:   uint32(index),
-				Amount:  types.Amount(vo.Amount),
-				Block:   block,
-				Spend:   spend,
-				IsBlue:  isBlue,
+				Address:    vo.ScriptPubKey.Addresses[0],
+				TxId:       *txId,
+				Index:      uint32(index),
+				Amount:     types.Amount(vo.Amount),
+				Block:      block,
+				Spend:      spend,
+				IsBlue:     isBlue,
+				IsCoinbase: isCoinbase,
 			}
 			txouts = append(txouts, txOut)
 		}
