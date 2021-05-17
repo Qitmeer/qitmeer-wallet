@@ -1822,7 +1822,9 @@ func (w *Wallet) SendOutputs(coin2outputs map[types.CoinID][]*types.TxOutput, ac
 									if (output.Amount.Value - payAmount.Value - feeAmount.Value) >= 0 {
 										selfTxOut.Amount.Value = output.Amount.Value - payAmount.Value - feeAmount.Value
 										if selfTxOut.Amount.Value > 0 {
-											tx.AddTxOut(selfTxOut)
+											if err := txrules.CheckOutput(selfTxOut, satPerKb); err == nil {
+												tx.AddTxOut(selfTxOut)
+											}
 										}
 										payAmount = types.Amount{Id: coinId}
 										feeAmount = types.Amount{Id: coinId}
@@ -1830,7 +1832,9 @@ func (w *Wallet) SendOutputs(coin2outputs map[types.CoinID][]*types.TxOutput, ac
 									} else {
 										selfTxOut.Amount.Value = output.Amount.Value - payAmount.Value
 										payAmount = types.Amount{Id: coinId}
-										tx.AddTxOut(selfTxOut)
+										if err := txrules.CheckOutput(selfTxOut, satPerKb); err == nil {
+											tx.AddTxOut(selfTxOut)
+										}
 									}
 
 								} else {
@@ -1851,7 +1855,9 @@ func (w *Wallet) SendOutputs(coin2outputs map[types.CoinID][]*types.TxOutput, ac
 									txOutput := types.Amount{Value: output.Amount.Value - feeAmount.Value, Id: coinId}
 									selfTxOut := types.NewTxOutput(txOutput, frompkscipt)
 									if selfTxOut.Amount.Value > 0 {
-										tx.AddTxOut(selfTxOut)
+										if err := txrules.CheckOutput(selfTxOut, satPerKb); err == nil {
+											tx.AddTxOut(selfTxOut)
+										}
 									}
 									sendAddrTxOutput = append(sendAddrTxOutput, output)
 									allSendAddrTxOutput = append(allSendAddrTxOutput, output)

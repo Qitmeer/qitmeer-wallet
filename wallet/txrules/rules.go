@@ -11,10 +11,11 @@ import (
 	"github.com/Qitmeer/qitmeer/core/serialization"
 	"github.com/Qitmeer/qitmeer/core/types"
 	"github.com/Qitmeer/qitmeer/engine/txscript"
+	"github.com/Qitmeer/qitmeer/services/mempool"
 )
 
 // DefaultRelayFeePerKb is the default minimum relay fee policy for a mempool.
-const DefaultRelayFeePerKb int64 = 1e3
+const DefaultRelayFeePerKb = mempool.DefaultMinRelayTxFee
 
 // GetDustThreshold is used to define the amount below which output will be
 // determined as dust. Threshold is determined as 3 times the relay fee.
