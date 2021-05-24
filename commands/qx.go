@@ -179,7 +179,7 @@ var wifToPriCmd = &cobra.Command{
 	Use:   "wiftopri {string, wif}",
 	Short: "WIF key to private key",
 	Example: `
-		wiftopri  5HueCGU8rMjxEXxiPuD5BDku4MkFqeZyd4dZ1jvhTVqvbTLvyTJ
+		wiftopri  PxBefLecRtTYPoxUUwAbq8m7xGmzDK8gQ71N9qKyhp2j5yN42Rpzc
 		`,
 	Args: cobra.MinimumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {

@@ -3,9 +3,9 @@ package commands
 import (
 	"encoding/hex"
 	"fmt"
+	util "github.com/Qitmeer/qitmeer-wallet/utils"
 	"github.com/Qitmeer/qitmeer-wallet/wallet"
 	"github.com/Qitmeer/qitmeer/log"
-	"github.com/Qitmeer/qitmeer/qx"
 	"github.com/spf13/cobra"
 	"strconv"
 )
@@ -320,7 +320,7 @@ func newImportPrivKeyCmd() *cobra.Command {
 		Short: "import priKey ",
 		Example: `
 		importprivkey  ef235aacf90d9f4aadd8c92e4b2562e1d9eb97f0df9ba3b508258739cb013db2 pripassword 
-		importprivkey  5HueCGU8rMjxEXxiPuD5BDku4MkFqeZyd4dZ1jvhTVqvbTLvyTJ pripassword  --format=wif
+		importprivkey  PxBefLecRtTYPoxUUwAbq8m7xGmzDK8gQ71N9qKyhp2j5yN42Rpzc pripassword  --format=wif
 		`,
 		Args: cobra.MinimumNArgs(2),
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -332,10 +332,10 @@ func newImportPrivKeyCmd() *cobra.Command {
 			}
 			priv := args[0]
 			if format == "wif" {
-				if decoded, _, err := qx.DecodeWIF(priv); err != nil {
+				if wif, err := util.DecodeWIF(priv, w.ChainParams()); err != nil {
 					return err
 				} else {
-					priv = hex.EncodeToString(decoded)
+					priv = hex.EncodeToString(wif.PrivKey.Serialize())
 				}
 			}
 
