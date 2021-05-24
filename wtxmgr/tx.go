@@ -114,9 +114,10 @@ func UnMarshalUnconfirmTx(bytes []byte) (*UnconfirmTx, error) {
 }
 
 type UTxo struct {
-	TxId   string
-	Index  uint32
-	Amount types.Amount
+	Address string
+	TxId    string
+	Index   uint32
+	Amount  types.Amount
 }
 
 // incidence records the block hash and blockchain height of a mined transaction.

@@ -246,7 +246,8 @@ func (c *Console) Interactive() {
 					}
 					if company == "i" {
 						if detail == "true" {
-							for _, v := range b {
+							for name, v := range b {
+								fmt.Printf("coin:%s\n", name)
 								fmt.Printf("unspent:%d\n", v.UnspentAmount.Value)
 								fmt.Printf("unconfirmed:%d\n", v.UnConfirmAmount.Value)
 								fmt.Printf("total:%d\n", v.TotalAmount.Value)
@@ -254,14 +255,16 @@ func (c *Console) Interactive() {
 								fmt.Println()
 							}
 						} else {
-							for _, v := range b {
+							for name, v := range b {
+								fmt.Printf("coin:%s\n", name)
 								fmt.Printf("%d\n", v.UnspentAmount.Value)
 								fmt.Println()
 							}
 						}
 					} else {
 						if detail == "true" {
-							for _, v := range b {
+							for name, v := range b {
+								fmt.Printf("coin:%s\n", name)
 								fmt.Printf("unspent:%.8f\n", v.UnspentAmount.ToCoin())
 								fmt.Printf("unconfirmed:%.8f\n", v.UnConfirmAmount.ToCoin())
 								fmt.Printf("total:%.8f\n", v.TotalAmount.ToCoin())
@@ -269,7 +272,8 @@ func (c *Console) Interactive() {
 								fmt.Println()
 							}
 						} else {
-							for _, v := range b {
+							for name, v := range b {
+								fmt.Printf("coin:%s\n", name)
 								fmt.Printf("%.8f\n", v.UnspentAmount.ToCoin())
 								fmt.Println()
 							}
