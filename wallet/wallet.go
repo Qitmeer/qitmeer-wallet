@@ -714,7 +714,7 @@ func (w *Wallet) GetBillByAddr(addr string, filter int, pageNo int, pageSize int
 
 func (w *Wallet) getPagedBillByAddr(addr string, filter int, pageNo int, pageSize int) (*wt.Bill, error) {
 	//TODO
-	/*at, err := w.getAddrAndAddrTxOutputByAddr(addr)
+	at, err := w.getAddrAndAddrTxOutputByAddr(addr)
 	if err != nil {
 		return nil, err
 	}
@@ -733,35 +733,37 @@ func (w *Wallet) getPagedBillByAddr(addr string, filter int, pageNo int, pageSiz
 
 	allMap := make(map[hash.Hash]wt.Payment)
 
-	for _, o := range at.Txoutput {
-
-		txOut, found := allMap[o.TxId]
-		if found {
-			txOut.Variation += o.Amount.Value
-		} else {
-			txOut.TxID = o.TxId
-			txOut.Variation = o.Amount.Value
-			txOut.BlockHash = o.Block.Hash
-			txOut.BlockOrder = uint32(o.Block.Order)
-		}
-		//log.Debug(fmt.Sprintf("%s %v %v", o.TxId.String(), float64(o.Amount)/math.Pow10(8), float64(txOut.Amount)/math.Pow10(8)))
-
-		allMap[o.TxId] = txOut
-
-		if o.SpendTo != nil {
-			txOut, found := allMap[o.SpendTo.TxId]
+	for _, at := range at.TxoutputMap {
+		for _, o := range at {
+			txOut, found := allMap[o.TxId]
 			if found {
-				txOut.Variation -= o.Amount.Value
+				txOut.Variation += o.Amount.Value
 			} else {
-				txOut.TxID = o.SpendTo.TxId
-				txOut.Variation = -o.Amount.Value
-				// ToDo: add Block to SpendTo
+				txOut.TxID = o.TxId
+				txOut.Variation = o.Amount.Value
 				txOut.BlockHash = o.Block.Hash
 				txOut.BlockOrder = uint32(o.Block.Order)
 			}
-			allMap[o.SpendTo.TxId] = txOut
-			//log.Debug(fmt.Sprintf("%s %v %v", o.SpendTo.TxHash.String(), float64(-o.Amount)/math.Pow10(8), float64(txOut.Amount)/math.Pow10(8)))
+			//log.Debug(fmt.Sprintf("%s %v %v", o.TxId.String(), float64(o.Amount)/math.Pow10(8), float64(txOut.Amount)/math.Pow10(8)))
+
+			allMap[o.TxId] = txOut
+
+			if o.SpendTo != nil {
+				txOut, found := allMap[o.SpendTo.TxId]
+				if found {
+					txOut.Variation -= o.Amount.Value
+				} else {
+					txOut.TxID = o.SpendTo.TxId
+					txOut.Variation = -o.Amount.Value
+					// ToDo: add Block to SpendTo
+					txOut.BlockHash = o.Block.Hash
+					txOut.BlockOrder = uint32(o.Block.Order)
+				}
+				allMap[o.SpendTo.TxId] = txOut
+				//log.Debug(fmt.Sprintf("%s %v %v", o.SpendTo.TxHash.String(), float64(-o.Amount)/math.Pow10(8), float64(txOut.Amount)/math.Pow10(8)))
+			}
 		}
+
 	}
 
 	for _, out := range allMap {
@@ -801,8 +803,7 @@ func (w *Wallet) getPagedBillByAddr(addr string, filter int, pageNo int, pageSiz
 			allTxs = allTxs[startIndex:endIndex]
 		}
 	}
-	return &allTxs, nil*/
-	return nil, nil
+	return &allTxs, nil
 }
 
 func (w *Wallet) GetBalance(addr string) (map[string]Balance, error) {
@@ -1997,7 +1998,7 @@ func (w *Wallet) GetUTXOByAddress(addrs []types.Address, amount types.Amount) ([
 func (w *Wallet) fees(coinId types.CoinID) int64 {
 	switch coinId {
 	case types.MEERID:
-		return 0
+		return 1 * 1000
 	case types.QITID:
 		return 0
 	case types.METID:

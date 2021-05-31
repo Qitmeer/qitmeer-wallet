@@ -99,6 +99,7 @@ export default {
             _this.currentAccount,
             _this.form.to,
             parseFloat(_this.form.value),
+            "MEER",
             "",
             ""
           ]
