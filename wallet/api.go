@@ -85,7 +85,8 @@ func (api *API) GetAccountsAndBalance(coin string) (map[string]*Balance, error) 
 			accountBalance.TotalAmount.Value += addr.balanceMap[types.NewCoinID(coin)].TotalAmount.Value
 			accountBalance.SpendAmount.Value += addr.balanceMap[types.NewCoinID(coin)].SpendAmount.Value
 			accountBalance.UnspentAmount.Value += addr.balanceMap[types.NewCoinID(coin)].UnspentAmount.Value
-			accountBalance.UnConfirmAmount.Value += addr.balanceMap[types.NewCoinID(coin)].UnConfirmAmount.Value
+			accountBalance.UnconfirmedAmount.Value += addr.balanceMap[types.NewCoinID(coin)].UnconfirmedAmount.Value
+			accountBalance.LockAmount.Value += addr.balanceMap[types.NewCoinID(coin)].LockAmount.Value
 		}
 
 	}
@@ -106,7 +107,8 @@ func (api *API) GetBalanceByAccount(name string, coin string) (*Balance, error) 
 				accountBalance.TotalAmount.Value += addr.balanceMap[types.NewCoinID(coin)].TotalAmount.Value
 				accountBalance.SpendAmount.Value += addr.balanceMap[types.NewCoinID(coin)].SpendAmount.Value
 				accountBalance.UnspentAmount.Value += addr.balanceMap[types.NewCoinID(coin)].UnspentAmount.Value
-				accountBalance.UnConfirmAmount.Value += addr.balanceMap[types.NewCoinID(coin)].UnConfirmAmount.Value
+				accountBalance.UnconfirmedAmount.Value += addr.balanceMap[types.NewCoinID(coin)].UnconfirmedAmount.Value
+				accountBalance.LockAmount.Value += addr.balanceMap[types.NewCoinID(coin)].LockAmount.Value
 			}
 		}
 	}
@@ -116,7 +118,7 @@ func (api *API) GetBalanceByAccount(name string, coin string) (*Balance, error) 
 
 // GetUTxo addr unSpend UTxo
 func (api *API) GetUTxo(addr string, coin string) ([]wtxmgr.UTxo, error) {
-	results, err := api.wt.GetUtxo(addr, coin)
+	results, err := api.wt.GetUnspentUTXO(addr, coin)
 	if err != nil {
 		return nil, err
 	}

@@ -262,15 +262,10 @@ func SendToAddress(iCmd interface{}, w *wallet.Wallet) (interface{}, error) {
 
 	var amt *types.Amount
 	var err error
-	switch cmd.Coin {
-	case "MEER":
-		amt, err = types.NewAmount(cmd.Amount)
-		amt.Id = types.MEERID
-	case "QIT":
-		amt, err = types.NewAmount(cmd.Amount)
-		amt.Id = types.QITID
-	default:
-		return nil, fmt.Errorf("There is no %s ", cmd.Coin)
+	amt, err = types.NewAmount(cmd.Amount)
+	amt.Id = types.NewCoinID(cmd.Coin)
+	if amt.Id.Name() != cmd.Coin {
+		return nil, fmt.Errorf("%s does not exist", cmd.Coin)
 	}
 	if err != nil {
 		return nil, err

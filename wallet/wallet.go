@@ -6,6 +6,9 @@
 package wallet
 
 import (
+	"bytes"
+	"encoding/binary"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -190,10 +193,11 @@ type (
 )
 
 type Balance struct {
-	TotalAmount     types.Amount // 总余额
-	UnspentAmount   types.Amount // 可用余额
-	UnConfirmAmount types.Amount // 待确认
-	SpendAmount     types.Amount // 已花费
+	TotalAmount       types.Amount // 总余额
+	UnspentAmount     types.Amount // 可用余额
+	UnconfirmedAmount types.Amount // 待确认
+	LockAmount        types.Amount // 锁定
+	SpendAmount       types.Amount // 已花费
 }
 
 // AccountBalanceResult is a single result for the Wallet.AccountBalances method.
@@ -566,8 +570,7 @@ func (w *Wallet) getAddrTxOutputByCoin(addr, coin string) (wtxmgr.AddrTxOutputs,
 		hsOutNs := outNs.NestedReadBucket(hs)
 		if hsOutNs != nil {
 			err := hsOutNs.ForEach(func(k, v []byte) error {
-				to := wtxmgr.NewAddrTxOutput()
-				err := wtxmgr.ReadAddrTxOutput(addr, v, to)
+				to, err := wtxmgr.DecodeAddrTxOutput(v)
 				if err != nil {
 					return err
 				}
@@ -588,6 +591,7 @@ func (w *Wallet) getAddrTxOutputByCoin(addr, coin string) (wtxmgr.AddrTxOutputs,
 }
 
 func (w *Wallet) getAddrAndAddrTxOutputByAddr(addr string) (*AddrAndAddrTxOutput, error) {
+	height := w.Manager.ChainHeight()
 	ato := NewAddrAndAddrTxOutput()
 	for _, id := range types.CoinIDList {
 		b := Balance{}
@@ -597,33 +601,39 @@ func (w *Wallet) getAddrAndAddrTxOutputByAddr(addr string) (*AddrAndAddrTxOutput
 		}
 		var spendAmount = types.Amount{Value: 0, Id: id}
 		var usableAmount = types.Amount{Value: 0, Id: id}
-		var unConfirmAmount = types.Amount{Value: 0, Id: id}
+		var UnconfirmedAmount = types.Amount{Value: 0, Id: id}
 		var totalAmount = types.Amount{Value: 0, Id: id}
+		var lockAmount = types.Amount{Value: 0, Id: id}
 
 		for _, txOut := range txOuts {
 			if txOut.Status == wtxmgr.TxStatusConfirmed {
 				if txOut.Spend == wtxmgr.SpendStatusSpend {
 					spendAmount.Value += txOut.Amount.Value
 				} else {
-					usableAmount.Value += txOut.Amount.Value
+					if txOut.Locked > height {
+						lockAmount.Value += txOut.Amount.Value
+					} else {
+						usableAmount.Value += txOut.Amount.Value
+					}
 				}
 			} else if txOut.Status == wtxmgr.TxStatusUnConfirmed {
 				if txOut.Spend == wtxmgr.SpendStatusSpend {
 					spendAmount.Value += txOut.Amount.Value
 				} else {
-					unConfirmAmount.Value += txOut.Amount.Value
+					UnconfirmedAmount.Value += txOut.Amount.Value
 				}
 			} else if txOut.Status == wtxmgr.TxStatusMemPool {
 				if txOut.Spend == wtxmgr.SpendStatusSpend {
 					spendAmount.Value += txOut.Amount.Value
 				} else {
-					unConfirmAmount.Value += txOut.Amount.Value
+					UnconfirmedAmount.Value += txOut.Amount.Value
 				}
 			}
 		}
-		totalAmount.Value = usableAmount.Value + unConfirmAmount.Value
+		totalAmount.Value = usableAmount.Value + lockAmount.Value + UnconfirmedAmount.Value
 		b.UnspentAmount = usableAmount
-		b.UnConfirmAmount = unConfirmAmount
+		b.UnconfirmedAmount = UnconfirmedAmount
+		b.LockAmount = lockAmount
 		b.SpendAmount = spendAmount
 		b.TotalAmount = totalAmount
 		ato.balanceMap[id] = b
@@ -1023,6 +1033,23 @@ func (w *Wallet) parseTxDetail(tr corejson.TxRawResult, order uint32, isBlue boo
 	}
 	txStatus := w.txStatus(uint32(tr.Confirmations), tr.Txsvalid, isBlue, isCoinBase, inMemPool)
 	for index, vo := range tr.Vout {
+		var lock uint64
+		switch vo.ScriptPubKey.Type {
+		case "pubkeyhash":
+
+		case "cltvpubkeyhash":
+			codes := strings.Split(vo.ScriptPubKey.Asm, " ")
+			if len(codes) == 0 {
+				return nil, nil, 0, false, fmt.Errorf("cltvpubkeyhash vout error,  %s", vo.ScriptPubKey.Asm)
+			}
+			lock, err = littleHexToUint64(codes[0])
+			if err != nil {
+				return nil, nil, 0, false, fmt.Errorf("little hex %s to uint64 error, %s", codes[0], err.Error())
+			}
+		default:
+			continue
+		}
+
 		if len(vo.ScriptPubKey.Addresses) == 0 {
 			continue
 		} else {
@@ -1039,6 +1066,7 @@ func (w *Wallet) parseTxDetail(tr corejson.TxRawResult, order uint32, isBlue boo
 					Index: 0,
 					TxId:  hash.Hash{},
 				},
+				Locked: uint32(lock),
 			}
 			txouts = append(txouts, txOut)
 		}
@@ -1072,7 +1100,7 @@ func (w *Wallet) txStatus(confirmations uint32, txsvalid, isBlue, isCoinBase, in
 	}
 }
 
-func (w *Wallet) GetSyncBlockHeight() uint32 {
+func (w *Wallet) GetSyncBlockOrder() uint32 {
 	order := w.Manager.SyncedTo().Order
 	return order
 }
@@ -1156,75 +1184,20 @@ func (w *Wallet) UpdateBlock(toOrder uint64) error {
 	w.scanEnd <- struct{}{}
 
 	ntfnHandlers := client.NotificationHandlers{
-		OnTxConfirm: func(txConfirm *cmds.TxConfirmResult) {
-			if err := w.updateTxConfirm(txConfirm); err != nil {
-				log.Warn("updateTxConfirm", "error", err)
-			}
-			fmt.Printf("Confirm %d %d %s\n", txConfirm.Order, txConfirm.Confirms, txConfirm.Tx)
-		},
-		OnTxAcceptedVerbose: func(c *client.Client, tx *j.DecodeRawTransactionResult) {
-			if tx.Duplicate {
-				return
-			}
-			if !w.syncLatest {
-				if tx.BlockHash == "" {
-					return
-				}
-				if tx.Order >= uint64(w.getToOrder()) {
-					return
-				}
-			}
-			txIns, txOuts, status, trRs, err := w.parseTx(tx)
-			if err != nil {
-				log.Error("OnTxAcceptedVerbose parse tx", "error", err)
-				return
-			}
-			err = w.insertTx(uint32(tx.Order), txIns, txOuts, status, trRs)
-			if err != nil {
-				log.Error("OnTxAcceptedVerbose insert tx", "error", err)
-				return
-			}
-
-			blockHash, _ := hash.NewHashFromStr(tx.BlockHash)
-			err = w.updateBlockTemp(*blockHash, uint32(tx.Order))
-			if err != nil {
-				return
-			}
-
-			if w.syncLatest {
-				_, _ = fmt.Fprintf(os.Stdout, "update new transaction:%d %s\r", tx.Order, tx.Txid)
-			}
-
-		},
-		OnRescanProgress: func(rescanPro *cmds.RescanProgressNtfn) {
-			//log.Info("scan block progress", "order", rescanPro.Order)
-			_, _ = fmt.Fprintf(os.Stdout, "update history blcok:%d/%d\r", rescanPro.Order, w.getToOrder()-1)
-		},
-		OnRescanFinish: func(rescanFinish *cmds.RescanFinishedNtfn) {
-			defer func() {
-				w.scanEnd <- struct{}{}
-			}()
-
-			hash, err := w.HttpClient.getBlockHashByOrder(int64(w.getToOrder() - 1))
-			if err != nil {
-				log.Warn("get block hash by order", "error", err)
-				return
-			}
-			err = w.updateBlockTemp(*hash, w.getToOrder()-1)
-			if err != nil {
-				return
-			}
-			w.setOrder(w.getToOrder() - 1)
-
-		},
-		OnNodeExit: func(nodeExit *cmds.NodeExitNtfn) {
-			w.notificationRpc.Shutdown()
-			w.stopSync()
-		},
+		OnBlockConnected:    w.OnBlockConnected,
+		OnTxConfirm:         w.OnTxConfirm,
+		OnTxAcceptedVerbose: w.OnTxAcceptedVerbose,
+		OnRescanProgress:    w.OnRescanProgress,
+		OnRescanFinish:      w.OnRescanFinish,
+		OnNodeExit:          w.OnNodeExit,
 	}
 
 	w.notificationRpc, err = NewNotificationRpc(w.cfg, ntfnHandlers)
 	if err != nil {
+		return err
+	}
+
+	if err = w.notifyBlock(); err != nil {
 		return err
 	}
 
@@ -1288,6 +1261,51 @@ func (w *Wallet) notifyScanTxByAddr(addrs []string) {
 	}
 }
 
+func (w *Wallet) OnTxConfirm(txConfirm *cmds.TxConfirmResult) {
+	if err := w.updateTxConfirm(txConfirm); err != nil {
+		log.Warn("updateTxConfirm", "error", err)
+	}
+	fmt.Printf("Confirm %d %d %s\n", txConfirm.Order, txConfirm.Confirms, txConfirm.Tx)
+}
+
+func (w *Wallet) OnTxAcceptedVerbose(c *client.Client, tx *j.DecodeRawTransactionResult) {
+	if tx.Duplicate {
+		return
+	}
+	if !w.syncLatest {
+		if tx.BlockHash == "" {
+			return
+		}
+		if tx.Order >= uint64(w.getToOrder()) {
+			return
+		}
+	}
+	txIns, txOuts, status, trRs, err := w.parseTx(tx)
+	if err != nil {
+		log.Error("OnTxAcceptedVerbose parse tx", "error", err)
+		return
+	}
+	err = w.insertTx(uint32(tx.Order), txIns, txOuts, status, trRs)
+	if err != nil {
+		log.Error("OnTxAcceptedVerbose insert tx", "error", err)
+		return
+	}
+
+	blockHash, _ := hash.NewHashFromStr(tx.BlockHash)
+	err = w.updateBlockTemp(*blockHash, uint32(tx.Order))
+	if err != nil {
+		return
+	}
+	if w.syncLatest {
+		_, _ = fmt.Fprintf(os.Stdout, "update new transaction:%d %s\r", tx.Order, tx.Txid)
+	}
+}
+
+func (w *Wallet) OnRescanProgress(rescanPro *cmds.RescanProgressNtfn) {
+	//log.Info("scan block progress", "order", rescanPro.Order)
+	_, _ = fmt.Fprintf(os.Stdout, "update history blcok:%d/%d\r", rescanPro.Order, w.getToOrder()-1)
+}
+
 func (w *Wallet) updateSyncToOrder(toOrder uint32) error {
 	maxOrder, err := w.maxBlockOrder()
 	if err != nil {
@@ -1300,6 +1318,34 @@ func (w *Wallet) updateSyncToOrder(toOrder uint32) error {
 	}
 	w.setToOrder(toOrder)
 	return nil
+}
+
+func (w *Wallet) OnBlockConnected(hash *hash.Hash, height int64, order int64, t time.Time, txs []*types.Transaction) {
+	if err := w.updateChainHeight(uint32(height)); err != nil {
+		log.Warn("update chain height", "error", err.Error())
+	}
+}
+
+func (w *Wallet) OnRescanFinish(rescanFinish *cmds.RescanFinishedNtfn) {
+	defer func() {
+		w.scanEnd <- struct{}{}
+	}()
+
+	hash, err := w.HttpClient.getBlockHashByOrder(int64(w.getToOrder() - 1))
+	if err != nil {
+		log.Warn("get block hash by order", "error", err)
+		return
+	}
+	err = w.updateBlockTemp(*hash, w.getToOrder()-1)
+	if err != nil {
+		return
+	}
+	w.setOrder(w.getToOrder() - 1)
+}
+
+func (w *Wallet) OnNodeExit(nodeExit *cmds.NodeExitNtfn) {
+	w.notificationRpc.Shutdown()
+	w.stopSync()
 }
 
 func (w *Wallet) stopSync() {
@@ -1319,8 +1365,28 @@ func (w *Wallet) updateBlockTemp(hash hash.Hash, localOrder uint32) error {
 	return err
 }
 
+func (w *Wallet) updateChainHeight(height uint32) error {
+	err := walletdb.Update(w.db, func(tx walletdb.ReadWriteTx) error {
+		ns := tx.ReadWriteBucket(waddrmgrNamespaceKey)
+		err := w.Manager.SetChainHeight(ns, height)
+		if err != nil {
+			return err
+		}
+		return nil
+	})
+	return err
+}
+
 func (w *Wallet) notifyTxByAddr(addrs []string) error {
 	err := w.notificationRpc.NotifyTxsByAddr(false, addrs, nil)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (w *Wallet) notifyBlock() error {
+	err := w.notificationRpc.NotifyBlocks()
 	if err != nil {
 		return err
 	}
@@ -1805,42 +1871,25 @@ func (w *Wallet) AccountName(scope waddrmgr.KeyScope, accountNumber uint32) (str
 	return accountName, err
 }
 
-func (w *Wallet) GetUtxo(addr string, coin string) ([]wtxmgr.UTxo, error) {
+func (w *Wallet) GetUnspentUTXO(addr string, coin string) ([]wtxmgr.UTxo, error) {
 	var utxos []wtxmgr.UTxo
-	err := walletdb.View(w.db, func(tx walletdb.ReadTx) error {
-		hs := []byte(addr)
-		ns := tx.ReadBucket(wtxmgrNamespaceKey)
-		outns := ns.NestedReadBucket(wtxmgr.CoinBucket(wtxmgr.BucketAddrtxout, coin))
-		hsoutns := outns.NestedReadBucket(hs)
-		if hsoutns != nil {
-			_ = hsoutns.ForEach(func(k, v []byte) error {
-				outPut := wtxmgr.NewAddrTxOutput()
-				err := wtxmgr.ReadAddrTxOutput(addr, v, outPut)
-				if err != nil {
-					log.Error("readAddrTxOutput err", "err", err.Error())
-					return err
-				}
-				if outPut.Spend == wtxmgr.SpendStatusUnspent && outPut.Status == wtxmgr.TxStatusConfirmed {
-					utxos = append(utxos, wtxmgr.UTxo{
-						TxId:    outPut.TxId.String(),
-						Index:   outPut.Index,
-						Amount:  outPut.Amount,
-						Address: outPut.Address,
-					})
-				}
-				return nil
-			})
-		}
-		return nil
-	})
+	outputs, err := w.GetUnspentAddrOutput(addr, coin)
 	if err != nil {
-		log.Error("ReadAddrTxOutput err", "err", err)
 		return nil, err
+	}
+	for _, outPut := range outputs {
+		utxos = append(utxos, wtxmgr.UTxo{
+			TxId:    outPut.TxId.String(),
+			Index:   outPut.Index,
+			Amount:  outPut.Amount,
+			Address: outPut.Address,
+		})
 	}
 	return utxos, nil
 }
 
-func (w *Wallet) GetUnSpentAddrOuPut(addr string, coin string) ([]*wtxmgr.AddrTxOutput, error) {
+func (w *Wallet) GetUnspentAddrOutput(addr string, coin string) ([]*wtxmgr.AddrTxOutput, error) {
+	height := w.Manager.ChainHeight()
 	var utxos []*wtxmgr.AddrTxOutput
 	err := walletdb.View(w.db, func(tx walletdb.ReadTx) error {
 		hs := []byte(addr)
@@ -1850,12 +1899,13 @@ func (w *Wallet) GetUnSpentAddrOuPut(addr string, coin string) ([]*wtxmgr.AddrTx
 		if hsoutns != nil {
 			_ = hsoutns.ForEach(func(k, v []byte) error {
 				outPut := wtxmgr.NewAddrTxOutput()
-				err := wtxmgr.ReadAddrTxOutput(addr, v, outPut)
+				outPut, err := wtxmgr.DecodeAddrTxOutput(v)
 				if err != nil {
 					log.Error("readAddrTxOutput err", "err", err.Error())
 					return err
 				}
-				if outPut.Spend == wtxmgr.SpendStatusUnspent && outPut.Status == wtxmgr.TxStatusConfirmed {
+
+				if outPut.Spend == wtxmgr.SpendStatusUnspent && outPut.Status == wtxmgr.TxStatusConfirmed && outPut.Locked <= height {
 					utxos = append(utxos, outPut)
 				}
 				return nil
@@ -1976,7 +2026,7 @@ func (w *Wallet) GetUTXOByAddress(addrs []types.Address, amount types.Amount) ([
 	otxoList := make([]*wtxmgr.AddrTxOutput, 0)
 	var sum int64
 	for _, addr := range addrs {
-		uxtoList, err := w.GetUnSpentAddrOuPut(addr.String(), amount.Id.Name())
+		uxtoList, err := w.GetUnspentAddrOutput(addr.String(), amount.Id.Name())
 		if err != nil {
 			log.Warn("Failed to get address utxo", "address", addr.String(), "coinId", amount.Id.Name())
 			continue
@@ -1998,13 +2048,7 @@ func (w *Wallet) GetUTXOByAddress(addrs []types.Address, amount types.Amount) ([
 func (w *Wallet) fees(coinId types.CoinID) int64 {
 	switch coinId {
 	case types.MEERID:
-		return 1 * 1000
-	case types.QITID:
 		return 0
-	case types.METID:
-		return 1 * types.AtomsPerCoin
-	case types.TERID:
-		return 1 * types.AtomsPerCoin
 	default:
 		return 0
 	}
@@ -2127,4 +2171,17 @@ func makeOutputs(pairs map[string]types.Amount) (map[types.CoinID][]*types.TxOut
 
 	}
 	return coin2outputs, nil
+}
+
+func littleHexToUint64(hexStr string) (uint64, error) {
+	src, err := hex.DecodeString(hexStr)
+	if err != nil {
+		return 0, err
+	}
+	dst := make([]byte, 8)
+	copy(dst, src)
+	var number uint64
+	bytesBuffer := bytes.NewBuffer(dst)
+	err = binary.Read(bytesBuffer, binary.LittleEndian, &number)
+	return number, err
 }

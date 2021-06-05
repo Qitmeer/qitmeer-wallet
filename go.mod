@@ -19,3 +19,7 @@ require (
 	golang.org/x/crypto v0.0.0-20210421170649-83a5a9bb288b
 	golang.org/x/net v0.0.0-20210421230115-4e50805a0758
 )
+
+replace (
+	github.com/Qitmeer/qitmeer v0.10.0-dev.0.20210406085400-b7642766e7b2 => ../qitmeer-jamesvan2019
+)

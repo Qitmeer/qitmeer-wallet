@@ -244,6 +244,7 @@ var (
 
 	// Sync related key names (sync bucket).
 	syncedToName              = []byte("syncedto")
+	chainHeightName           = []byte("chainheight")
 	startBlockName            = []byte("startblock")
 	birthdayName              = []byte("birthday")
 	birthdayBlockName         = []byte("birthdayblock")
@@ -868,6 +869,34 @@ func PutSyncedTo(ns walletdb.ReadWriteBucket, bs *BlockStamp) error {
 	return nil
 }
 
+// PutSyncedTo stores the provided synced to blockstamp to the database.
+func putChainHeight(ns walletdb.ReadWriteBucket, height uint32) error {
+	bucket := ns.NestedReadWriteBucket(wtxmgr.BucketHeight)
+	errStr := fmt.Sprintf("failed to store chain height information %v", height)
+
+	temp := make([]byte, 4)
+	binary.BigEndian.PutUint32(temp, height)
+	err := bucket.Put(chainHeightName, temp)
+	if err != nil {
+		return managerError(ErrDatabase, errStr, err)
+	}
+	return nil
+}
+
+func fetchChainHeight(ns walletdb.ReadBucket) (uint32, error) {
+	bucket := ns.NestedReadBucket(wtxmgr.BucketHeight)
+
+	buf := bucket.Get(chainHeightName)
+	if len(buf) < 4 {
+		str := "malformed chain height stored in database"
+		return 0, managerError(ErrDatabase, str, nil)
+	}
+
+	height := binary.BigEndian.Uint32(buf[0:4])
+
+	return height, nil
+}
+
 // fetchBlockHash loads the block hash for the provided height from the
 // database.
 func fetchBlockHash(ns walletdb.ReadBucket, order uint32) (*chainhash.Hash, error) {
@@ -1080,6 +1109,11 @@ func CreateManagerNS(ns walletdb.ReadWriteBucket, defaultScopes map[KeyScope]Sco
 	_, err = ns.CreateBucket(wtxmgr.BucketSync)
 	if err != nil {
 		str := "failed to create sync bucket"
+		return managerError(ErrDatabase, str, err)
+	}
+	_, err = ns.CreateBucket(wtxmgr.BucketHeight)
+	if err != nil {
+		str := "failed to create height bucket"
 		return managerError(ErrDatabase, str, err)
 	}
 

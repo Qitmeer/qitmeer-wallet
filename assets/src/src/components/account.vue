@@ -16,6 +16,7 @@
         <el-table-column prop="account" label="名称" width="120"></el-table-column>
         <el-table-column prop="UnspendAmount" label="余额(可花费)"></el-table-column>
         <el-table-column prop="ConfirmAmount" label="余额(待确认)"></el-table-column>
+        <el-table-column prop="LockAmount" label="余额(锁定)"></el-table-column>
       </el-table>
     </el-main>
   </el-container>
@@ -47,15 +48,18 @@ export default {
         tmpTable.push({
           account: i,
           UnspendAmount: listAccounts[item]['UnspentAmount']['Value'] / 1e8,
-          ConfirmAmount: listAccounts[item]['UnConfirmAmount']['Value'] / 1e8,
+          ConfirmAmount: listAccounts[item]['UnconfirmedAmount']['Value'] / 1e8,
         })
       }*/
 
       for (let k in listAccounts) {
+        // eslint-disable-next-line no-console
+        console.log(k)
          tmpTable.push({
            account: k,
            UnspendAmount: listAccounts[k]['UnspentAmount']['Value'] / 1e8,
-           ConfirmAmount: listAccounts[k]['UnConfirmAmount']['Value'] / 1e8
+           LockAmount: listAccounts[k]['LockAmount']['Value'] / 1e8,
+           ConfirmAmount: listAccounts[k]['UnconfirmedAmount']['Value'] / 1e8,
          });
        }
       return tmpTable;

@@ -279,7 +279,7 @@ func test_wallet_sendToAddress(w *wallet.Wallet) (interface{}, error) {
 }
 func test_wallet_updateblock(w *wallet.Wallet) error {
 	cmd := &qitmeerjson.UpdateBlockToCmd{
-		Toheight: 0,
+		ToOrder: 0,
 	}
 	err := UpdateBlock(cmd, w)
 	if err != nil {
