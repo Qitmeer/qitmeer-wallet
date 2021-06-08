@@ -1655,7 +1655,7 @@ func (w *Wallet) DumpWIFPrivateKey(addr types.Address) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return wif.String(), nil
+	return wif, nil
 }
 func (w *Wallet) getPrivateKey(addr types.Address) (waddrmgr.ManagedPubKeyAddress, error) {
 	var maddr waddrmgr.ManagedAddress
