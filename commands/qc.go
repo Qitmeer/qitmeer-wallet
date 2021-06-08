@@ -339,7 +339,7 @@ func newImportPrivKeyCmd() *cobra.Command {
 			var wif *util.WIF
 			var err error
 			if format == "pastwif" {
-				if wif, err = util.DecodePassWIF(priv, w.ChainParams()); err != nil {
+				if wif, err = util.DecodePastWIF(priv, w.ChainParams()); err != nil {
 					return err
 				}
 			} else if format == "wif" {

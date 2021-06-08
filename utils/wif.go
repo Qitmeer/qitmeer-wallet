@@ -65,7 +65,7 @@ func (w *WIF) IsForNet(net *params.Params) bool {
 	return w.netID == net.PrivateKeyID
 }
 
-// DecodePassWIF creates a new WIF structure by decoding the string encoding of
+// DecodePastWIF creates a new WIF structure by decoding the string encoding of
 // the import format.
 //
 // The WIF string must be a base58-encoded string of the following byte
@@ -85,7 +85,7 @@ func (w *WIF) IsForNet(net *params.Params) bool {
 // is of an impossible length or the expected compressed pubkey magic number
 // does not equal the expected value of 0x01.  ErrChecksumMismatch is returned
 // if the expected WIF checksum does not match the calculated checksum.
-func DecodePassWIF(wif string, net *params.Params) (*WIF, error) {
+func DecodePastWIF(wif string, net *params.Params) (*WIF, error) {
 	decoded := base58.Decode([]byte(wif))
 	decodedLen := len(decoded)
 	var compress bool
