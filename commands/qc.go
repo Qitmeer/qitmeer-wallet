@@ -342,12 +342,13 @@ func newImportPrivKeyCmd() *cobra.Command {
 				if wif, err = util.DecodePastWIF(priv, w.ChainParams()); err != nil {
 					return err
 				}
+				priv = hex.EncodeToString(wif.PrivKey.Serialize())
 			} else if format == "wif" {
 				if wif, err = util.DecodeWIF(priv, w.ChainParams()); err != nil {
 					return err
 				}
+				priv = hex.EncodeToString(wif.PrivKey.Serialize())
 			}
-			priv = hex.EncodeToString(wif.PrivKey.Serialize())
 			_, err = importPrivKey(priv)
 			return err
 		},
