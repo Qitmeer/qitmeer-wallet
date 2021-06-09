@@ -14,7 +14,6 @@ import (
 	"fmt"
 	"github.com/Qitmeer/qitmeer-wallet/json/qitmeerjson"
 	"github.com/Qitmeer/qitmeer/common/marshal"
-	"github.com/Qitmeer/qitmeer/crypto/ecc"
 	"io/ioutil"
 	"os"
 	"sort"
@@ -240,7 +239,6 @@ func (w *Wallet) SetConfig(cfg *config.Config) {
 // NOTE: If a block stamp is not provided, then the wallet's birthday will be
 // set to the genesis block of the corresponding chain.
 func (w *Wallet) ImportPrivateKey(scope waddrmgr.KeyScope, wif *utils.WIF) (string, error) {
-
 	manager, err := w.Manager.FetchScopedKeyManager(scope)
 	if err != nil {
 		return "", err
@@ -1034,6 +1032,7 @@ func (w *Wallet) parseTxDetail(tr corejson.TxRawResult, order uint32, isBlue boo
 	txStatus := w.txStatus(uint32(tr.Confirmations), tr.Txsvalid, isBlue, isCoinBase, inMemPool)
 	for index, vo := range tr.Vout {
 		var lock uint64
+		var pkScript []byte
 		switch vo.ScriptPubKey.Type {
 		case "pubkeyhash":
 
@@ -1046,6 +1045,8 @@ func (w *Wallet) parseTxDetail(tr corejson.TxRawResult, order uint32, isBlue boo
 			if err != nil {
 				return nil, nil, 0, false, fmt.Errorf("little hex %s to uint64 error, %s", codes[0], err.Error())
 			}
+			bytes, _ := hex.DecodeString(vo.ScriptPubKey.Hex)
+			pkScript, err = txscript.PayToCLTVPubKeyHashScript(bytes, int64(lock))
 		default:
 			continue
 		}
@@ -1066,7 +1067,8 @@ func (w *Wallet) parseTxDetail(tr corejson.TxRawResult, order uint32, isBlue boo
 					Index: 0,
 					TxId:  hash.Hash{},
 				},
-				Locked: uint32(lock),
+				Locked:   uint32(lock),
+				PkScript: pkScript,
 			}
 			txouts = append(txouts, txOut)
 		}
@@ -1321,6 +1323,7 @@ func (w *Wallet) updateSyncToOrder(toOrder uint32) error {
 }
 
 func (w *Wallet) OnBlockConnected(hash *hash.Hash, height int64, order int64, t time.Time, txs []*types.Transaction) {
+	fmt.Println(height, order)
 	if err := w.updateChainHeight(uint32(height)); err != nil {
 		log.Warn("update chain height", "error", err.Error())
 	}
@@ -1702,7 +1705,7 @@ func (w *Wallet) newAddress(addrMgrNs walletdb.ReadWriteBucket, account uint32,
 
 // DumpWIFPrivateKey returns the WIF encoded private key for a
 // single wallet address.
-func (w *Wallet) DumpWIFPrivateKey(addr types.Address) (string, error) {
+func (w *Wallet) DumpWIFPrivateKey(addr types.Address) (*utils.WIF, error) {
 	var maddr waddrmgr.ManagedAddress
 	err := walletdb.View(w.db, func(tx walletdb.ReadTx) error {
 		waddrMgrNs := tx.ReadBucket(waddrmgrNamespaceKey)
@@ -1712,17 +1715,17 @@ func (w *Wallet) DumpWIFPrivateKey(addr types.Address) (string, error) {
 		return err
 	})
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	pka, ok := maddr.(waddrmgr.ManagedPubKeyAddress)
 	if !ok {
-		return "", fmt.Errorf("address %s is not a key type", addr)
+		return nil, fmt.Errorf("address %s is not a key type", addr)
 	}
 	wif, err := pka.ExportPrivKey()
 	if err != nil {
-		return "", err
+		return nil, err
 	}
-	return wif.String(), nil
+	return wif, nil
 }
 func (w *Wallet) getPrivateKey(addr types.Address) (waddrmgr.ManagedPubKeyAddress, error) {
 	var maddr waddrmgr.ManagedAddress
@@ -1906,6 +1909,9 @@ func (w *Wallet) GetUnspentAddrOutput(addr string, coin string) ([]*wtxmgr.AddrT
 				}
 
 				if outPut.Spend == wtxmgr.SpendStatusUnspent && outPut.Status == wtxmgr.TxStatusConfirmed && outPut.Locked <= height {
+					if outPut.Locked == 0 {
+						return nil
+					}
 					utxos = append(utxos, outPut)
 				}
 				return nil
@@ -1944,6 +1950,8 @@ func (w *Wallet) SendOutputs(coin2outputs map[types.CoinID][]*types.TxOutput, ac
 
 	allSpentUTXO := make([]*wtxmgr.AddrTxOutput, 0)
 	tx := types.NewTransaction()
+	tx.LockTime = w.Manager.ChainHeight()
+	var txInPkScript [][]byte
 	for coinId, outputs := range coin2outputs {
 		payAmount := types.Amount{Id: coinId}
 		for _, output := range outputs {
@@ -1960,7 +1968,19 @@ func (w *Wallet) SendOutputs(coin2outputs map[types.CoinID][]*types.TxOutput, ac
 		}
 		for _, utxo := range uxtoList {
 			input := types.NewOutPoint(&utxo.TxId, utxo.Index)
-			tx.AddTxIn(types.NewTxInput(input, []byte(utxo.Address)))
+			in := types.NewTxInput(input, []byte(utxo.Address))
+			if tx.LockTime != 0 {
+				in.Sequence = types.MaxTxInSequenceNum - 1
+			}
+			addr, _ := address.DecodeAddress(utxo.Address)
+			if utxo.Locked != 0 {
+				pkScript, _ := txscript.PayToCLTVPubKeyHashScript(addr.Script(), int64(utxo.Locked))
+				txInPkScript = append(txInPkScript, pkScript)
+			} else {
+				pkScript, _ := txscript.PayToAddrScript(addr)
+				txInPkScript = append(txInPkScript, pkScript)
+			}
+			tx.AddTxIn(in)
 		}
 
 		change := sum - payAmount.Value
@@ -1978,11 +1998,12 @@ func (w *Wallet) SendOutputs(coin2outputs map[types.CoinID][]*types.TxOutput, ac
 		allSpentUTXO = append(allSpentUTXO, uxtoList...)
 	}
 
-	signTx, err := w.multiAddressMergeSign(*tx, w.chainParams.Name)
+	signTx, err := w.multiAddressMergeSign(*tx, txInPkScript)
 	if err != nil {
 		return nil, err
 	}
 	log.Trace(fmt.Sprintf("signTx size:%v", len(signTx)), "signTx", signTx)
+	fmt.Println(signTx)
 	msg, err := w.HttpClient.SendRawTransaction(signTx, false)
 	if err != nil {
 		log.Trace("SendRawTransaction txSign err ", "err", err.Error())
@@ -2055,23 +2076,9 @@ func (w *Wallet) fees(coinId types.CoinID) int64 {
 }
 
 // Multi address merge signature
-func (w *Wallet) multiAddressMergeSign(redeemTx types.Transaction, network string) (string, error) {
-
-	var param *chaincfg.Params
-	switch network {
-	case "mainnet":
-		param = &chaincfg.MainNetParams
-	case "testnet":
-		param = &chaincfg.TestNetParams
-	case "privnet":
-		param = &chaincfg.PrivNetParams
-	case "mixnet":
-		param = &chaincfg.MixNetParams
-	}
-
-	var sigScripts [][]byte
-	for i := range redeemTx.TxIn {
-		addrByte := redeemTx.TxIn[i].SignScript
+func (w *Wallet) multiAddressMergeSign(redeemTx types.Transaction, txInPkScript [][]byte) (string, error) {
+	for i, txIn := range redeemTx.TxIn {
+		addrByte := txIn.SignScript
 		addr, err := address.DecodeAddress(string(addrByte))
 		if err != nil {
 			return "", err
@@ -2084,23 +2091,11 @@ func (w *Wallet) multiAddressMergeSign(redeemTx types.Transaction, network strin
 		if err != nil {
 			return "", err
 		}
-		// Create a new script which pays to the provided address.
-		pkScript, err := txscript.PayToAddrScript(addr)
+		sigScript, err := txscript.SignatureScript(&redeemTx, i, txInPkScript[i], txscript.SigHashAll, priKey, true)
 		if err != nil {
 			return "", err
 		}
-		var kdb txscript.KeyClosure = func(types.Address) (ecc.PrivateKey, bool, error) {
-			return priKey, true, nil // compressed is true
-		}
-		sigScript, err := txscript.SignTxOutput(param, &redeemTx, i, pkScript, txscript.SigHashAll, kdb, nil, nil, ecc.ECDSA_Secp256k1)
-		if err != nil {
-			return "", err
-		}
-		sigScripts = append(sigScripts, sigScript)
-	}
-
-	for i2 := range sigScripts {
-		redeemTx.TxIn[i2].SignScript = sigScripts[i2]
+		redeemTx.TxIn[i].SignScript = sigScript
 	}
 
 	mtxHex, err := marshal.MessageToHex(&redeemTx)

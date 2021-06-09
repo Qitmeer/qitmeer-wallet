@@ -50,16 +50,17 @@ type TxInputPoint struct {
 }
 
 type AddrTxOutput struct {
-	Address string
-	TxId    hash.Hash
-	Index   uint32
-	Amount  types.Amount
-	Block   Block
-	Spend   SpendStatus
-	SpendTo *SpendTo
-	Status  TxStatus
-	Locked  uint32
-	IsBlue  bool
+	Address  string
+	TxId     hash.Hash
+	Index    uint32
+	Amount   types.Amount
+	Block    Block
+	Spend    SpendStatus
+	SpendTo  *SpendTo
+	Status   TxStatus
+	Locked   uint32
+	IsBlue   bool
+	PkScript []byte
 }
 
 func NewAddrTxOutput() *AddrTxOutput {
