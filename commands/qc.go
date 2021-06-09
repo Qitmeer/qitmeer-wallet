@@ -324,7 +324,8 @@ func newImportPrivKeyCmd() *cobra.Command {
 		Short: "import priKey ",
 		Example: `
 		importprivkey  ef235aacf90d9f4aadd8c92e4b2562e1d9eb97f0df9ba3b508258739cb013db2 pripassword 
-		importprivkey  PxBefLecRtTYPoxUUwAbq8m7xGmzDK8gQ71N9qKyhp2j5yN42Rpzc pripassword  --format=wif
+		importprivkey  5HueCGU8rMjxEXxiPuD5BDku4MkFqeZyd4dZ1jvhTVqvbTLvyTJ pripassword  --format=wif
+		importprivkey  PxBefLecRtTYPoxUUwAbq8m7xGmzDK8gQ71N9qKyhp2j5yN42Rpzc pripassword  --format=pastwif
 		`,
 		Args: cobra.MinimumNArgs(2),
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -335,15 +336,19 @@ func newImportPrivKeyCmd() *cobra.Command {
 				return err
 			}
 			priv := args[0]
-			if format == "wif" {
-				if wif, err := util.DecodeWIF(priv, w.ChainParams()); err != nil {
+			var wif *util.WIF
+			var err error
+			if format == "pastwif" {
+				if wif, err = util.DecodePastWIF(priv, w.ChainParams()); err != nil {
 					return err
-				} else {
-					priv = hex.EncodeToString(wif.PrivKey.Serialize())
+				}
+			} else if format == "wif" {
+				if wif, err = util.DecodeWIF(priv, w.ChainParams()); err != nil {
+					return err
 				}
 			}
-
-			_, err := importPrivKey(priv)
+			priv = hex.EncodeToString(wif.PrivKey.Serialize())
+			_, err = importPrivKey(priv)
 			return err
 		},
 	}
