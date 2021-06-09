@@ -249,6 +249,7 @@ func (c *Console) Interactive() {
 							for name, v := range b {
 								fmt.Printf("coin:%s\n", name)
 								fmt.Printf("unspent:%d\n", v.UnspentAmount.Value)
+								fmt.Printf("locked:%d\n", v.LockAmount.Value)
 								fmt.Printf("unconfirmed:%d\n", v.UnconfirmedAmount.Value)
 								fmt.Printf("total:%d\n", v.TotalAmount.Value)
 								fmt.Printf("spend:%d\n", v.SpendAmount.Value)
@@ -265,16 +266,17 @@ func (c *Console) Interactive() {
 						if detail == "true" {
 							for name, v := range b {
 								fmt.Printf("coin:%s\n", name)
-								fmt.Printf("unspent:%.8f\n", v.UnspentAmount.ToCoin())
-								fmt.Printf("unconfirmed:%.8f\n", v.UnconfirmedAmount.ToCoin())
-								fmt.Printf("total:%.8f\n", v.TotalAmount.ToCoin())
-								fmt.Printf("spend:%.8f\n", v.SpendAmount.ToCoin())
+								fmt.Printf("unspent:%.8f\n", v.UnspentAmount.FValue)
+								fmt.Printf("locked:%.8f\n", v.LockAmount.FValue)
+								fmt.Printf("unconfirmed:%.8f\n", v.UnconfirmedAmount.FValue)
+								fmt.Printf("total:%.8f\n", v.TotalAmount.FValue)
+								fmt.Printf("spend:%.8f\n", v.SpendAmount.FValue)
 								fmt.Println()
 							}
 						} else {
 							for name, v := range b {
 								fmt.Printf("coin:%s\n", name)
-								fmt.Printf("%.8f\n", v.UnspentAmount.ToCoin())
+								fmt.Printf("%.8f\n", v.UnspentAmount.FValue)
 								fmt.Println()
 							}
 						}

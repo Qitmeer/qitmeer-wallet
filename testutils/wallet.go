@@ -99,7 +99,7 @@ func (w *Wallet) SendToAddress(addr string, coin string, amount uint64) (string,
 		addr: amt,
 	}
 
-	return w.wallet.SendPairs(pairs, waddrmgr.AccountMergePayNum, txrules.DefaultRelayFeePerKb)
+	return w.wallet.SendPairs(pairs, waddrmgr.AccountMergePayNum, txrules.DefaultRelayFeePerKb, 0)
 }
 
 func networkDir(dataDir string, chainParams *chaincfg.Params) string {
