@@ -65,7 +65,7 @@ func (w *WIF) IsForNet(net *params.Params) bool {
 	return w.netID == net.PrivateKeyID
 }
 
-// DecodePastWIF creates a new WIF structure by decoding the string encoding of
+// DecodeWIFV09 creates a new qitmeer-wallet V0.9 WIF structure by decoding the string encoding of
 // the import format.
 //
 // The WIF string must be a base58-encoded string of the following byte
@@ -136,7 +136,7 @@ func DecodeWIF(wif string, net *params.Params) (*WIF, error) {
 	return NewWIF(priv, net, compressed)
 }
 
-// PastString creates the Wallet Import Format string encoding of a WIF structure.
+// StringV09 creates the Wallet Import Format string encoding of a qitmeer-wallet V0.9 WIF structure.
 // See DecodeWIF for a detailed breakdown of the format and requirements of
 // a valid WIF string.
 func (w *WIF) StringV09() string {
