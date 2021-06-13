@@ -1343,11 +1343,9 @@ b:
 					mature := false
 					if outTx, err := w.GetTx(output.TxId.String()); err == nil {
 						if outTx.Vin[0].IsCoinBase() {
-							if output.IsBlue {
-								confirms := uint16(w.SyncMainHeight - output.Block.MainHeight + 1)
-								if confirms > uint16(config.Cfg.CoinbaseMaturity) {
-									mature = true
-								}
+							confirms := uint16(w.SyncMainHeight - output.Block.MainHeight + 1)
+							if confirms > uint16(config.Cfg.CoinbaseMaturity) {
+								mature = true
 							}
 						} else {
 							mature = true
