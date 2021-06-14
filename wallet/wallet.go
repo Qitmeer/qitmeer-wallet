@@ -828,7 +828,7 @@ func parseTx(tr corejson.TxRawResult, height, mainHeight int32, isBlue bool) ([]
 	for index, vo := range tr.Vout {
 		if len(vo.ScriptPubKey.Addresses) == 0 {
 			continue
-		} else {
+		} else if vo.Amount != 0  {
 			txOut := wtxmgr.AddrTxOutput{
 				Address:    vo.ScriptPubKey.Addresses[0],
 				TxId:       *txId,
@@ -1338,6 +1338,9 @@ b:
 				addrByte := []byte(addroutput.Addr)
 
 				for _, output := range addroutput.Txoutput {
+					if output.Amount ==0 {
+						continue
+					}
 					output.Address = addroutput.Addr
 
 					mature := false
