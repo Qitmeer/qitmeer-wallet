@@ -3,9 +3,9 @@ package commands
 import (
 	"encoding/hex"
 	"fmt"
+	util "github.com/Qitmeer/qitmeer-wallet/utils"
 	"github.com/Qitmeer/qitmeer-wallet/wallet"
 	"github.com/Qitmeer/qitmeer/log"
-	"github.com/Qitmeer/qitmeer/qx"
 	"github.com/spf13/cobra"
 	"strconv"
 )
@@ -110,7 +110,8 @@ var getBalanceCmd = &cobra.Command{
 		}
 		if company == "i" {
 			if detail == "true" {
-				for _, v := range b {
+				for name, v := range b {
+					fmt.Printf("coin:%s\n", name)
 					fmt.Printf("unspent:%d\n", v.UnspentAmount.Value)
 					fmt.Printf("unconfirmed:%d\n", v.UnConfirmAmount.Value)
 					fmt.Printf("total:%d\n", v.TotalAmount.Value)
@@ -118,14 +119,16 @@ var getBalanceCmd = &cobra.Command{
 					fmt.Println()
 				}
 			} else {
-				for _, v := range b {
+				for name, v := range b {
+					fmt.Printf("coin:%s\n", name)
 					fmt.Printf("%d\n", v.UnspentAmount.Value)
 					fmt.Println()
 				}
 			}
 		} else {
 			if detail == "true" {
-				for _, v := range b {
+				for name, v := range b {
+					fmt.Printf("coin:%s\n", name)
 					fmt.Printf("unspent:%.8f\n", v.UnspentAmount.ToCoin())
 					fmt.Printf("unconfirmed:%.8f\n", v.UnConfirmAmount.ToCoin())
 					fmt.Printf("total:%.8f\n", v.TotalAmount.ToCoin())
@@ -133,7 +136,8 @@ var getBalanceCmd = &cobra.Command{
 					fmt.Println()
 				}
 			} else {
-				for _, v := range b {
+				for name, v := range b {
+					fmt.Printf("coin:%s\n", name)
 					fmt.Printf("%.8f\n", v.UnspentAmount.ToCoin())
 					fmt.Println()
 				}
@@ -321,6 +325,7 @@ func newImportPrivKeyCmd() *cobra.Command {
 		Example: `
 		importprivkey  ef235aacf90d9f4aadd8c92e4b2562e1d9eb97f0df9ba3b508258739cb013db2 pripassword 
 		importprivkey  5HueCGU8rMjxEXxiPuD5BDku4MkFqeZyd4dZ1jvhTVqvbTLvyTJ pripassword  --format=wif
+		importprivkey  PxBefLecRtTYPoxUUwAbq8m7xGmzDK8gQ71N9qKyhp2j5yN42Rpzc pripassword  --format=wallet_v0.9  --network=mixnet
 		`,
 		Args: cobra.MinimumNArgs(2),
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -331,15 +336,20 @@ func newImportPrivKeyCmd() *cobra.Command {
 				return err
 			}
 			priv := args[0]
-			if format == "wif" {
-				if decoded, _, err := qx.DecodeWIF(priv); err != nil {
+			var wif *util.WIF
+			var err error
+			if format == "wallet_v0.9" {
+				if wif, err = util.DecodeWIFV09(priv, w.ChainParams()); err != nil {
 					return err
-				} else {
-					priv = hex.EncodeToString(decoded)
 				}
+				priv = hex.EncodeToString(wif.PrivKey.Serialize())
+			} else if format == "wif" {
+				if wif, err = util.DecodeWIF(priv, w.ChainParams()); err != nil {
+					return err
+				}
+				priv = hex.EncodeToString(wif.PrivKey.Serialize())
 			}
-
-			_, err := importPrivKey(priv)
+			_, err = importPrivKey(priv)
 			return err
 		},
 	}

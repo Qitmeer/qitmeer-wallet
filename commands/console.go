@@ -10,7 +10,6 @@ import (
 	waddrmgr "github.com/Qitmeer/qitmeer-wallet/waddrmgs"
 	"github.com/Qitmeer/qitmeer-wallet/wallet"
 	"github.com/Qitmeer/qitmeer-wallet/wtxmgr"
-	"github.com/Qitmeer/qitmeer/core/types"
 	"github.com/Qitmeer/qitmeer/crypto/bip39"
 	"github.com/Qitmeer/qitmeer/crypto/ecc/secp256k1"
 	"github.com/Qitmeer/qitmeer/qx"
@@ -170,7 +169,7 @@ func createNewAccount(arg string) error {
 	fmt.Printf("%s", msg)
 	return nil
 }
-func getBalance(addr string) (map[types.CoinID]wallet.Balance, error) {
+func getBalance(addr string) (map[string]wallet.Balance, error) {
 	cmd := &qitmeerjson.GetBalanceByAddressCmd{
 		Address: addr,
 	}
@@ -179,7 +178,7 @@ func getBalance(addr string) (map[types.CoinID]wallet.Balance, error) {
 		fmt.Println("getBalance", "err", err.Error())
 		return nil, err
 	}
-	r := b.(map[types.CoinID]wallet.Balance)
+	r := b.(map[string]wallet.Balance)
 	return r, nil
 }
 

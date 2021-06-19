@@ -1,7 +1,10 @@
 package commands
 
 import (
+	"encoding/hex"
 	"fmt"
+	"github.com/Qitmeer/qitmeer-wallet/config"
+	util "github.com/Qitmeer/qitmeer-wallet/utils"
 	"github.com/Qitmeer/qitmeer/qx"
 	"github.com/spf13/cobra"
 )
@@ -21,7 +24,7 @@ func AddQxCommand() {
 	QxCmd.AddCommand(seedtoaddrCmd)
 	QxCmd.AddCommand(pritoaddrCmd)
 	QxCmd.AddCommand(pubtoaddrCmd)
-	QxCmd.AddCommand(wifToPriCmd)
+	QxCmd.AddCommand(newWifToPriCmd())
 }
 
 var generatemnemonicCmd = &cobra.Command{
@@ -175,14 +178,32 @@ var pritoaddrCmd = &cobra.Command{
 	},
 }
 
-var wifToPriCmd = &cobra.Command{
-	Use:   "wiftopri {string, wif}",
-	Short: "WIF key to private key",
-	Example: `
+
+func newWifToPriCmd()*cobra.Command{
+	var format string
+	var wifToPriCmd = &cobra.Command{
+		Use:   "wiftopri {string, wif}",
+		Short: "WIF key to private key",
+		Example: `
 		wiftopri  5HueCGU8rMjxEXxiPuD5BDku4MkFqeZyd4dZ1jvhTVqvbTLvyTJ
+		wiftopri  PxBefLecRtTYPoxUUwAbq8m7xGmzDK8gQ71N9qKyhp2j5yN42Rpzc --format=wallet_v0.9 --network=mixnet
 		`,
-	Args: cobra.MinimumNArgs(1),
-	Run: func(cmd *cobra.Command, args []string) {
-		qx.WifToEcPrivateKey(args[0])
-	},
+		Args: cobra.MinimumNArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error{
+			var wif *util.WIF
+			var err error
+			if format == "wallet_v0.9" {
+				if wif, err = util.DecodeWIFV09(args[0], config.ActiveNet); err != nil {
+					return err
+				}
+				fmt.Println(hex.EncodeToString(wif.PrivKey.Serialize()))
+			} else  {
+				qx.WifToEcPrivateKey(args[0])
+			}
+			return nil
+		},
+	}
+	wifToPriCmd.Flags().StringVarP(
+		&format, "format", "f", "", "Wif format. {wallet_v0.9}")
+	return wifToPriCmd
 }
