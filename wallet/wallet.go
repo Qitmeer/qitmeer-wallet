@@ -2227,6 +2227,9 @@ func makeOutputs(pairs map[string]types.Amount, lockHeight uint64) ([]*types.TxO
 }
 
 func littleHexToUint64(hexStr string) (uint64, error) {
+	if len(hexStr) == 1 {
+		hexStr = "0" + hexStr
+	}
 	src, err := hex.DecodeString(hexStr)
 	if err != nil {
 		return 0, err
