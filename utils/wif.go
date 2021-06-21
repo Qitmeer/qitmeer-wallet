@@ -65,7 +65,7 @@ func (w *WIF) IsForNet(net *params.Params) bool {
 	return w.netID == net.PrivateKeyID
 }
 
-// DecodePastWIF creates a new WIF structure by decoding the string encoding of
+// DecodeWIFV09 creates a new qitmeer-wallet V0.9 WIF structure by decoding the string encoding of
 // the import format.
 //
 // The WIF string must be a base58-encoded string of the following byte
@@ -85,8 +85,11 @@ func (w *WIF) IsForNet(net *params.Params) bool {
 // is of an impossible length or the expected compressed pubkey magic number
 // does not equal the expected value of 0x01.  ErrChecksumMismatch is returned
 // if the expected WIF checksum does not match the calculated checksum.
-func DecodePastWIF(wif string, net *params.Params) (*WIF, error) {
+func DecodeWIFV09(wif string, net *params.Params) (*WIF, error) {
 	decoded := base58.Decode([]byte(wif))
+	if len(decoded) == 0{
+		return nil, ErrMalformedPrivateKey
+	}
 	decodedLen := len(decoded)
 	var compress bool
 	netID := [2]byte{decoded[0], decoded[1]}
@@ -133,10 +136,10 @@ func DecodeWIF(wif string, net *params.Params) (*WIF, error) {
 	return NewWIF(priv, net, compressed)
 }
 
-// PastString creates the Wallet Import Format string encoding of a WIF structure.
+// StringV09 creates the Wallet Import Format string encoding of a qitmeer-wallet V0.9 WIF structure.
 // See DecodeWIF for a detailed breakdown of the format and requirements of
 // a valid WIF string.
-func (w *WIF) PastString() string {
+func (w *WIF) StringV09() string {
 	// Precalculate size.  Maximum number of bytes before base58 encoding
 	// is one byte for the network, 32 bytes of private key, possibly one
 	// extra byte if the pubkey is to be compressed, and finally four
