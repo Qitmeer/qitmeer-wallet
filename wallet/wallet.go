@@ -15,6 +15,7 @@ import (
 	"github.com/Qitmeer/qitmeer-wallet/json/qitmeerjson"
 	"github.com/Qitmeer/qitmeer-wallet/util"
 	"github.com/Qitmeer/qitmeer/common/marshal"
+	"github.com/Qitmeer/qitmeer/qx"
 	"io/ioutil"
 	"os"
 	"sort"
@@ -1046,24 +1047,6 @@ func (w *Wallet) parseTxDetail(tr corejson.TxRawResult, order uint32, isBlue boo
 	txStatus := w.txStatus(uint32(tr.Confirmations), tr.Txsvalid, isBlue, isCoinBase, inMemPool)
 	for index, vo := range tr.Vout {
 		var lock uint64
-		var pkScript []byte
-		switch vo.ScriptPubKey.Type {
-		case "pubkeyhash":
-
-		case "cltvpubkeyhash":
-			codes := strings.Split(vo.ScriptPubKey.Asm, " ")
-			if len(codes) == 0 {
-				return nil, nil, 0, false, fmt.Errorf("cltvpubkeyhash vout error,  %s", vo.ScriptPubKey.Asm)
-			}
-			lock, err = littleHexToUint64(codes[0])
-			if err != nil {
-				return nil, nil, 0, false, fmt.Errorf("little hex %s to uint64 error, %s", codes[0], err.Error())
-			}
-			bytes, _ := hex.DecodeString(vo.ScriptPubKey.Hex)
-			pkScript, err = txscript.PayToCLTVPubKeyHashScript(bytes, int64(lock))
-		default:
-			continue
-		}
 
 		if len(vo.ScriptPubKey.Addresses) == 0 {
 			continue
@@ -1082,7 +1065,7 @@ func (w *Wallet) parseTxDetail(tr corejson.TxRawResult, order uint32, isBlue boo
 					TxId:  hash.Hash{},
 				},
 				Locked:   uint32(lock),
-				PkScript: pkScript,
+				PkScript: vo.ScriptPubKey.Hex,
 			}
 			txouts = append(txouts, txOut)
 		}
@@ -1957,7 +1940,7 @@ var syncSendOutputs = new(sync.Mutex)
 
 // SendOutputs creates and sends payment transactions. It returns the
 // transaction upon success.
-func (w *Wallet) SendOutputs(coin2outputs []*types.TxOutput, coinId types.CoinID, account int64, satPerKb int64) (*string, error) {
+func (w *Wallet) SendOutputs(coin2outputs []*TxOutput, coinId types.CoinID, account int64, satPerKb int64) (*string, error) {
 	// Ensure the outputs to be created adhere to the network's consensus
 	// rules.
 	syncSendOutputs.Lock()
@@ -1974,25 +1957,19 @@ func (w *Wallet) SendOutputs(coin2outputs []*types.TxOutput, coinId types.CoinID
 		return nil, err
 	}
 
-	tx, payAmount, allSpentUTXO, err := w.createTx(addrs, coin2outputs, coinId, 0, satPerKb)
+	signedRaw, payAmount, allSpentUTXO, err := w.createTx(addrs, coin2outputs, coinId, 0, satPerKb)
 	if err != nil {
 		return nil, err
 	}
-	txBytes, _ := tx.Serialize()
-	fees := w.fees(txBytes, coinId)
+	fees := w.fees(signedRaw, coinId)
 	payAmount = payAmount + fees
-	tx, payAmount, allSpentUTXO, err = w.createTx(addrs, coin2outputs, coinId, fees, satPerKb)
+	signedRaw, payAmount, allSpentUTXO, err = w.createTx(addrs, coin2outputs, coinId, fees, satPerKb)
 	if err != nil {
 		return nil, err
 	}
 
-	signTx, err := marshal.MessageToHex(tx)
-	if err != nil {
-		return nil, err
-	}
-
-	log.Trace(fmt.Sprintf("signTx size:%v", len(signTx)), "signTx", signTx)
-	msg, err := w.HttpClient.SendRawTransaction(signTx, false)
+	log.Trace(fmt.Sprintf("signTx size:%v", len(signedRaw)), "signTx", signedRaw)
+	msg, err := w.HttpClient.SendRawTransaction(signedRaw, false)
 	if err != nil {
 		log.Trace("SendRawTransaction txSign err ", "err", err.Error())
 		return nil, err
@@ -2008,22 +1985,28 @@ func (w *Wallet) SendOutputs(coin2outputs []*types.TxOutput, coinId types.CoinID
 	return &msg, nil
 }
 
-func (w *Wallet) createTx(addrs []types.Address, coin2outputs []*types.TxOutput, coinId types.CoinID, fees int64, satPerKb int64) (*types.Transaction, int64, []*wtxmgr.AddrTxOutput, error) {
+func (w *Wallet) createTx(addrs []types.Address, coin2outputs []*TxOutput, coinId types.CoinID, fees int64, satPerKb int64) (string, int64, []*wtxmgr.AddrTxOutput, error) {
 	var sum int64
-	tx := types.NewTransaction()
-	tx.LockTime = w.Manager.ChainHeight()
+	outputs := make(map[string]qx.Amount)
+	inputs := make([]qx.Input, 0)
+	priKeyList := make([]string, 0)
 	payAmount := types.Amount{Id: coinId}
 	for _, output := range coin2outputs {
-		if err := txrules.CheckOutput(output, satPerKb); err != nil {
-			return nil, 0, nil, err
+		if err := txrules.CheckOutput(types.NewTxOutput(output.Amount, output.PkScript), satPerKb); err != nil {
+			return "", 0, nil, err
 		}
 		payAmount.Value += output.Amount.Value
-		tx.AddTxOut(output)
+		outputs[output.Address] = qx.Amount{
+			TargetLockTime: int64(output.LockHeight),
+			Value:          payAmount.Value,
+			Id:             payAmount.Id,
+		}
 	}
+
 	payAmount.Value = payAmount.Value + fees
 	uxtoList, sum, err := w.GetUTXOByAddress(addrs, payAmount)
 	if err != nil {
-		return nil, 0, nil, err
+		return "", 0, nil, err
 	}
 	change := sum - payAmount.Value
 	if change > 0 {
@@ -2034,47 +2017,41 @@ func (w *Wallet) createTx(addrs []types.Address, coin2outputs []*types.TxOutput,
 			Id:    coinId,
 		}, addrScript)
 		if err := txrules.CheckOutput(changeOut, satPerKb); err == nil {
-			tx.AddTxOut(changeOut)
+			outputs[uxtoList[0].Address] = qx.Amount{
+				TargetLockTime: 0,
+				Value:          change,
+				Id:             coinId,
+			}
 		}
 	}
-	var vinPkScript = make([][]byte, 0)
+
+	var vinPkScript = make([]string, 0)
 	for _, utxo := range uxtoList {
-		var pkScript []byte
-		input := types.NewOutPoint(&utxo.TxId, utxo.Index)
-		in := types.NewTxInput(input, []byte(utxo.Address))
-		if tx.LockTime > uint32(0) {
-			in.Sequence = types.MaxTxInSequenceNum - 1
-		}
 		addr, _ := address.DecodeAddress(utxo.Address)
-		if utxo.Locked != 0 {
-			pkScript, _ = txscript.PayToCLTVPubKeyHashScript(addr.Script(), int64(utxo.Locked))
-		} else {
-			pkScript, _ = txscript.PayToAddrScript(addr)
-		}
-		vinPkScript = append(vinPkScript, pkScript)
-		tx.AddTxIn(in)
-	}
-	for i, txIn := range tx.TxIn {
-		addrByte := txIn.SignScript
-		addr, err := address.DecodeAddress(string(addrByte))
-		if err != nil {
-			return nil, 0, nil, err
-		}
+		vinPkScript = append(vinPkScript, utxo.PkScript)
+		inputs = append(inputs, qx.Input{
+			TxID:     utxo.TxId.String(),
+			OutIndex: utxo.Index})
 		pri, err := w.getPrivateKey(addr)
 		if err != nil {
-			return nil, 0, nil, err
+			return "", 0, nil, err
 		}
 		priKey, err := pri.PrivKey()
 		if err != nil {
-			return nil, 0, nil, err
+			return "", 0, nil, err
 		}
-
-		tx.TxIn[i].SignScript, err = txscript.SignatureScript(tx, i, vinPkScript[i], txscript.SigHashAll, priKey, true)
-		if err != nil {
-			return nil, 0, nil, err
-		}
+		priKeyList = append(priKeyList, hex.EncodeToString(priKey.Serialize()))
 	}
-	return tx, payAmount.Value, uxtoList, nil
+	timeNow := time.Now()
+	raw, err := qx.TxEncode(1, w.Manager.ChainHeight(), &timeNow, inputs, outputs)
+	if err != nil {
+		return "", 0, nil, err
+	}
+	signedRaw, err := qx.TxSign(priKeyList, raw, config.Cfg.Network, vinPkScript)
+	if err != nil {
+		return "", 0, nil, err
+	}
+	return signedRaw, payAmount.Value, uxtoList, nil
 }
 
 func (w *Wallet) updateUTXOSpent(UTXOs []*wtxmgr.AddrTxOutput, spentTx *wtxmgr.SpendTo) error {
@@ -2123,10 +2100,12 @@ func (w *Wallet) GetUTXOByAddress(addrs []types.Address, amount types.Amount) ([
 	return otxoList, sum, nil
 }
 
-func (w *Wallet) fees(txBytes []byte, coinId types.CoinID) int64 {
+func (w *Wallet) fees(rawTx string, coinId types.CoinID) int64 {
+	bytes, _ := hex.DecodeString(rawTx)
+	txLen := len(bytes)
 	switch coinId {
 	case types.MEERID:
-		return util.CalcMinRequiredTxRelayFee(int64(len(txBytes)), config.Cfg.MinTxFee)
+		return util.CalcMinRequiredTxRelayFee(int64(txLen), config.Cfg.MinTxFee)
 	default:
 		return 0
 	}
@@ -2197,12 +2176,19 @@ func (w *Wallet) SendPairs(amounts map[string]types.Amount,
 	return *tx, nil
 }
 
+type TxOutput struct {
+	Amount     types.Amount
+	Address    string
+	PkScript   []byte
+	LockHeight uint64
+}
+
 // makeOutputs creates a slice of transaction outputs from a pair of address
 // strings to amounts.  This is used to create the outputs to include in newly
 // created transactions from a JSON object describing the output destinations
 // and amounts.
-func makeOutputs(pairs map[string]types.Amount, lockHeight uint64) ([]*types.TxOutput, types.CoinID, error) {
-	coin2outputs := make([]*types.TxOutput, 0)
+func makeOutputs(pairs map[string]types.Amount, lockHeight uint64) ([]*TxOutput, types.CoinID, error) {
+	coin2outputs := make([]*TxOutput, 0)
 	var coinId types.CoinID
 	var pkScript []byte
 	for addrStr, amt := range pairs {
@@ -2221,7 +2207,12 @@ func makeOutputs(pairs map[string]types.Amount, lockHeight uint64) ([]*types.TxO
 				return coin2outputs, coinId, fmt.Errorf("cannot create txout script: %s", err)
 			}
 		}
-		coin2outputs = append(coin2outputs, types.NewTxOutput(amt, pkScript))
+		coin2outputs = append(coin2outputs, &TxOutput{
+			Amount:     amt,
+			Address:    addrStr,
+			PkScript:   pkScript,
+			LockHeight: lockHeight,
+		})
 	}
 	return coin2outputs, coinId, nil
 }

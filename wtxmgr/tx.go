@@ -60,7 +60,7 @@ type AddrTxOutput struct {
 	Status   TxStatus
 	Locked   uint32
 	IsBlue   bool
-	PkScript []byte
+	PkScript string
 }
 
 func NewAddrTxOutput() *AddrTxOutput {
