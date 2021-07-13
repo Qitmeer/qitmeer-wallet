@@ -72,21 +72,20 @@ func (api *API) GetAccountsAndBalance(coin string) (map[string]*Balance, error) 
 	if err != nil {
 		return nil, err
 	}
-
+	coinID := types.NewCoinID(coin)
 	for _, aaa := range aaas {
 
 		if _, ok := accountsBalances[aaa.AccountName]; !ok {
-			accountsBalances[aaa.AccountName] = &Balance{}
+			accountsBalances[aaa.AccountName] = NewBalance(coinID)
 		}
 
 		accountBalance := accountsBalances[aaa.AccountName]
-
 		for _, addr := range aaa.AddrsOutput {
-			accountBalance.TotalAmount.Value += addr.balanceMap[types.NewCoinID(coin)].TotalAmount.Value
-			accountBalance.SpendAmount.Value += addr.balanceMap[types.NewCoinID(coin)].SpendAmount.Value
-			accountBalance.UnspentAmount.Value += addr.balanceMap[types.NewCoinID(coin)].UnspentAmount.Value
-			accountBalance.UnconfirmedAmount.Value += addr.balanceMap[types.NewCoinID(coin)].UnconfirmedAmount.Value
-			accountBalance.LockAmount.Value += addr.balanceMap[types.NewCoinID(coin)].LockAmount.Value
+			accountBalance.TotalAmount.Value += addr.balanceMap[coinID].TotalAmount.Value
+			accountBalance.SpendAmount.Value += addr.balanceMap[coinID].SpendAmount.Value
+			accountBalance.UnspentAmount.Value += addr.balanceMap[coinID].UnspentAmount.Value
+			accountBalance.UnconfirmedAmount.Value += addr.balanceMap[coinID].UnconfirmedAmount.Value
+			accountBalance.LockAmount.Value += addr.balanceMap[coinID].LockAmount.Value
 		}
 
 	}
@@ -100,15 +99,16 @@ func (api *API) GetBalanceByAccount(name string, coin string) (*Balance, error) 
 		return nil, err
 	}
 
-	accountBalance := &Balance{}
+	coinID := types.NewCoinID(coin)
+	accountBalance := NewBalance(coinID)
 	for _, result := range results {
 		if result.AccountName == name {
 			for _, addr := range result.AddrsOutput {
-				accountBalance.TotalAmount.Value += addr.balanceMap[types.NewCoinID(coin)].TotalAmount.Value
-				accountBalance.SpendAmount.Value += addr.balanceMap[types.NewCoinID(coin)].SpendAmount.Value
-				accountBalance.UnspentAmount.Value += addr.balanceMap[types.NewCoinID(coin)].UnspentAmount.Value
-				accountBalance.UnconfirmedAmount.Value += addr.balanceMap[types.NewCoinID(coin)].UnconfirmedAmount.Value
-				accountBalance.LockAmount.Value += addr.balanceMap[types.NewCoinID(coin)].LockAmount.Value
+				accountBalance.TotalAmount.Value += addr.balanceMap[coinID].TotalAmount.Value
+				accountBalance.SpendAmount.Value += addr.balanceMap[coinID].SpendAmount.Value
+				accountBalance.UnspentAmount.Value += addr.balanceMap[coinID].UnspentAmount.Value
+				accountBalance.UnconfirmedAmount.Value += addr.balanceMap[coinID].UnconfirmedAmount.Value
+				accountBalance.LockAmount.Value += addr.balanceMap[coinID].LockAmount.Value
 			}
 		}
 	}

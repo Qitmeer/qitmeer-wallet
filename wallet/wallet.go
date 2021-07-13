@@ -193,18 +193,38 @@ type (
 	}
 )
 
-type Balance struct {
-	TotalAmount       Amount // 总余额
-	UnspentAmount     Amount // 可用余额
-	LockAmount        Amount // 锁定
-	UnconfirmedAmount Amount // 待确认
-	SpendAmount       Amount // 已花费
+type Amount struct {
+	Value int64
+	Id    types.CoinID `json:"-"`
 }
 
-type Amount struct {
-	Coin   string
-	Value  int64
-	FValue float64
+func NewAmount(value int64, id types.CoinID) *Amount {
+	return &Amount{
+		Value: 0,
+		Id:    0,
+	}
+}
+
+func (a *Amount) ToCoin() float64 {
+	return (&types.Amount{Value: a.Value, Id: a.Id}).ToCoin()
+}
+
+type Balance struct {
+	TotalAmount       *Amount // 总余额
+	UnspentAmount     *Amount // 可用余额
+	LockAmount        *Amount // 锁定
+	UnconfirmedAmount *Amount // 待确认
+	SpendAmount       *Amount // 已花费
+}
+
+func NewBalance(coinId types.CoinID) *Balance {
+	return &Balance{
+		TotalAmount:       &Amount{Value: 0, Id: coinId},
+		UnspentAmount:     &Amount{Value: 0, Id: coinId},
+		LockAmount:        &Amount{Value: 0, Id: coinId},
+		UnconfirmedAmount: &Amount{Value: 0, Id: coinId},
+		SpendAmount:       &Amount{Value: 0, Id: coinId},
+	}
 }
 
 // AccountBalanceResult is a single result for the Wallet.AccountBalances method.
@@ -605,11 +625,11 @@ func (w *Wallet) getAddrAndAddrTxOutputByAddr(addr string) (*AddrAndAddrTxOutput
 		if err != nil {
 			return nil, err
 		}
-		var spendAmount = Amount{Value: 0, FValue: 0, Coin: id.Name()}
-		var usableAmount = Amount{Value: 0, FValue: 0, Coin: id.Name()}
-		var UnconfirmedAmount = Amount{Value: 0, FValue: 0, Coin: id.Name()}
-		var totalAmount = Amount{Value: 0, FValue: 0, Coin: id.Name()}
-		var lockAmount = Amount{Value: 0, FValue: 0, Coin: id.Name()}
+		var spendAmount = NewAmount(0, id)
+		var usableAmount = NewAmount(0, id)
+		var UnconfirmedAmount = NewAmount(0, id)
+		var totalAmount = NewAmount(0, id)
+		var lockAmount = NewAmount(0, id)
 
 		for _, txOut := range txOuts {
 			if txOut.Status == wtxmgr.TxStatusConfirmed {
@@ -637,12 +657,6 @@ func (w *Wallet) getAddrAndAddrTxOutputByAddr(addr string) (*AddrAndAddrTxOutput
 			}
 		}
 		totalAmount.Value = usableAmount.Value + lockAmount.Value + UnconfirmedAmount.Value
-
-		usableAmount.FValue = (&types.Amount{Value: usableAmount.Value, Id: id}).ToCoin()
-		lockAmount.FValue = (&types.Amount{Value: lockAmount.Value, Id: id}).ToCoin()
-		UnconfirmedAmount.FValue = (&types.Amount{Value: UnconfirmedAmount.Value, Id: id}).ToCoin()
-		spendAmount.FValue = (&types.Amount{Value: spendAmount.Value, Id: id}).ToCoin()
-		totalAmount.FValue = (&types.Amount{Value: totalAmount.Value, Id: id}).ToCoin()
 
 		b.UnspentAmount = usableAmount
 		b.UnconfirmedAmount = UnconfirmedAmount
@@ -1635,17 +1649,11 @@ func (w *Wallet) AccountBalances(scope waddrmgr.KeyScope) ([]AccountBalanceResul
 				balance.TotalAmount.Value += addr.balanceMap[id].TotalAmount.Value
 				balance.UnconfirmedAmount.Value += addr.balanceMap[id].UnconfirmedAmount.Value
 
-				balance.UnspentAmount.FValue += addr.balanceMap[id].UnspentAmount.FValue
-				balance.SpendAmount.FValue += addr.balanceMap[id].SpendAmount.FValue
-				balance.LockAmount.FValue += addr.balanceMap[id].LockAmount.FValue
-				balance.TotalAmount.FValue += addr.balanceMap[id].TotalAmount.FValue
-				balance.UnconfirmedAmount.FValue += addr.balanceMap[id].UnconfirmedAmount.FValue
-
-				balance.LockAmount.Coin = addr.balanceMap[id].LockAmount.Coin
-				balance.UnspentAmount.Coin = addr.balanceMap[id].UnspentAmount.Coin
-				balance.UnconfirmedAmount.Coin = addr.balanceMap[id].UnconfirmedAmount.Coin
-				balance.TotalAmount.Coin = addr.balanceMap[id].TotalAmount.Coin
-				balance.SpendAmount.Coin = addr.balanceMap[id].SpendAmount.Coin
+				balance.LockAmount.Id = addr.balanceMap[id].LockAmount.Id
+				balance.UnspentAmount.Id = addr.balanceMap[id].UnspentAmount.Id
+				balance.UnconfirmedAmount.Id = addr.balanceMap[id].UnconfirmedAmount.Id
+				balance.TotalAmount.Id = addr.balanceMap[id].TotalAmount.Id
+				balance.SpendAmount.Id = addr.balanceMap[id].SpendAmount.Id
 
 			}
 			results[index].AccountBalanceList = append(results[index].AccountBalanceList, balance)
