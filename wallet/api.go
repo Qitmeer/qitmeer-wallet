@@ -72,7 +72,10 @@ func (api *API) GetAccountsAndBalance(coin string) (map[string]*Balance, error) 
 	if err != nil {
 		return nil, err
 	}
-	coinID := types.NewCoinID(coin)
+	coinID, err := api.wt.CoinID(coin)
+	if err != nil {
+		return nil, err
+	}
 	for _, aaa := range aaas {
 
 		if _, ok := accountsBalances[aaa.AccountName]; !ok {
@@ -99,7 +102,10 @@ func (api *API) GetBalanceByAccount(name string, coin string) (*Balance, error) 
 		return nil, err
 	}
 
-	coinID := types.NewCoinID(coin)
+	coinID, err := api.wt.CoinID(coin)
+	if err != nil {
+		return nil, err
+	}
 	accountBalance := NewBalance(coinID)
 	for _, result := range results {
 		if result.AccountName == name {
@@ -321,8 +327,11 @@ func (api *API) SendToAddress(addressStr string, amount float64, coin string) (s
 		return "", qitmeerjson.ErrNeedPositiveAmount
 	}
 
-	coinId := types.NewCoinID(coin)
-	amt := types.Amount{Value: int64(amount * types.AtomsPerCoin), Id: coinId}
+	coinID, err := api.wt.CoinID(coin)
+	if err != nil {
+		return "", err
+	}
+	amt := types.Amount{Value: int64(amount * types.AtomsPerCoin), Id: coinID}
 
 	// Mock up map of address and amount pairs.
 	pairs := map[string]types.Amount{
@@ -344,12 +353,18 @@ func (api *API) SendLockedToAddress(addressStr string, amount float64, coin stri
 		return "", qitmeerjson.ErrNeedPositiveAmount
 	}
 
-	coinId := types.NewCoinID(coin)
-	amt := types.Amount{Value: int64(amount * types.AtomsPerCoin), Id: coinId}
-
+	id, err := api.wt.CoinID(coin)
+	if err != nil {
+		return "", err
+	}
+	amt, err := types.NewAmount(amount)
+	if err != nil {
+		return "", err
+	}
+	amt.Id = id
 	// Mock up map of address and amount pairs.
 	pairs := map[string]types.Amount{
-		addressStr: amt,
+		addressStr: *amt,
 	}
 
 	return api.wt.SendPairs(pairs, waddrmgr.AccountMergePayNum, txrules.DefaultRelayFeePerKb, lockHeight)
@@ -362,8 +377,11 @@ func (api *API) SendToMany(addAmounts map[string]float64, coin string) (string, 
 		if amount < 0 {
 			return "", qitmeerjson.ErrNeedPositiveAmount
 		}
-		coinId := types.NewCoinID(coin)
-		amt := types.Amount{Value: int64(amount * types.AtomsPerCoin), Id: coinId}
+		coinID, err := api.wt.CoinID(coin)
+		if err != nil {
+			return "", err
+		}
+		amt := types.Amount{Value: int64(amount * types.AtomsPerCoin), Id: coinID}
 
 		pairs[addr] = amt
 	}
@@ -384,8 +402,11 @@ func (api *API) SendToAddressByAccount(accountName string, addressStr string, am
 		return "", qitmeerjson.ErrNeedPositiveAmount
 	}
 
-	coinId := types.NewCoinID(coin)
-	amt := types.Amount{Value: int64(amount * types.AtomsPerCoin), Id: coinId}
+	coinID, err := api.wt.CoinID(coin)
+	if err != nil {
+		return "", nil
+	}
+	amt := types.Amount{Value: int64(amount * types.AtomsPerCoin), Id: coinID}
 
 	// Mock up map of address and amount pairs.
 	pairs := map[string]types.Amount{

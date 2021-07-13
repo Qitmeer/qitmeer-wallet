@@ -249,7 +249,10 @@ func SendToAddress(iCmd interface{}, w *wallet.Wallet) (interface{}, error) {
 	var amt *types.Amount
 	var err error
 	amt, err = types.NewAmount(cmd.Amount)
-	amt.Id = types.NewCoinID(cmd.Coin)
+	amt.Id, err = w.CoinID(cmd.Coin)
+	if err != nil {
+		return nil, err
+	}
 	if amt.Id.Name() != cmd.Coin {
 		return nil, fmt.Errorf("%s does not exist", cmd.Coin)
 	}
@@ -285,12 +288,9 @@ func SendLockedToAddress(iCmd interface{}, w *wallet.Wallet) (interface{}, error
 	var amt *types.Amount
 	var err error
 	amt, err = types.NewAmount(cmd.Amount)
-	amt.Id = types.NewCoinID(cmd.Coin)
-	if amt.Id.Name() != cmd.Coin {
-		return nil, fmt.Errorf("%s does not exist", cmd.Coin)
-	}
+	amt.Id, err = w.CoinID(cmd.Coin)
 	if err != nil {
-		return nil, err
+		return "", err
 	}
 
 	// Check that signed integer parameters are positive.

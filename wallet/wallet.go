@@ -76,6 +76,7 @@ type Wallet struct {
 	db      walletdb.DB
 	Manager *waddrmgr.Manager
 	TxStore *wtxmgr.Store
+	tokens  *QitmeerToken
 
 	HttpClient *httpConfig
 
@@ -385,6 +386,7 @@ func Open(db walletdb.DB, pubPass []byte, _ *waddrmgr.OpenCallbacks,
 		db:             db,
 		Manager:        addrMgr,
 		TxStore:        txMgr,
+		tokens:         NewQitmeerToken(),
 		unlockRequests: make(chan unlockRequest),
 		lockRequests:   make(chan struct{}),
 		lockState:      make(chan bool),
@@ -1183,7 +1185,7 @@ func (w *Wallet) UpdateBlock(toOrder uint64) error {
 	if toOrder != 0 {
 		w.syncAll = false
 	}
-
+	w.updateTokens()
 	addrs, err := w.walletAddress()
 	if err != nil {
 		return err
@@ -1330,6 +1332,17 @@ func (w *Wallet) updateSyncToOrder(toOrder uint32) error {
 		return fmt.Errorf("the target Order %d cannot be larger than the number of existing blocks  %d on the node", toOrder, maxOrder)
 	}
 	w.setToOrder(toOrder)
+	return nil
+}
+
+func (w *Wallet) updateTokens() error {
+	tokens, err := w.HttpClient.GetTokenInfo()
+	if err != nil {
+		return err
+	}
+	for _, t := range tokens {
+		w.tokens.Add(&t)
+	}
 	return nil
 }
 
@@ -2182,6 +2195,14 @@ func (w *Wallet) SendPairs(amounts map[string]types.Amount,
 		}
 	}
 	return *tx, nil
+}
+
+func (w *Wallet) CoinID(coin string) (types.CoinID, error) {
+	token, err := w.tokens.GetToken(coin)
+	if err != nil {
+		return 0, err
+	}
+	return types.CoinID(token.CoinId), nil
 }
 
 type TxOutput struct {
