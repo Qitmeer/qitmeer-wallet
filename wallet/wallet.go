@@ -1063,28 +1063,38 @@ func (w *Wallet) parseTxDetail(tr corejson.TxRawResult, order uint32, isBlue boo
 	txStatus := w.txStatus(uint32(tr.Confirmations), tr.Txsvalid, isBlue, isCoinBase, inMemPool)
 	for index, vo := range tr.Vout {
 		var lock uint64
-
-		if len(vo.ScriptPubKey.Addresses) == 0 {
-			continue
-		} else {
-			txOut := wtxmgr.AddrTxOutput{
-				Address: vo.ScriptPubKey.Addresses[0],
-				TxId:    *txId,
-				Index:   uint32(index),
-				Amount:  types.Amount{Value: int64(vo.Amount), Id: types.CoinID(vo.CoinId)},
-				Block:   block,
-				Spend:   wtxmgr.SpendStatusUnspent,
-				IsBlue:  isBlue,
-				Status:  txStatus,
-				SpendTo: &wtxmgr.SpendTo{
-					Index: 0,
-					TxId:  hash.Hash{},
-				},
-				Locked:   uint32(lock),
-				PkScript: vo.ScriptPubKey.Hex,
+		switch vo.ScriptPubKey.Type {
+		case "cltvpubkeyhash":
+			if len(vo.ScriptPubKey.Addresses) == 0 {
+				continue
+			} else {
+				codes := strings.Split(vo.ScriptPubKey.Asm, " ")
+				if len(codes) == 0 {
+					return nil, nil, 0, false, fmt.Errorf("cltvpubkeyhash vout error,  %s", vo.ScriptPubKey.Asm)
+				}
+				lock, err = littleHexToUint64(codes[0])
+				if err != nil {
+					return nil, nil, 0, false, fmt.Errorf("little hex %s to uint64 error, %s", codes[0], err.Error())
+				}
 			}
-			txouts = append(txouts, txOut)
 		}
+		txOut := wtxmgr.AddrTxOutput{
+			Address: vo.ScriptPubKey.Addresses[0],
+			TxId:    *txId,
+			Index:   uint32(index),
+			Amount:  types.Amount{Value: int64(vo.Amount), Id: types.CoinID(vo.CoinId)},
+			Block:   block,
+			Spend:   wtxmgr.SpendStatusUnspent,
+			IsBlue:  isBlue,
+			Status:  txStatus,
+			SpendTo: &wtxmgr.SpendTo{
+				Index: 0,
+				TxId:  hash.Hash{},
+			},
+			Locked:   uint32(lock),
+			PkScript: vo.ScriptPubKey.Hex,
+		}
+		txouts = append(txouts, txOut)
 	}
 
 	return txins, txouts, txStatus, isCoinBase, nil
