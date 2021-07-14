@@ -3,7 +3,6 @@ package wtxmgr
 import (
 	"bytes"
 	"encoding/binary"
-	"errors"
 	"fmt"
 	"github.com/Qitmeer/qitmeer-wallet/walletdb"
 	"github.com/Qitmeer/qitmeer/common/hash"
@@ -36,6 +35,7 @@ var (
 	BucketAddrtxout      = []byte("out")
 	BucketTxJson         = []byte("txjson")
 	BucketSync           = []byte("sync")
+	BucketHeight         = []byte("h")
 )
 
 // Root (namespace) bucket keys
@@ -132,6 +132,8 @@ func valueBlockRecord(block *BlockMeta, txHash *hash.Hash) []byte {
 	copy(v[44:76], txHash[:])
 	return v
 }
+
+/*
 func ValueAddrTxOutput(txout *AddrTxOutput) []byte {
 	var v []byte
 	if txout.SpendTo == nil {
@@ -159,6 +161,7 @@ func ValueAddrTxOutput(txout *AddrTxOutput) []byte {
 	}
 	return v
 }
+
 func ReadAddrTxOutput(addr string, v []byte, txout *AddrTxOutput) (err error) {
 	defer func() {
 		if rev := recover(); rev != nil {
@@ -189,7 +192,7 @@ func ReadAddrTxOutput(addr string, v []byte, txout *AddrTxOutput) (err error) {
 		txout.SpendTo = &st
 	}
 	return nil
-}
+}*/
 
 // appendRawBlockRecord returns a new block record value with a transaction
 // hash appended to the end and an incremented number of transactions.

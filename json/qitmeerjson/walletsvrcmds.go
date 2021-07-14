@@ -229,6 +229,16 @@ type SendToAddressCmd struct {
 	Comment   *string
 	CommentTo *string
 }
+
+type SendLockedToAddressCmd struct {
+	Address      string
+	Amount       float64
+	Coin         string
+	LockedHeight uint64
+	Comment      *string
+	CommentTo    *string
+}
+
 type UpdateBlockToCmd struct {
 	ToOrder int64
 }

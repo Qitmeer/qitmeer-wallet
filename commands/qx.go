@@ -178,8 +178,7 @@ var pritoaddrCmd = &cobra.Command{
 	},
 }
 
-
-func newWifToPriCmd()*cobra.Command{
+func newWifToPriCmd() *cobra.Command {
 	var format string
 	var wifToPriCmd = &cobra.Command{
 		Use:   "wiftopri {string, wif}",
@@ -189,7 +188,7 @@ func newWifToPriCmd()*cobra.Command{
 		wiftopri  PxBefLecRtTYPoxUUwAbq8m7xGmzDK8gQ71N9qKyhp2j5yN42Rpzc --format=wallet_v0.9 --network=mixnet
 		`,
 		Args: cobra.MinimumNArgs(1),
-		RunE: func(cmd *cobra.Command, args []string) error{
+		RunE: func(cmd *cobra.Command, args []string) error {
 			var wif *util.WIF
 			var err error
 			if format == "wallet_v0.9" {
@@ -197,7 +196,7 @@ func newWifToPriCmd()*cobra.Command{
 					return err
 				}
 				fmt.Println(hex.EncodeToString(wif.PrivKey.Serialize()))
-			} else  {
+			} else {
 				qx.WifToEcPrivateKey(args[0])
 			}
 			return nil

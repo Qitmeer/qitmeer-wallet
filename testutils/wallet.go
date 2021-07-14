@@ -91,7 +91,10 @@ func (w *Wallet) SendToAddress(addr string, coin string, amount uint64) (string,
 		return "", qitmeerjson.ErrNeedPositiveAmount
 	}
 
-	coinId := types.NewCoinID(coin)
+	coinId, err := w.wallet.CoinID(coin)
+	if err != nil {
+		return "", err
+	}
 	amt := types.Amount{Value: int64(amount * types.AtomsPerCoin), Id: coinId}
 
 	// Mock up map of address and amount pairs.
@@ -99,7 +102,7 @@ func (w *Wallet) SendToAddress(addr string, coin string, amount uint64) (string,
 		addr: amt,
 	}
 
-	return w.wallet.SendPairs(pairs, waddrmgr.AccountMergePayNum, txrules.DefaultRelayFeePerKb)
+	return w.wallet.SendPairs(pairs, waddrmgr.AccountMergePayNum, txrules.DefaultRelayFeePerKb, 0)
 }
 
 func networkDir(dataDir string, chainParams *chaincfg.Params) string {

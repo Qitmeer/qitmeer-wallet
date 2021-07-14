@@ -103,8 +103,8 @@ func TestSyncUnConfirmedCoinBase(t *testing.T) {
 		t.Errorf("test failed:%v", err)
 		return
 	}
-	if b.UnConfirmAmount.Value != 500000000000 {
-		t.Errorf("test failed, expect balance %d, but got %d", 500000000000, b.UnConfirmAmount.Value)
+	if b.UnconfirmedAmount.Value != 500000000000 {
+		t.Errorf("test failed, expect balance %d, but got %d", 500000000000, b.UnconfirmedAmount.Value)
 		return
 	}
 }
@@ -148,7 +148,7 @@ func TestSyncConfirmedCoinBase(t *testing.T) {
 		t.Errorf("test failed, expect unspent balance %d, but got %d", 200000000000, b.UnspentAmount.Value)
 		return
 	}
-	if b.UnConfirmAmount.Value != 800000000000 {
+	if b.UnconfirmedAmount.Value != 800000000000 {
 		t.Errorf("test failed, expect unconfirmed balance %d, but got %d", 800000000000, b.UnspentAmount.Value)
 		return
 	}

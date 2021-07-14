@@ -87,7 +87,7 @@ func (w *WIF) IsForNet(net *params.Params) bool {
 // if the expected WIF checksum does not match the calculated checksum.
 func DecodeWIFV09(wif string, net *params.Params) (*WIF, error) {
 	decoded := base58.Decode([]byte(wif))
-	if len(decoded) == 0{
+	if len(decoded) == 0 {
 		return nil, ErrMalformedPrivateKey
 	}
 	decodedLen := len(decoded)

@@ -16,6 +16,7 @@
         <el-table-column prop="account" label="名称" width="120"></el-table-column>
         <el-table-column prop="UnspendAmount" label="余额(可花费)"></el-table-column>
         <el-table-column prop="ConfirmAmount" label="余额(待确认)"></el-table-column>
+        <el-table-column prop="LockAmount" label="余额(锁定)"></el-table-column>
       </el-table>
     </el-main>
   </el-container>
@@ -37,18 +38,34 @@ export default {
   },
   methods: {
     listAccount2table(listAccounts) {
+      // eslint-disable-next-line no-console
+      console.log(listAccounts)
       let tmpTable = [];
-      for (let k in listAccounts) {
+     /* let i = 0;
+      // eslint-disable-next-line no-unused-vars
+      for (let item in listAccounts) {
+        // if (!item.hasOwnProperty(listAccounts)) return;
         tmpTable.push({
-          account: k,
-          UnspendAmount: listAccounts[k].UnspendAmount / 100000000,
-          ConfirmAmount: listAccounts[k].ConfirmAmount / 100000000
-        });
-      }
+          account: i,
+          UnspendAmount: listAccounts[item]['UnspentAmount']['Value'] / 1e8,
+          ConfirmAmount: listAccounts[item]['UnconfirmedAmount']['Value'] / 1e8,
+        })
+      }*/
+
+      for (let k in listAccounts) {
+        // eslint-disable-next-line no-console
+        console.log(k)
+         tmpTable.push({
+           account: k,
+           UnspendAmount: listAccounts[k]['UnspentAmount']['Value'] / 1e8,
+           LockAmount: listAccounts[k]['LockAmount']['Value'] / 1e8,
+           ConfirmAmount: listAccounts[k]['UnconfirmedAmount']['Value'] / 1e8,
+         });
+       }
       return tmpTable;
     },
     newAccount() {
-      this.$router.push({ path: "/account/new" });
+      this.$router.push({path: "/account/new"});
     }
   },
   mounted() {
@@ -58,7 +75,7 @@ export default {
       data: JSON.stringify({
         id: new Date().getTime(),
         method: "wallet_getAccountsAndBalance",
-        params: null
+        params: ["MEER"]
       })
     }).then(response => {
       if (typeof response.data.error != "undefined") {

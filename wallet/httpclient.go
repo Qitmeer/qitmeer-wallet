@@ -244,6 +244,21 @@ func (cfg *httpConfig) GetNodeInfo() (*qJson.InfoNodeResult, error) {
 	return nodeInfo, nil
 }
 
+func (cfg *httpConfig) GetTokenInfo() ([]qJson.TokenState, error) {
+	var params []interface{}
+	buf, err := cfg.getResByte("getTokenInfo", params)
+	if err != nil {
+		return nil, err
+	}
+	tokens := []qJson.TokenState{}
+	err = json.Unmarshal(buf, &tokens)
+	if err != nil {
+		return nil, err
+	}
+
+	return tokens, nil
+}
+
 // sendPostRequest sends the marshalled JSON-RPC command using HTTP-POST mode
 // to the server described in the passed config struct.  It also attempts to
 // unmarshal the response as a JSON-RPC response and returns either the result

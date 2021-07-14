@@ -27,6 +27,7 @@ func AddQcCommand() {
 	QcCmd.AddCommand(updateblockCmd)
 	QcCmd.AddCommand(syncheightCmd)
 	QcCmd.AddCommand(sendToAddressCmd)
+	QcCmd.AddCommand(sendLockedToAddressCmd)
 	QcCmd.AddCommand(newImportPrivKeyCmd())
 	QcCmd.AddCommand(getAddressesByAccountCmd)
 	QcCmd.AddCommand(newListAccountsBalance())
@@ -93,17 +94,15 @@ var getBalanceCmd = &cobra.Command{
 			fmt.Println(err.Error())
 			return
 		}
-		company := "i"
-		detail := "false"
+		company := "f"
+		detail := "true"
 		b, err := getBalance(args[0])
 		if err != nil {
 			fmt.Println(err.Error())
 			return
 		}
 		if len(args) > 1 {
-			if args[1] != "i" {
-				company = "f"
-			}
+			company = args[1]
 			if len(args) > 2 {
 				detail = args[2]
 			}
@@ -113,7 +112,8 @@ var getBalanceCmd = &cobra.Command{
 				for name, v := range b {
 					fmt.Printf("coin:%s\n", name)
 					fmt.Printf("unspent:%d\n", v.UnspentAmount.Value)
-					fmt.Printf("unconfirmed:%d\n", v.UnConfirmAmount.Value)
+					fmt.Printf("locked:%d\n", v.LockAmount.Value)
+					fmt.Printf("unconfirmed:%d\n", v.UnconfirmedAmount.Value)
 					fmt.Printf("total:%d\n", v.TotalAmount.Value)
 					fmt.Printf("spend:%d\n", v.SpendAmount.Value)
 					fmt.Println()
@@ -130,15 +130,16 @@ var getBalanceCmd = &cobra.Command{
 				for name, v := range b {
 					fmt.Printf("coin:%s\n", name)
 					fmt.Printf("unspent:%.8f\n", v.UnspentAmount.ToCoin())
-					fmt.Printf("unconfirmed:%.8f\n", v.UnConfirmAmount.ToCoin())
+					fmt.Printf("locked:%.8f\n", v.LockAmount.ToCoin())
+					fmt.Printf("unconfirmed:%.8f\n", v.UnconfirmedAmount.ToCoin())
 					fmt.Printf("total:%.8f\n", v.TotalAmount.ToCoin())
-					fmt.Printf("spend:%.8f\n", v.SpendAmount.ToCoin())
+					fmt.Printf("spend:%.8f\n", v.SpendAmount.ToCoin)
 					fmt.Println()
 				}
 			} else {
 				for name, v := range b {
 					fmt.Printf("coin:%s\n", name)
-					fmt.Printf("%.8f\n", v.UnspentAmount.ToCoin())
+					fmt.Printf("%.8f\n", v.UnspentAmount.ToCoin)
 					fmt.Println()
 				}
 			}
@@ -276,6 +277,38 @@ var sendToAddressCmd = &cobra.Command{
 	},
 }
 
+var sendLockedToAddressCmd = &cobra.Command{
+	Use:   "sendlockedtoaddress {address} {amount} {lock height} {pripassword} ",
+	Short: "send lock transaction ",
+	Example: `
+		sendlockedtoaddress TmWMuY9q5dUutUTGikhqTVKrnDMG34dEgb5 MEER 10 10000 pripassword
+		`,
+	Args: cobra.MinimumNArgs(5),
+	Run: func(cmd *cobra.Command, args []string) {
+		err := OpenWallet()
+		if err != nil {
+			fmt.Println(err.Error())
+			return
+		}
+		f32, err := strconv.ParseFloat(args[2], 32)
+		if err != nil {
+			log.Error("sendtoaddress ", "error", err.Error())
+			return
+		}
+		lock, err := strconv.ParseUint(args[3], 10, 64)
+		if err != nil {
+			log.Error("sendtoaddress ", "error", err.Error())
+			return
+		}
+		err = UnLock(args[4])
+		if err != nil {
+			fmt.Println(err.Error())
+			return
+		}
+		sendLockedToAddress(args[0], float64(f32), lock, args[1])
+	},
+}
+
 func newGetTxByTxIdCmd() *cobra.Command {
 	getTxByTxIdCmd := &cobra.Command{
 		Use:   "gettx {txid}",
@@ -373,6 +406,7 @@ func newListAccountsBalance() *cobra.Command {
 				return err
 			}
 			_, err := listAccountsBalance()
+
 			return err
 		},
 	}

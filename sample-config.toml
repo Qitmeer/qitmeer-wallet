@@ -11,7 +11,7 @@ QNoTLS=true #Whether to start TLS corresponding to qitmeer
 QTLSSkipVerify=true
 WalletPass="public" #Wallet encryption code default public
 
-MinTxFee=200000   # The minimum transaction fee in QIT/KB default 200000 (aka. 0.002 MEER/KB)
+MinTxFee=20000   # The minimum transaction fee in QIT/KB default 20000 (aka. 0.0002 MEER/KB)
 Confirmations=10   # Number of block confirmations
 
 #web model

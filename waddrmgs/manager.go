@@ -222,6 +222,7 @@ type Manager struct {
 	externalAddrSchemas map[AddressType][]KeyScope
 	internalAddrSchemas map[AddressType][]KeyScope
 	syncState           syncState
+	chainHeight         uint32
 	watchingOnly        bool
 	birthday            time.Time
 	locked              bool
@@ -525,6 +526,10 @@ func Create(ns walletdb.ReadWriteBucket, seed, pubPassphrase, privPassphrase []b
 	if err != nil {
 		return maybeConvertDbError(err)
 	}
+	err = putChainHeight(ns, 0)
+	if err != nil {
+		return maybeConvertDbError(err)
+	}
 	err = putStartBlock(ns, &syncInfo.startBlock)
 	if err != nil {
 		return maybeConvertDbError(err)
@@ -612,6 +617,10 @@ func loadManager(ns walletdb.ReadBucket, pubPassphrase []byte,
 	if err != nil {
 		return nil, maybeConvertDbError(err)
 	}
+	chainHeight, err := fetchChainHeight(ns)
+	if err != nil {
+		return nil, maybeConvertDbError(err)
+	}
 	startBlock, err := FetchStartBlock(ns)
 	if err != nil {
 		return nil, maybeConvertDbError(err)
@@ -692,7 +701,7 @@ func loadManager(ns walletdb.ReadBucket, pubPassphrase []byte,
 	mgr := newManager(
 		chainParams, &masterKeyPub, &masterKeyPriv,
 		cryptoKeyPub, cryptoKeyPrivEnc, cryptoKeyScriptEnc, syncInfo,
-		birthday, privPassphraseSalt, scopedManagers,
+		chainHeight, birthday, privPassphraseSalt, scopedManagers,
 	)
 	mgr.watchingOnly = watchingOnly
 
@@ -719,12 +728,13 @@ func loadManager(ns walletdb.ReadBucket, pubPassphrase []byte,
 func newManager(chainParams *chaincfg.Params, masterKeyPub *snacl.SecretKey,
 	masterKeyPriv *snacl.SecretKey, cryptoKeyPub EncryptorDecryptor,
 	cryptoKeyPrivEncrypted, cryptoKeyScriptEncrypted []byte, syncInfo *syncState,
-	birthday time.Time, privPassphraseSalt [saltSize]byte,
+	chainHeight uint32, birthday time.Time, privPassphraseSalt [saltSize]byte,
 	scopedManagers map[KeyScope]*ScopedKeyManager) *Manager {
 
 	m := &Manager{
 		chainParams:              chainParams,
 		syncState:                *syncInfo,
+		chainHeight:              chainHeight,
 		locked:                   true,
 		birthday:                 birthday,
 		masterKeyPub:             masterKeyPub,

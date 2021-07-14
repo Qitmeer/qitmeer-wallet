@@ -3,6 +3,7 @@ package wtxmgr
 import (
 	"encoding/json"
 	"fmt"
+	util "github.com/Qitmeer/qitmeer-wallet/utils"
 	"github.com/Qitmeer/qitmeer/common/math"
 	corejson "github.com/Qitmeer/qitmeer/core/json"
 	"time"
@@ -49,19 +50,31 @@ type TxInputPoint struct {
 }
 
 type AddrTxOutput struct {
-	Address string
-	TxId    hash.Hash
-	Index   uint32
-	Amount  types.Amount
-	Block   Block
-	Spend   SpendStatus
-	SpendTo *SpendTo
-	Status  TxStatus
-	IsBlue  bool
+	Address  string
+	TxId     hash.Hash
+	Index    uint32
+	Amount   types.Amount
+	Block    Block
+	Spend    SpendStatus
+	SpendTo  *SpendTo
+	Status   TxStatus
+	Locked   uint32
+	IsBlue   bool
+	PkScript string
 }
 
 func NewAddrTxOutput() *AddrTxOutput {
 	return &AddrTxOutput{SpendTo: &SpendTo{}}
+}
+
+func (a *AddrTxOutput) Encode() []byte {
+	bytes, _ := util.Encode(a)
+	return bytes
+}
+
+func DecodeAddrTxOutput(bytes []byte) (*AddrTxOutput, error) {
+	output := &AddrTxOutput{}
+	return output, util.Decode(bytes, output)
 }
 
 type AddrTxOutputs []AddrTxOutput
@@ -211,15 +224,14 @@ func (s *Store) InsertAddrTxOut(ns walletdb.ReadWriteBucket, txOut *AddrTxOutput
 		return err
 	} else {
 		k := canonicalOutPoint(&txOut.TxId, txOut.Index)
-		v := ValueAddrTxOutput(txOut)
-
+		v := txOut.Encode()
 		oldTxOut := outRw.Get(k)
 		if oldTxOut == nil || len(oldTxOut) == 0 {
 			err := outRw.Put(k, v)
 			return err
 		} else {
 			addTxOutPut := NewAddrTxOutput()
-			err := ReadAddrTxOutput(txOut.Address, oldTxOut, addTxOutPut)
+			addTxOutPut, err := DecodeAddrTxOutput(oldTxOut)
 			if err != nil {
 				return err
 			}
@@ -229,7 +241,7 @@ func (s *Store) InsertAddrTxOut(ns walletdb.ReadWriteBucket, txOut *AddrTxOutput
 			} else {
 				txOut.SpendTo = addTxOutPut.SpendTo
 				txOut.Spend = addTxOutPut.Spend
-				v := ValueAddrTxOutput(txOut)
+				v := txOut.Encode()
 				err := outRw.Put(k, v)
 				return err
 			}
@@ -242,7 +254,7 @@ func (s *Store) UpdateAddrTxOut(ns walletdb.ReadWriteBucket, txOut *AddrTxOutput
 		return err
 	} else {
 		k := canonicalOutPoint(&txOut.TxId, txOut.Index)
-		v := ValueAddrTxOutput(txOut)
+		v := txOut.Encode()
 		err := outRw.Put(k, v)
 		return err
 	}
@@ -252,7 +264,7 @@ func (s *Store) GetAddrTxOut(ns walletdb.ReadWriteBucket, address string, point 
 	k := canonicalOutPoint(&point.Hash, point.OutIndex)
 	txOut := outRw.Get(k)
 	addTxOutPut := NewAddrTxOutput()
-	err := ReadAddrTxOutput(address, txOut, addTxOutPut)
+	addTxOutPut, err := DecodeAddrTxOutput(txOut)
 	if err != nil {
 		return nil, err
 	}

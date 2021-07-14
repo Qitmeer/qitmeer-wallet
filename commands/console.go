@@ -365,6 +365,21 @@ func sendToAddress(address string, amount float64, coin string) (interface{}, er
 	fmt.Printf("%s\n", msg)
 	return msg, nil
 }
+func sendLockedToAddress(address string, amount float64, lockedHeight uint64, coin string) (interface{}, error) {
+	cmd := &qitmeerjson.SendLockedToAddressCmd{
+		Address:      address,
+		Amount:       amount,
+		Coin:         coin,
+		LockedHeight: lockedHeight,
+	}
+	msg, err := walletrpc.SendLockedToAddress(cmd, w)
+	if err != nil {
+		fmt.Println("sendToAddress:", "error", err.Error())
+		return nil, err
+	}
+	fmt.Printf("%s\n", msg)
+	return msg, nil
+}
 func updateblock(height int64) error {
 	cmd := &qitmeerjson.UpdateBlockToCmd{
 		ToOrder: height,

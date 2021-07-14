@@ -72,20 +72,23 @@ func (api *API) GetAccountsAndBalance(coin string) (map[string]*Balance, error) 
 	if err != nil {
 		return nil, err
 	}
-
+	coinID, err := api.wt.CoinID(coin)
+	if err != nil {
+		return nil, err
+	}
 	for _, aaa := range aaas {
 
 		if _, ok := accountsBalances[aaa.AccountName]; !ok {
-			accountsBalances[aaa.AccountName] = &Balance{}
+			accountsBalances[aaa.AccountName] = NewBalance(coinID)
 		}
 
 		accountBalance := accountsBalances[aaa.AccountName]
-
 		for _, addr := range aaa.AddrsOutput {
-			accountBalance.TotalAmount.Value += addr.balanceMap[types.NewCoinID(coin)].TotalAmount.Value
-			accountBalance.SpendAmount.Value += addr.balanceMap[types.NewCoinID(coin)].SpendAmount.Value
-			accountBalance.UnspentAmount.Value += addr.balanceMap[types.NewCoinID(coin)].UnspentAmount.Value
-			accountBalance.UnConfirmAmount.Value += addr.balanceMap[types.NewCoinID(coin)].UnConfirmAmount.Value
+			accountBalance.TotalAmount.Value += addr.balanceMap[coinID].TotalAmount.Value
+			accountBalance.SpendAmount.Value += addr.balanceMap[coinID].SpendAmount.Value
+			accountBalance.UnspentAmount.Value += addr.balanceMap[coinID].UnspentAmount.Value
+			accountBalance.UnconfirmedAmount.Value += addr.balanceMap[coinID].UnconfirmedAmount.Value
+			accountBalance.LockAmount.Value += addr.balanceMap[coinID].LockAmount.Value
 		}
 
 	}
@@ -99,14 +102,19 @@ func (api *API) GetBalanceByAccount(name string, coin string) (*Balance, error) 
 		return nil, err
 	}
 
-	accountBalance := &Balance{}
+	coinID, err := api.wt.CoinID(coin)
+	if err != nil {
+		return nil, err
+	}
+	accountBalance := NewBalance(coinID)
 	for _, result := range results {
 		if result.AccountName == name {
 			for _, addr := range result.AddrsOutput {
-				accountBalance.TotalAmount.Value += addr.balanceMap[types.NewCoinID(coin)].TotalAmount.Value
-				accountBalance.SpendAmount.Value += addr.balanceMap[types.NewCoinID(coin)].SpendAmount.Value
-				accountBalance.UnspentAmount.Value += addr.balanceMap[types.NewCoinID(coin)].UnspentAmount.Value
-				accountBalance.UnConfirmAmount.Value += addr.balanceMap[types.NewCoinID(coin)].UnConfirmAmount.Value
+				accountBalance.TotalAmount.Value += addr.balanceMap[coinID].TotalAmount.Value
+				accountBalance.SpendAmount.Value += addr.balanceMap[coinID].SpendAmount.Value
+				accountBalance.UnspentAmount.Value += addr.balanceMap[coinID].UnspentAmount.Value
+				accountBalance.UnconfirmedAmount.Value += addr.balanceMap[coinID].UnconfirmedAmount.Value
+				accountBalance.LockAmount.Value += addr.balanceMap[coinID].LockAmount.Value
 			}
 		}
 	}
@@ -116,7 +124,7 @@ func (api *API) GetBalanceByAccount(name string, coin string) (*Balance, error) 
 
 // GetUTxo addr unSpend UTxo
 func (api *API) GetUTxo(addr string, coin string) ([]wtxmgr.UTxo, error) {
-	results, err := api.wt.GetUtxo(addr, coin)
+	results, err := api.wt.GetUnspentUTXO(addr, coin)
 	if err != nil {
 		return nil, err
 	}
@@ -319,15 +327,47 @@ func (api *API) SendToAddress(addressStr string, amount float64, coin string) (s
 		return "", qitmeerjson.ErrNeedPositiveAmount
 	}
 
-	coinId := types.NewCoinID(coin)
-	amt := types.Amount{Value: int64(amount * types.AtomsPerCoin), Id: coinId}
+	coinID, err := api.wt.CoinID(coin)
+	if err != nil {
+		return "", err
+	}
+	amt := types.Amount{Value: int64(amount * types.AtomsPerCoin), Id: coinID}
 
 	// Mock up map of address and amount pairs.
 	pairs := map[string]types.Amount{
 		addressStr: amt,
 	}
 
-	return api.wt.SendPairs(pairs, waddrmgr.AccountMergePayNum, txrules.DefaultRelayFeePerKb)
+	return api.wt.SendPairs(pairs, waddrmgr.AccountMergePayNum, txrules.DefaultRelayFeePerKb, 0)
+}
+
+//SendToAddress handles a sendtoaddress RPC request by creating a new
+//transaction spending unspent transaction outputs for a wallet to another
+//payment address.  Leftover inputs not sent to the payment address or a fee
+//for the miner are sent back to a new address in the wallet.  Upon success,
+//the TxID for the created transaction is returned.
+func (api *API) SendLockedToAddress(addressStr string, amount float64, coin string, lockHeight uint64) (string, error) {
+
+	// Check that signed integer parameters are positive.
+	if amount < 0 {
+		return "", qitmeerjson.ErrNeedPositiveAmount
+	}
+
+	id, err := api.wt.CoinID(coin)
+	if err != nil {
+		return "", err
+	}
+	amt, err := types.NewAmount(amount)
+	if err != nil {
+		return "", err
+	}
+	amt.Id = id
+	// Mock up map of address and amount pairs.
+	pairs := map[string]types.Amount{
+		addressStr: *amt,
+	}
+
+	return api.wt.SendPairs(pairs, waddrmgr.AccountMergePayNum, txrules.DefaultRelayFeePerKb, lockHeight)
 }
 
 func (api *API) SendToMany(addAmounts map[string]float64, coin string) (string, error) {
@@ -337,13 +377,16 @@ func (api *API) SendToMany(addAmounts map[string]float64, coin string) (string, 
 		if amount < 0 {
 			return "", qitmeerjson.ErrNeedPositiveAmount
 		}
-		coinId := types.NewCoinID(coin)
-		amt := types.Amount{Value: int64(amount * types.AtomsPerCoin), Id: coinId}
+		coinID, err := api.wt.CoinID(coin)
+		if err != nil {
+			return "", err
+		}
+		amt := types.Amount{Value: int64(amount * types.AtomsPerCoin), Id: coinID}
 
 		pairs[addr] = amt
 	}
 
-	return api.wt.SendPairs(pairs, waddrmgr.AccountMergePayNum, txrules.DefaultRelayFeePerKb)
+	return api.wt.SendPairs(pairs, waddrmgr.AccountMergePayNum, txrules.DefaultRelayFeePerKb, 0)
 }
 
 // SendToAddressByAccount by account
@@ -359,15 +402,18 @@ func (api *API) SendToAddressByAccount(accountName string, addressStr string, am
 		return "", qitmeerjson.ErrNeedPositiveAmount
 	}
 
-	coinId := types.NewCoinID(coin)
-	amt := types.Amount{Value: int64(amount * types.AtomsPerCoin), Id: coinId}
+	coinID, err := api.wt.CoinID(coin)
+	if err != nil {
+		return "", nil
+	}
+	amt := types.Amount{Value: int64(amount * types.AtomsPerCoin), Id: coinID}
 
 	// Mock up map of address and amount pairs.
 	pairs := map[string]types.Amount{
 		addressStr: amt,
 	}
 
-	return api.wt.SendPairs(pairs, int64(accountNum), txrules.DefaultRelayFeePerKb)
+	return api.wt.SendPairs(pairs, int64(accountNum), txrules.DefaultRelayFeePerKb, 0)
 }
 
 //GetBalanceByAddr get balance by address
