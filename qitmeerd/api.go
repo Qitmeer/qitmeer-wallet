@@ -152,6 +152,4 @@ type Status struct {
 	MainOrder    uint32
 	MainHeight   uint32
 	Blake2bdDiff string // float64
-	CuckarooDiff float64
-	CuckatooDiff float64
 }
