@@ -74,7 +74,7 @@ func (api *API) GetAccountsAndBalance(coin string) (map[string]*Balance, error) 
 	}
 	coinID, err := api.wt.CoinID(coin)
 	if err != nil {
-		return nil, err
+		return map[string]*Balance{}, err
 	}
 	for _, aaa := range aaas {
 
@@ -417,8 +417,8 @@ func (api *API) SendToAddressByAccount(accountName string, addressStr string, am
 }
 
 //GetBalanceByAddr get balance by address
-func (api *API) GetBalanceByAddr(addrStr string) (map[string]Balance, error) {
-	m, err := api.wt.GetBalance(addrStr)
+func (api *API) GetBalanceByAddr(addrStr, coin string) (map[string]Balance, error) {
+	m, err := api.wt.GetBalanceByCoin(addrStr, coin)
 	if err != nil {
 		return nil, err
 	}

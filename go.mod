@@ -4,7 +4,7 @@ go 1.15
 
 require (
 	github.com/BurntSushi/toml v0.3.1
-	github.com/Qitmeer/qitmeer v0.10.0-dev.0.20210622081212-4214186f513b
+	github.com/Qitmeer/qitmeer v0.10.1
 	github.com/deckarep/golang-set v1.7.1
 	github.com/jessevdk/go-flags v1.5.0
 	github.com/jrick/logrotate v1.0.0

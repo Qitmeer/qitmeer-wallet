@@ -130,6 +130,19 @@ func (b *bucket) NestedReadWriteBucket(key []byte) walletdb.ReadWriteBucket {
 	return (*bucket)(boltBucket)
 }
 
+func (b *bucket) NestedAndCreateReadWriteBucket(key []byte) walletdb.ReadWriteBucket {
+	boltBucket := (*bbolt.Bucket)(b).Bucket(key)
+	// Don't return a non-nil interface to a nil pointer.
+	if boltBucket == nil {
+		buck, err := b.CreateBucket(key)
+		if err != nil {
+			return nil
+		}
+		return buck
+	}
+	return (*bucket)(boltBucket)
+}
+
 func (b *bucket) NestedReadBucket(key []byte) walletdb.ReadBucket {
 	return b.NestedReadWriteBucket(key)
 }

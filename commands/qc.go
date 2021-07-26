@@ -133,7 +133,7 @@ var getBalanceCmd = &cobra.Command{
 					fmt.Printf("locked:%.8f\n", v.LockAmount.ToCoin())
 					fmt.Printf("unconfirmed:%.8f\n", v.UnconfirmedAmount.ToCoin())
 					fmt.Printf("total:%.8f\n", v.TotalAmount.ToCoin())
-					fmt.Printf("spend:%.8f\n", v.SpendAmount.ToCoin)
+					fmt.Printf("spend:%.8f\n", v.SpendAmount.ToCoin())
 					fmt.Println()
 				}
 			} else {
