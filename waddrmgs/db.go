@@ -1,4 +1,3 @@
-
 package waddrmgr
 
 import (
@@ -7,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/Qitmeer/qitmeer-wallet/walletdb"
+	"github.com/Qitmeer/qitmeer-wallet/wtxmgr"
 	chainhash "github.com/Qitmeer/qitmeer/common/hash"
 	"time"
 )
@@ -47,8 +47,8 @@ type syncStatus uint8
 // NOTE: These are currently unused but are being defined for the possibility
 // of supporting sync status on a per-address basis.
 const (
-	ssNone    syncStatus = 0 // not iota as they need to be stable for db
-	ssFull    syncStatus = 2
+	ssNone syncStatus = 0 // not iota as they need to be stable for db
+	ssFull syncStatus = 2
 )
 
 // addressType represents a type of address stored in the database.
@@ -230,10 +230,6 @@ var (
 	// encryption key. This reside under the main bucket.
 	masterHDPubName = []byte("mhdpub")
 
-	// syncBucketName is the name of the bucket that stores the current
-	// sync state of the root manager.
-	syncBucketName = []byte("sync")
-
 	// Db related key names (main bucket).
 	mgrVersionName    = []byte("mgrver")
 	mgrCreateDateName = []byte("mgrcreated")
@@ -248,6 +244,7 @@ var (
 
 	// Sync related key names (sync bucket).
 	syncedToName              = []byte("syncedto")
+	chainHeightName           = []byte("chainheight")
 	startBlockName            = []byte("startblock")
 	birthdayName              = []byte("birthday")
 	birthdayBlockName         = []byte("birthdayblock")
@@ -403,7 +400,6 @@ func putMasterHDKeys(ns walletdb.ReadWriteBucket, masterHDPrivEnc, masterHDPubEn
 
 	return nil
 }
-
 
 // fetchCryptoKeys loads the encrypted crypto keys which are in turn used to
 // protect the extended keys, imported keys, and scripts.  Any of the returned
@@ -620,7 +616,6 @@ func serializeDefaultAccountRow(encryptedPubKey, encryptedPrivKey []byte,
 	return rawData
 }
 
-
 // deserializeAddressRow deserializes the passed serialized address
 // information.  This is used as a common base for the various address types to
 // deserialize the common parts.
@@ -812,7 +807,7 @@ func serializeScriptAddress(encryptedHash, encryptedScript []byte) []byte {
 // fetchSyncedTo loads the block stamp the manager is synced to from the
 // database.
 func fetchSyncedTo(ns walletdb.ReadBucket) (*BlockStamp, error) {
-	bucket := ns.NestedReadBucket(syncBucketName)
+	bucket := ns.NestedReadBucket(wtxmgr.BucketSync)
 
 	// The serialized synced to format is:
 	//   <blockheight><blockhash><timestamp>
@@ -825,9 +820,8 @@ func fetchSyncedTo(ns walletdb.ReadBucket) (*BlockStamp, error) {
 	}
 
 	var bs BlockStamp
-	bs.Height = int32(binary.LittleEndian.Uint32(buf[0:4]))
+	bs.Order = binary.LittleEndian.Uint32(buf[0:4])
 	copy(bs.Hash[:], buf[4:36])
-
 	if len(buf) == 40 {
 		bs.Timestamp = time.Unix(
 			int64(binary.LittleEndian.Uint32(buf[36:])), 0,
@@ -839,23 +833,23 @@ func fetchSyncedTo(ns walletdb.ReadBucket) (*BlockStamp, error) {
 
 // PutSyncedTo stores the provided synced to blockstamp to the database.
 func PutSyncedTo(ns walletdb.ReadWriteBucket, bs *BlockStamp) error {
-	bucket := ns.NestedReadWriteBucket(syncBucketName)
+	bucket := ns.NestedReadWriteBucket(wtxmgr.BucketSync)
 	errStr := fmt.Sprintf("failed to store sync information %v", bs.Hash)
 
 	// If the block height is greater than zero, check that the previous
 	// block height exists. This prevents reorg issues in the future.
 	// We use BigEndian so that keys/values are added to the bucket in
 	// order, making writes more efficient for some database backends.
-	if bs.Height > 0 {
-		if _, err := fetchBlockHash(ns, bs.Height-1); err != nil {
+	/*	if bs.Order > 0 {
+		if _, err := fetchBlockHash(ns, bs.Order-1); err != nil {
 			return managerError(ErrDatabase, errStr, err)
 		}
-	}
+	}*/
 
 	// Store the block hash by block height.
-	height := make([]byte, 4)
-	binary.BigEndian.PutUint32(height, uint32(bs.Height))
-	err := bucket.Put(height, bs.Hash[0:32])
+	temp := make([]byte, 4)
+	binary.BigEndian.PutUint32(temp, bs.Order)
+	err := bucket.Put(temp[0:4], bs.Hash[0:32])
 	if err != nil {
 		return managerError(ErrDatabase, errStr, err)
 	}
@@ -865,10 +859,9 @@ func PutSyncedTo(ns walletdb.ReadWriteBucket, bs *BlockStamp) error {
 	//
 	// 4 bytes block height + 32 bytes hash length + 4 byte timestamp length
 	buf := make([]byte, 40)
-	binary.LittleEndian.PutUint32(buf[0:4], uint32(bs.Height))
+	binary.LittleEndian.PutUint32(buf[0:4], bs.Order)
 	copy(buf[4:36], bs.Hash[0:32])
 	binary.LittleEndian.PutUint32(buf[36:], uint32(bs.Timestamp.Unix()))
-
 	err = bucket.Put(syncedToName, buf)
 	if err != nil {
 		return managerError(ErrDatabase, errStr, err)
@@ -876,15 +869,43 @@ func PutSyncedTo(ns walletdb.ReadWriteBucket, bs *BlockStamp) error {
 	return nil
 }
 
+// PutSyncedTo stores the provided synced to blockstamp to the database.
+func putChainHeight(ns walletdb.ReadWriteBucket, height uint32) error {
+	bucket := ns.NestedReadWriteBucket(wtxmgr.BucketHeight)
+	errStr := fmt.Sprintf("failed to store chain height information %v", height)
+
+	temp := make([]byte, 4)
+	binary.BigEndian.PutUint32(temp, height)
+	err := bucket.Put(chainHeightName, temp)
+	if err != nil {
+		return managerError(ErrDatabase, errStr, err)
+	}
+	return nil
+}
+
+func fetchChainHeight(ns walletdb.ReadBucket) (uint32, error) {
+	bucket := ns.NestedReadBucket(wtxmgr.BucketHeight)
+
+	buf := bucket.Get(chainHeightName)
+	if len(buf) < 4 {
+		str := "malformed chain height stored in database"
+		return 0, managerError(ErrDatabase, str, nil)
+	}
+
+	height := binary.BigEndian.Uint32(buf[0:4])
+
+	return height, nil
+}
+
 // fetchBlockHash loads the block hash for the provided height from the
 // database.
-func fetchBlockHash(ns walletdb.ReadBucket, height int32) (*chainhash.Hash, error) {
-	bucket := ns.NestedReadBucket(syncBucketName)
-	errStr := fmt.Sprintf("failed to fetch block hash for height %d", height)
+func fetchBlockHash(ns walletdb.ReadBucket, order uint32) (*chainhash.Hash, error) {
+	bucket := ns.NestedReadBucket(wtxmgr.BucketSync)
+	errStr := fmt.Sprintf("failed to fetch block hash for height %d", order)
 
-	heightBytes := make([]byte, 4)
-	binary.BigEndian.PutUint32(heightBytes, uint32(height))
-	hashBytes := bucket.Get(heightBytes)
+	orderBytes := make([]byte, 4)
+	binary.BigEndian.PutUint32(orderBytes, order)
+	hashBytes := bucket.Get(orderBytes)
 	if hashBytes == nil {
 		err := errors.New("block not found")
 		return nil, managerError(ErrBlockNotFound, errStr, err)
@@ -903,7 +924,7 @@ func fetchBlockHash(ns walletdb.ReadBucket, height int32) (*chainhash.Hash, erro
 // FetchStartBlock loads the start block stamp for the manager from the
 // database.
 func FetchStartBlock(ns walletdb.ReadBucket) (*BlockStamp, error) {
-	bucket := ns.NestedReadBucket(syncBucketName)
+	bucket := ns.NestedReadBucket(wtxmgr.BucketSync)
 
 	// The serialized start block format is:
 	//   <blockheight><blockhash>
@@ -916,21 +937,21 @@ func FetchStartBlock(ns walletdb.ReadBucket) (*BlockStamp, error) {
 	}
 
 	var bs BlockStamp
-	bs.Height = int32(binary.LittleEndian.Uint32(buf[0:4]))
+	bs.Order = binary.LittleEndian.Uint32(buf[0:4])
 	copy(bs.Hash[:], buf[4:36])
 	return &bs, nil
 }
 
 // putStartBlock stores the provided start block stamp to the database.
 func putStartBlock(ns walletdb.ReadWriteBucket, bs *BlockStamp) error {
-	bucket := ns.NestedReadWriteBucket(syncBucketName)
+	bucket := ns.NestedReadWriteBucket(wtxmgr.BucketSync)
 
 	// The serialized start block format is:
 	//   <blockheight><blockhash>
 	//
 	// 4 bytes block height + 32 bytes hash length
 	buf := make([]byte, 36)
-	binary.LittleEndian.PutUint32(buf[0:4], uint32(bs.Height))
+	binary.LittleEndian.PutUint32(buf[0:4], uint32(bs.Order))
 	copy(buf[4:36], bs.Hash[0:32])
 
 	err := bucket.Put(startBlockName, buf)
@@ -945,7 +966,7 @@ func putStartBlock(ns walletdb.ReadWriteBucket, bs *BlockStamp) error {
 func fetchBirthday(ns walletdb.ReadBucket) (time.Time, error) {
 	var t time.Time
 
-	bucket := ns.NestedReadBucket(syncBucketName)
+	bucket := ns.NestedReadBucket(wtxmgr.BucketSync)
 	birthdayTimestamp := bucket.Get(birthdayName)
 	if len(birthdayTimestamp) != 8 {
 		str := "malformed birthday stored in database"
@@ -962,7 +983,7 @@ func putBirthday(ns walletdb.ReadWriteBucket, t time.Time) error {
 	var birthdayTimestamp [8]byte
 	binary.BigEndian.PutUint64(birthdayTimestamp[:], uint64(t.Unix()))
 
-	bucket := ns.NestedReadWriteBucket(syncBucketName)
+	bucket := ns.NestedReadWriteBucket(wtxmgr.BucketSync)
 	if err := bucket.Put(birthdayName, birthdayTimestamp[:]); err != nil {
 		str := "failed to store birthday"
 		return managerError(ErrDatabase, str, err)
@@ -980,7 +1001,7 @@ func putBirthday(ns walletdb.ReadWriteBucket, t time.Time) error {
 func FetchBirthdayBlock(ns walletdb.ReadBucket) (BlockStamp, error) {
 	var block BlockStamp
 
-	bucket := ns.NestedReadBucket(syncBucketName)
+	bucket := ns.NestedReadBucket(wtxmgr.BucketSync)
 	birthdayBlock := bucket.Get(birthdayBlockName)
 	if birthdayBlock == nil {
 		str := "birthday block not set"
@@ -991,7 +1012,7 @@ func FetchBirthdayBlock(ns walletdb.ReadBucket) (BlockStamp, error) {
 		return block, managerError(ErrDatabase, str, nil)
 	}
 
-	block.Height = int32(binary.BigEndian.Uint32(birthdayBlock[:4]))
+	block.Order = binary.BigEndian.Uint32(birthdayBlock[:4])
 	copy(block.Hash[:], birthdayBlock[4:36])
 	t := int64(binary.BigEndian.Uint64(birthdayBlock[36:]))
 	block.Timestamp = time.Unix(t, 0)
@@ -1007,11 +1028,11 @@ func FetchBirthdayBlock(ns walletdb.ReadBucket) (BlockStamp, error) {
 //   [36:44] block timestamp
 func putBirthdayBlock(ns walletdb.ReadWriteBucket, block BlockStamp) error {
 	var birthdayBlock [44]byte
-	binary.BigEndian.PutUint32(birthdayBlock[:4], uint32(block.Height))
+	binary.BigEndian.PutUint32(birthdayBlock[:4], uint32(block.Order))
 	copy(birthdayBlock[4:36], block.Hash[:])
 	binary.BigEndian.PutUint64(birthdayBlock[36:], uint64(block.Timestamp.Unix()))
 
-	bucket := ns.NestedReadWriteBucket(syncBucketName)
+	bucket := ns.NestedReadWriteBucket(wtxmgr.BucketSync)
 	if err := bucket.Put(birthdayBlockName, birthdayBlock[:]); err != nil {
 		str := "failed to store birthday block"
 		return managerError(ErrDatabase, str, err)
@@ -1023,7 +1044,7 @@ func putBirthdayBlock(ns walletdb.ReadWriteBucket, block BlockStamp) error {
 // fetchBirthdayBlockVerification retrieves the bit that determines whether the
 // wallet has verified that its birthday block is correct.
 func fetchBirthdayBlockVerification(ns walletdb.ReadBucket) bool {
-	bucket := ns.NestedReadBucket(syncBucketName)
+	bucket := ns.NestedReadBucket(wtxmgr.BucketSync)
 	verifiedValue := bucket.Get(birthdayBlockVerifiedName)
 
 	// If there is no verification status, we can assume it has not been
@@ -1051,7 +1072,7 @@ func putBirthdayBlockVerification(ns walletdb.ReadWriteBucket, verified bool) er
 	var verifiedBytes [2]byte
 	binary.BigEndian.PutUint16(verifiedBytes[:], verifiedValue)
 
-	bucket := ns.NestedReadWriteBucket(syncBucketName)
+	bucket := ns.NestedReadWriteBucket(wtxmgr.BucketSync)
 	err := bucket.Put(birthdayBlockVerifiedName, verifiedBytes[:])
 	if err != nil {
 		str := "failed to store birthday block verification"
@@ -1070,12 +1091,13 @@ func managerExists(ns walletdb.ReadBucket) bool {
 	mainBucket := ns.NestedReadBucket(mainBucketName)
 	return mainBucket != nil
 }
+
 // createManagerNS creates the initial namespace structure needed for all of
 // the manager data.  This includes things such as all of the buckets as well
 // as the version and creation date. In addition to creating the key space for
 // the root address manager, we'll also create internal scopes for all the
 // default manager scope types.
-func createManagerNS(ns walletdb.ReadWriteBucket,defaultScopes map[KeyScope]ScopeAddrSchema) error {
+func CreateManagerNS(ns walletdb.ReadWriteBucket, defaultScopes map[KeyScope]ScopeAddrSchema) error {
 
 	// First, we'll create all the relevant buckets that stem off of the
 	// main bucket.
@@ -1084,9 +1106,14 @@ func createManagerNS(ns walletdb.ReadWriteBucket,defaultScopes map[KeyScope]Scop
 		str := "failed to create main bucket"
 		return managerError(ErrDatabase, str, err)
 	}
-	_, err = ns.CreateBucket(syncBucketName)
+	_, err = ns.CreateBucket(wtxmgr.BucketSync)
 	if err != nil {
 		str := "failed to create sync bucket"
+		return managerError(ErrDatabase, str, err)
+	}
+	_, err = ns.CreateBucket(wtxmgr.BucketHeight)
+	if err != nil {
+		str := "failed to create height bucket"
 		return managerError(ErrDatabase, str, err)
 	}
 
@@ -1127,7 +1154,6 @@ func createManagerNS(ns walletdb.ReadWriteBucket,defaultScopes map[KeyScope]Scop
 		}
 	}
 
-
 	if err := putManagerVersion(ns, latestMgrVersion); err != nil {
 		return err
 	}
@@ -1163,6 +1189,7 @@ func putLastAccount(ns walletdb.ReadWriteBucket, scope *KeyScope,
 	}
 	return nil
 }
+
 // createScopedManagerNS creates the namespace buckets for a new registered
 // manager scope within the top level bucket. All relevant sub-buckets that a
 // ScopedManager needs to perform its duties are also created.
@@ -1231,6 +1258,7 @@ func scopeSchemaToBytes(schema *ScopeAddrSchema) []byte {
 
 	return schemaBytes[:]
 }
+
 // fetchAccountName retrieves the account name given an account number from the
 // database.
 func fetchAccountName(ns walletdb.ReadBucket, scope *KeyScope,
@@ -1325,6 +1353,7 @@ func forEachKeyScope(ns walletdb.ReadBucket, fn func(KeyScope) error) error {
 		return fn(scope)
 	})
 }
+
 // fetchScopeAddrSchema will attempt to retrieve the address schema for a
 // particular manager scope stored within the database. These are used in order
 // to properly type each address generated by the scope address manager.
@@ -1346,6 +1375,7 @@ func fetchScopeAddrSchema(ns walletdb.ReadBucket,
 
 	return scopeSchemaFromBytes(schemaBytes), nil
 }
+
 // scopeSchemaFromBytes decodes a new scope schema instance from the set of
 // serialized bytes.
 func scopeSchemaFromBytes(schemaBytes []byte) *ScopeAddrSchema {
@@ -1355,6 +1385,7 @@ func scopeSchemaFromBytes(schemaBytes []byte) *ScopeAddrSchema {
 		ExternalAddrType: AddressType(schemaBytes[1]),
 	}
 }
+
 // forEachAccountAddress calls the given function with each address of the
 // given account stored in the manager, breaking early on error.
 func forEachAccountAddress(ns walletdb.ReadBucket, scope *KeyScope,
@@ -1398,6 +1429,7 @@ func forEachAccountAddress(ns walletdb.ReadBucket, scope *KeyScope,
 	}
 	return nil
 }
+
 // fetchAddressByHash loads address information for the provided address hash
 // from the database.  The returned value is one of the address rows for the
 // specific address type.  The caller should use type assertions to ascertain
@@ -1436,6 +1468,7 @@ func fetchAddressByHash(ns walletdb.ReadBucket, scope *KeyScope,
 	str := fmt.Sprintf("unsupported address type '%d'", row.addrType)
 	return nil, managerError(ErrDatabase, str, nil)
 }
+
 // fetchAddress loads address information for the provided address id from the
 // database.  The returned value is one of the address rows for the specific
 // address type.  The caller should use type assertions to ascertain the type.
@@ -1447,6 +1480,7 @@ func fetchAddress(ns walletdb.ReadBucket, scope *KeyScope,
 	addrHash := sha256.Sum256(addressID)
 	return fetchAddressByHash(ns, scope, addrHash[:])
 }
+
 // existsAddress returns whether or not the address id exists in the database.
 func existsAddress(ns walletdb.ReadBucket, scope *KeyScope, addressID []byte) bool {
 	scopedBucket, err := fetchReadScopeBucket(ns, scope)
@@ -1542,6 +1576,7 @@ func putScriptAddress(ns walletdb.ReadWriteBucket, scope *KeyScope,
 
 	return nil
 }
+
 // putAddress stores the provided address information to the database.  This is
 // used a common base for storing the various address types.
 func putAddress(ns walletdb.ReadWriteBucket, scope *KeyScope,
@@ -1567,6 +1602,7 @@ func putAddress(ns walletdb.ReadWriteBucket, scope *KeyScope,
 	// Update address account index
 	return putAddrAccountIndex(ns, scope, row.account, addrHash[:])
 }
+
 // putAddrAccountIndex stores the given key to the address account index of the
 // database.
 func putAddrAccountIndex(ns walletdb.ReadWriteBucket, scope *KeyScope,
@@ -1644,6 +1680,7 @@ func fetchAddrAccount(ns walletdb.ReadBucket, scope *KeyScope,
 	}
 	return binary.LittleEndian.Uint32(val), nil
 }
+
 // fetchAccountInfo loads information about the passed account from the
 // database.
 func fetchAccountInfo(ns walletdb.ReadBucket, scope *KeyScope,
@@ -1692,7 +1729,6 @@ func fetchAddressUsed(ns walletdb.ReadBucket, scope *KeyScope,
 	return bucket.Get(addrHash[:]) != nil
 }
 
-
 // fetchLastAccount retrieves the last account from the database.
 func fetchLastAccount(ns walletdb.ReadBucket, scope *KeyScope) (uint32, error) {
 	scopedBucket, err := fetchReadScopeBucket(ns, scope)
@@ -1712,7 +1748,6 @@ func fetchLastAccount(ns walletdb.ReadBucket, scope *KeyScope) (uint32, error) {
 	account := binary.LittleEndian.Uint32(val[0:4])
 	return account, nil
 }
-
 
 // scopeToBytes transforms a manager's scope into the form that will be used to
 // retrieve the bucket that all information for a particular scope is stored
@@ -1755,6 +1790,7 @@ func putCoinTypeKeys(ns walletdb.ReadWriteBucket, scope *KeyScope,
 
 	return nil
 }
+
 // putAccountInfo stores the provided account information to the database.
 func putAccountInfo(ns walletdb.ReadWriteBucket, scope *KeyScope,
 	account uint32, encryptedPubKey, encryptedPrivKey []byte,
@@ -1787,6 +1823,7 @@ func putAccountInfo(ns walletdb.ReadWriteBucket, scope *KeyScope,
 
 	return nil
 }
+
 // putAccountRow stores the provided account information to the database.  This
 // is used a common base for storing the various account types.
 func putAccountRow(ns walletdb.ReadWriteBucket, scope *KeyScope,
@@ -1807,6 +1844,7 @@ func putAccountRow(ns walletdb.ReadWriteBucket, scope *KeyScope,
 	}
 	return nil
 }
+
 // putAccountIDIndex stores the given key to the account id index of the database.
 func putAccountIDIndex(ns walletdb.ReadWriteBucket, scope *KeyScope,
 	account uint32, name string) error {
@@ -1826,6 +1864,7 @@ func putAccountIDIndex(ns walletdb.ReadWriteBucket, scope *KeyScope,
 	}
 	return nil
 }
+
 // putAccountNameIndex stores the given key to the account name index of the
 // database.
 func putAccountNameIndex(ns walletdb.ReadWriteBucket, scope *KeyScope,

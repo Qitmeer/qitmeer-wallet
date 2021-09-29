@@ -69,7 +69,7 @@ func NewWalletServer(cfg *config.Config) (wSvr *WalletServer, err error) {
 		cfg: cfg,
 
 		WtLoader: wtLoader,
-		exitCh: make(chan bool),
+		exitCh:   make(chan bool),
 	}
 
 	RPCSvrCfg := &server.Config{

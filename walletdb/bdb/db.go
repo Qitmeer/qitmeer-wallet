@@ -130,6 +130,19 @@ func (b *bucket) NestedReadWriteBucket(key []byte) walletdb.ReadWriteBucket {
 	return (*bucket)(boltBucket)
 }
 
+func (b *bucket) NestedAndCreateReadWriteBucket(key []byte) walletdb.ReadWriteBucket {
+	boltBucket := (*bbolt.Bucket)(b).Bucket(key)
+	// Don't return a non-nil interface to a nil pointer.
+	if boltBucket == nil {
+		buck, err := b.CreateBucket(key)
+		if err != nil {
+			return nil
+		}
+		return buck
+	}
+	return (*bucket)(boltBucket)
+}
+
 func (b *bucket) NestedReadBucket(key []byte) walletdb.ReadBucket {
 	return b.NestedReadWriteBucket(key)
 }
@@ -347,8 +360,8 @@ func openDB(dbPath string, create bool) (walletdb.DB, error) {
 		return nil, walletdb.ErrDbDoesNotExist
 	}
 
-	boltDB, err := bbolt.Open(dbPath, 0600, &bbolt.Options{Timeout:10*time.Second})
-	if err!=nil && err.Error()=="timeout"{
+	boltDB, err := bbolt.Open(dbPath, 0600, &bbolt.Options{Timeout: 10 * time.Second})
+	if err != nil && err.Error() == "timeout" {
 		return (*db)(boltDB), fmt.Errorf("db is already in use, please check if other modes are running.")
 	}
 	return (*db)(boltDB), convertErr(err)

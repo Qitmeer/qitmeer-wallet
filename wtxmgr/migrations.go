@@ -3,6 +3,7 @@ package wtxmgr
 import (
 	"github.com/Qitmeer/qitmeer-wallet/walletdb"
 	"github.com/Qitmeer/qitmeer-wallet/walletdb/migration"
+	"github.com/Qitmeer/qitmeer/core/types"
 	"github.com/Qitmeer/qitmeer/log"
 )
 
@@ -36,7 +37,6 @@ type MigrationManager struct {
 // A compile-time assertion to ensure that MigrationManager implements the
 // migration.Manager interface.
 var _ migration.Manager = (*MigrationManager)(nil)
-
 
 // Name returns the name of the service we'll be attempting to upgrade.
 // NOTE: This method is part of the migration.Manager interface.
@@ -100,5 +100,5 @@ func dropTransactionHistory(ns walletdb.ReadWriteBucket) error {
 	}
 
 	// Finally, we'll insert a 0 value for our mined balance.
-	return putMinedBalance(ns, 0)
+	return putMinedBalance(ns, types.Amount{})
 }

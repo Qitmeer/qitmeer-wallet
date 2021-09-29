@@ -7,7 +7,7 @@ import (
 //  effects that a transaction makes on a specific address
 type Payment struct {
 	TxID      hash.Hash
-	Variation int64	// deposit: >0, withdraw: <= 0
+	Variation int64 // deposit: >0, withdraw: <= 0
 
 	BlockHash  hash.Hash
 	BlockOrder uint32

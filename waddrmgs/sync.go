@@ -14,7 +14,7 @@ import (
 // a point in the blockchain that an address manager element is
 // synced to.
 type BlockStamp struct {
-	Height    int32
+	Order     uint32
 	Hash      hash.Hash
 	Timestamp time.Time
 }
@@ -73,28 +73,50 @@ func (m *Manager) SetSyncedTo(ns walletdb.ReadWriteBucket, bs *BlockStamp) error
 // can use this information for intelligently initiating rescans to sync back to
 // the best chain from the last known good block.
 func (m *Manager) SyncedTo() BlockStamp {
+	m.mtx.RLock()
+	defer m.mtx.RUnlock()
+
+	return m.syncState.syncedTo
+}
+
+func (m *Manager) SetChainHeight(ns walletdb.ReadWriteBucket, height uint32) error {
 	m.mtx.Lock()
 	defer m.mtx.Unlock()
 
-	return m.syncState.syncedTo
+	// Update the database.
+	err := putChainHeight(ns, height)
+	if err != nil {
+		return err
+	}
+
+	// Update memory now that the database is updated.
+	m.chainHeight = height
+	return nil
+}
+
+func (m *Manager) ChainHeight() uint32 {
+	m.mtx.RLock()
+	defer m.mtx.RUnlock()
+
+	return m.chainHeight
 }
 
 // BlockHash returns the block hash at a particular block height. This
 // information is useful for comparing against the chain back-end to see if a
 // reorg is taking place and how far back it goes.
-func (m *Manager) BlockHash(ns walletdb.ReadBucket, height int32) (
+func (m *Manager) BlockHash(ns walletdb.ReadBucket, order uint32) (
 	*hash.Hash, error) {
-	m.mtx.Lock()
-	defer m.mtx.Unlock()
+	m.mtx.RLock()
+	defer m.mtx.RUnlock()
 
-	return fetchBlockHash(ns, height)
+	return fetchBlockHash(ns, order)
 }
 
 // Birthday returns the birthday, or earliest time a key could have been used,
 // for the manager.
 func (m *Manager) Birthday() time.Time {
-	m.mtx.Lock()
-	defer m.mtx.Unlock()
+	m.mtx.RLock()
+	defer m.mtx.RUnlock()
 
 	return m.birthday
 }

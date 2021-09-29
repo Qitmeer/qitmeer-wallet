@@ -20,8 +20,8 @@ package server
 import (
 	"context"
 	"errors"
-	"sync"
 	"reflect"
+	"sync"
 )
 
 var (

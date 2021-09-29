@@ -6,6 +6,8 @@ import (
 	"crypto/x509"
 	"encoding/json"
 	"fmt"
+	clijson "github.com/Qitmeer/qitmeer-wallet/json"
+	"github.com/Qitmeer/qitmeer/common/hash"
 	"github.com/Qitmeer/qitmeer/log"
 	"io/ioutil"
 	"net"
@@ -42,12 +44,12 @@ const (
 )
 
 // NewHtpc make qitmeerd http client
-func NewHtpc() (*httpConfig, error) {
+func NewHtpc(cfg *config.Config) (*httpConfig, error) {
 
-	if config.Cfg.QitmeerdSelect != "" {
+	if cfg.QitmeerdSelect != "" {
 		var qitmeerd *client.Config
-		for _, item := range config.Cfg.Qitmeerds {
-			if item.Name == config.Cfg.QitmeerdSelect {
+		for _, item := range cfg.Qitmeerds {
+			if item.Name == cfg.QitmeerdSelect {
 				qitmeerd = item
 				break
 			}
@@ -58,15 +60,15 @@ func NewHtpc() (*httpConfig, error) {
 	}
 
 	h := &httpConfig{
-		RPCUser:       config.Cfg.QUser,
-		RPCPassword:   config.Cfg.QPass,
-		RPCServer:     config.Cfg.QServer,
-		RPCCert:       config.Cfg.QCert,
-		NoTLS:         config.Cfg.QNoTLS,
-		TLSSkipVerify: config.Cfg.QTLSSkipVerify,
-		Proxy:         config.Cfg.QProxy,
-		ProxyUser:     config.Cfg.QProxyUser,
-		ProxyPass:     config.Cfg.QProxyPass,
+		RPCUser:       cfg.QUser,
+		RPCPassword:   cfg.QPass,
+		RPCServer:     cfg.QServer,
+		RPCCert:       cfg.QCert,
+		NoTLS:         cfg.QNoTLS,
+		TLSSkipVerify: cfg.QTLSSkipVerify,
+		Proxy:         cfg.QProxy,
+		ProxyUser:     cfg.QProxyUser,
+		ProxyPass:     cfg.QProxyPass,
 	}
 	c, err := newHTTPClient(h)
 	if err != nil {
@@ -160,7 +162,7 @@ func (cfg *httpConfig) CheckSyncUpdate(localheight int64) (bool, error) {
 		return false, err
 	}
 	log.Trace(fmt.Sprintf("blockheight:%v,localheight:%v", blockHeight, localheight))
-	if (blockHeight - localheight) < (config.Cfg.Confirmations + syncDiffNum) {
+	if uint32(blockHeight-localheight) < (config.Cfg.Confirmations + syncDiffNum) {
 		return true, nil
 	} else {
 		return false, fmt.Errorf("db Update incomplete")
@@ -188,9 +190,27 @@ func (cfg *httpConfig) getBlock(hash string, isDetail bool) (string, error) {
 	params := []interface{}{hash, isDetail}
 	return cfg.getResString("getBlock", params)
 }
+
 func (cfg *httpConfig) getBlockByOrder(i int64) ([]byte, error) {
 	params := []interface{}{i, true}
 	return cfg.getResByte("getBlockByOrder", params)
+}
+
+func (cfg *httpConfig) getBlockHashByOrder(i int64) (*hash.Hash, error) {
+	params := []interface{}{i, true}
+	bytes, err := cfg.getResByte("getBlockByOrder", params)
+	if err != nil {
+		return nil, err
+	}
+	var block clijson.BlockHttpResult
+	if err := json.Unmarshal(bytes, &block); err != nil {
+		return nil, err
+	}
+	blockHash, err := hash.NewHashFromStr(block.Hash)
+	if err != nil {
+		return nil, err
+	}
+	return blockHash, nil
 }
 func (cfg *httpConfig) isBlue(blockHash string) (bool, error) {
 	params := []interface{}{blockHash}
@@ -222,6 +242,21 @@ func (cfg *httpConfig) GetNodeInfo() (*qJson.InfoNodeResult, error) {
 	}
 
 	return nodeInfo, nil
+}
+
+func (cfg *httpConfig) GetTokenInfo() ([]qJson.TokenState, error) {
+	var params []interface{}
+	buf, err := cfg.getResByte("getTokenInfo", params)
+	if err != nil {
+		return nil, err
+	}
+	tokens := []qJson.TokenState{}
+	err = json.Unmarshal(buf, &tokens)
+	if err != nil {
+		return nil, err
+	}
+
+	return tokens, nil
 }
 
 // sendPostRequest sends the marshalled JSON-RPC command using HTTP-POST mode

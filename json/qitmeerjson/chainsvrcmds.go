@@ -1,10 +1,8 @@
 package qitmeerjson
 
-
 import (
 	"encoding/json"
 	"fmt"
-
 	//"github.com/btcsuite/btcd/wire"
 )
 
@@ -274,6 +272,7 @@ func NewGetBlockTemplateCmd(request *TemplateRequest) *GetBlockTemplateCmd {
 		Request: request,
 	}
 }
+
 //
 //// GetCFilterCmd defines the getcfilter JSON-RPC command.
 //type GetCFilterCmd struct {

@@ -59,9 +59,7 @@ func (qitmeerd *Qitmeerd) GetStatus() {
 			qitmeerd.Status.err = ""
 			qitmeerd.Status.MainOrder = nodeInfo.GraphState.MainOrder
 			qitmeerd.Status.MainHeight = nodeInfo.GraphState.MainHeight
-			qitmeerd.Status.Blake2bdDiff = strconv.FormatFloat(nodeInfo.PowDiff.Blake2bdDiff, 'f', 2, 64)
-			qitmeerd.Status.CuckarooDiff = nodeInfo.PowDiff.CuckarooDiff
-			qitmeerd.Status.CuckatooDiff = nodeInfo.PowDiff.CuckatooDiff
+			qitmeerd.Status.Blake2bdDiff = strconv.FormatFloat(nodeInfo.PowDiff.CurrentDiff, 'f', 2, 64)
 		}
 	}
 }

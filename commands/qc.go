@@ -3,9 +3,9 @@ package commands
 import (
 	"encoding/hex"
 	"fmt"
+	util "github.com/Qitmeer/qitmeer-wallet/utils"
 	"github.com/Qitmeer/qitmeer-wallet/wallet"
 	"github.com/Qitmeer/qitmeer/log"
-	"github.com/Qitmeer/qitmeer/qx"
 	"github.com/spf13/cobra"
 	"strconv"
 )
@@ -27,11 +27,13 @@ func AddQcCommand() {
 	QcCmd.AddCommand(updateblockCmd)
 	QcCmd.AddCommand(syncheightCmd)
 	QcCmd.AddCommand(sendToAddressCmd)
+	QcCmd.AddCommand(sendLockedToAddressCmd)
 	QcCmd.AddCommand(newImportPrivKeyCmd())
 	QcCmd.AddCommand(getAddressesByAccountCmd)
 	QcCmd.AddCommand(newListAccountsBalance())
 	QcCmd.AddCommand(newGetTxByTxIdCmd())
 	QcCmd.AddCommand(getTxSpendInfoCmd)
+	QcCmd.AddCommand(clearTxData)
 }
 
 var createWalletCmd = &cobra.Command{
@@ -92,38 +94,54 @@ var getBalanceCmd = &cobra.Command{
 			fmt.Println(err.Error())
 			return
 		}
-		company := "i"
-		detail := "false"
+		company := "f"
+		detail := "true"
 		b, err := getBalance(args[0])
 		if err != nil {
 			fmt.Println(err.Error())
 			return
 		}
 		if len(args) > 1 {
-			if args[1] != "i" {
-				company = "f"
-			}
+			company = args[1]
 			if len(args) > 2 {
 				detail = args[2]
 			}
 		}
 		if company == "i" {
 			if detail == "true" {
-				fmt.Printf("unspend:%s\n", b.UnspendAmount.String())
-				fmt.Printf("unconfirmed:%s\n", b.ConfirmAmount.String())
-				fmt.Printf("totalamount:%s\n", b.TotalAmount.String())
-				fmt.Printf("spendamount:%s\n", b.SpendAmount.String())
+				for name, v := range b {
+					fmt.Printf("coin:%s\n", name)
+					fmt.Printf("unspent:%d\n", v.UnspentAmount.Value)
+					fmt.Printf("locked:%d\n", v.LockAmount.Value)
+					fmt.Printf("unconfirmed:%d\n", v.UnconfirmedAmount.Value)
+					fmt.Printf("total:%d\n", v.TotalAmount.Value)
+					fmt.Printf("spend:%d\n", v.SpendAmount.Value)
+					fmt.Println()
+				}
 			} else {
-				fmt.Printf("%s\n", b.UnspendAmount.String())
+				for name, v := range b {
+					fmt.Printf("coin:%s\n", name)
+					fmt.Printf("%d\n", v.UnspentAmount.Value)
+					fmt.Println()
+				}
 			}
 		} else {
 			if detail == "true" {
-				fmt.Printf("unspend:%f\n", b.UnspendAmount.ToCoin())
-				fmt.Printf("unconfirmed:%f\n", b.ConfirmAmount.ToCoin())
-				fmt.Printf("totalamount:%f\n", b.TotalAmount.ToCoin())
-				fmt.Printf("spendamount:%f\n", b.SpendAmount.ToCoin())
+				for name, v := range b {
+					fmt.Printf("coin:%s\n", name)
+					fmt.Printf("unspent:%.8f\n", v.UnspentAmount.ToCoin())
+					fmt.Printf("locked:%.8f\n", v.LockAmount.ToCoin())
+					fmt.Printf("unconfirmed:%.8f\n", v.UnconfirmedAmount.ToCoin())
+					fmt.Printf("total:%.8f\n", v.TotalAmount.ToCoin())
+					fmt.Printf("spend:%.8f\n", v.SpendAmount.ToCoin())
+					fmt.Println()
+				}
 			} else {
-				fmt.Printf("%f\n", b.UnspendAmount.ToCoin())
+				for name, v := range b {
+					fmt.Printf("coin:%s\n", name)
+					fmt.Printf("%.8f\n", v.UnspentAmount.ToCoin)
+					fmt.Println()
+				}
 			}
 		}
 
@@ -193,7 +211,7 @@ var getTxSpendInfoCmd = &cobra.Command{
 				if b[index].SpendTo == nil {
 					fmt.Printf("addr:%v,txid:%v,index:%v,unspend\n", b[index].Address, b[index].TxId, b[index].Index)
 				} else {
-					fmt.Printf("addr:%v,txid:%v,index:%v,spend to: txid:%v,index:%v\n", b[index].Address, b[index].TxId, b[index].Index, b[index].SpendTo.TxHash, b[index].SpendTo.Index)
+					fmt.Printf("addr:%v,txid:%v,index:%v,spend to: txid:%v,index:%v\n", b[index].Address, b[index].TxId, b[index].Index, b[index].SpendTo.TxId, b[index].SpendTo.Index)
 				}
 				return
 			}
@@ -202,7 +220,7 @@ var getTxSpendInfoCmd = &cobra.Command{
 				if output.SpendTo == nil {
 					fmt.Printf("addr:%v,txid:%v,index:%v,unspend\n", output.Address, output.TxId, output.Index)
 				} else {
-					fmt.Printf("addr:%v,txid:%v,index:%v,spendto: txid:%v,index:%v\n", output.Address, output.TxId, output.Index, output.SpendTo.TxHash, output.SpendTo.Index)
+					fmt.Printf("addr:%v,txid:%v,index:%v,spendto: txid:%v,index:%v\n", output.Address, output.TxId, output.Index, output.SpendTo.TxId, output.SpendTo.Index)
 				}
 				return
 			}
@@ -211,30 +229,83 @@ var getTxSpendInfoCmd = &cobra.Command{
 	},
 }
 
-var sendToAddressCmd = &cobra.Command{
-	Use:   "sendtoaddress {address} {amount} {pripassword} ",
-	Short: "send transaction ",
+var clearTxData = &cobra.Command{
+	Use:   "clearTxData",
+	Short: "clearTxData",
 	Example: `
-		sendtoaddress TmWMuY9q5dUutUTGikhqTVKrnDMG34dEgb5 10 pripassword
+		clearTxData
+		clearTxData
 		`,
-	Args: cobra.MinimumNArgs(3),
+	Args: cobra.MinimumNArgs(0),
 	Run: func(cmd *cobra.Command, args []string) {
 		err := OpenWallet()
 		if err != nil {
 			fmt.Println(err.Error())
 			return
 		}
-		f32, err := strconv.ParseFloat(args[1], 32)
-		if err != nil {
-			log.Error("sendtoaddress ", "error", err.Error())
+		if err := ClearTxData(); err != nil {
+			fmt.Println(err.Error())
 			return
 		}
-		err = UnLock(args[2])
+	},
+}
+
+var sendToAddressCmd = &cobra.Command{
+	Use:   "sendtoaddress {address} {amount} {pripassword} ",
+	Short: "send transaction ",
+	Example: `
+		sendtoaddress TmWMuY9q5dUutUTGikhqTVKrnDMG34dEgb5 MEER 10 pripassword
+		`,
+	Args: cobra.MinimumNArgs(4),
+	Run: func(cmd *cobra.Command, args []string) {
+		err := OpenWallet()
 		if err != nil {
 			fmt.Println(err.Error())
 			return
 		}
-		sendToAddress(args[0], float64(f32))
+		f32, err := strconv.ParseFloat(args[2], 32)
+		if err != nil {
+			log.Error("sendtoaddress ", "error", err.Error())
+			return
+		}
+		err = UnLock(args[3])
+		if err != nil {
+			fmt.Println(err.Error())
+			return
+		}
+		sendToAddress(args[0], float64(f32), args[1])
+	},
+}
+
+var sendLockedToAddressCmd = &cobra.Command{
+	Use:   "sendlockedtoaddress {address} {amount} {lock height} {pripassword} ",
+	Short: "send lock transaction ",
+	Example: `
+		sendlockedtoaddress TmWMuY9q5dUutUTGikhqTVKrnDMG34dEgb5 MEER 10 10000 pripassword
+		`,
+	Args: cobra.MinimumNArgs(5),
+	Run: func(cmd *cobra.Command, args []string) {
+		err := OpenWallet()
+		if err != nil {
+			fmt.Println(err.Error())
+			return
+		}
+		f32, err := strconv.ParseFloat(args[2], 32)
+		if err != nil {
+			log.Error("sendtoaddress ", "error", err.Error())
+			return
+		}
+		lock, err := strconv.ParseUint(args[3], 10, 64)
+		if err != nil {
+			log.Error("sendtoaddress ", "error", err.Error())
+			return
+		}
+		err = UnLock(args[4])
+		if err != nil {
+			fmt.Println(err.Error())
+			return
+		}
+		sendLockedToAddress(args[0], float64(f32), lock, args[1])
 	},
 }
 
@@ -287,6 +358,7 @@ func newImportPrivKeyCmd() *cobra.Command {
 		Example: `
 		importprivkey  ef235aacf90d9f4aadd8c92e4b2562e1d9eb97f0df9ba3b508258739cb013db2 pripassword 
 		importprivkey  5HueCGU8rMjxEXxiPuD5BDku4MkFqeZyd4dZ1jvhTVqvbTLvyTJ pripassword  --format=wif
+		importprivkey  PxBefLecRtTYPoxUUwAbq8m7xGmzDK8gQ71N9qKyhp2j5yN42Rpzc pripassword  --format=wallet_v0.9  --network=mixnet
 		`,
 		Args: cobra.MinimumNArgs(2),
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -297,15 +369,20 @@ func newImportPrivKeyCmd() *cobra.Command {
 				return err
 			}
 			priv := args[0]
-			if format == "wif" {
-				if decoded, _, err := qx.DecodeWIF(priv); err != nil {
+			var wif *util.WIF
+			var err error
+			if format == "wallet_v0.9" {
+				if wif, err = util.DecodeWIFV09(priv, w.ChainParams()); err != nil {
 					return err
-				} else {
-					priv = hex.EncodeToString(decoded)
 				}
+				priv = hex.EncodeToString(wif.PrivKey.Serialize())
+			} else if format == "wif" {
+				if wif, err = util.DecodeWIF(priv, w.ChainParams()); err != nil {
+					return err
+				}
+				priv = hex.EncodeToString(wif.PrivKey.Serialize())
 			}
-
-			_, err := importPrivKey(priv)
+			_, err = importPrivKey(priv)
 			return err
 		},
 	}
@@ -329,6 +406,7 @@ func newListAccountsBalance() *cobra.Command {
 				return err
 			}
 			_, err := listAccountsBalance()
+
 			return err
 		},
 	}

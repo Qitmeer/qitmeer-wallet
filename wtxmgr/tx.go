@@ -1,8 +1,11 @@
 package wtxmgr
 
 import (
+	"encoding/json"
 	"fmt"
+	util "github.com/Qitmeer/qitmeer-wallet/utils"
 	"github.com/Qitmeer/qitmeer/common/math"
+	corejson "github.com/Qitmeer/qitmeer/core/json"
 	"time"
 
 	"github.com/Qitmeer/qitmeer-wallet/walletdb"
@@ -15,9 +18,8 @@ import (
 // Block contains the minimum amount of data to uniquely identify any block on
 // either the best or side chain.
 type Block struct {
-	Hash       hash.Hash
-	Height     int32
-	MainHeight int32
+	Hash  hash.Hash
+	Order int32
 }
 
 // BlockMeta contains the unique identification for a block and any metadata
@@ -37,8 +39,8 @@ type blockRecord struct {
 }
 
 type SpendTo struct {
-	Index  uint32
-	TxHash hash.Hash
+	Index uint32
+	TxId  hash.Hash
 	//Block  Block
 }
 
@@ -48,15 +50,31 @@ type TxInputPoint struct {
 }
 
 type AddrTxOutput struct {
-	Address    string
-	TxId       hash.Hash
-	Index      uint32
-	Amount     types.Amount
-	Block      Block
-	Spend      SpendStatus
-	SpendTo    *SpendTo
-	IsBlue     bool
-	IsCoinbase bool
+	Address  string
+	TxId     hash.Hash
+	Index    uint32
+	Amount   types.Amount
+	Block    Block
+	Spend    SpendStatus
+	SpendTo  *SpendTo
+	Status   TxStatus
+	Locked   uint32
+	IsBlue   bool
+	PkScript string
+}
+
+func NewAddrTxOutput() *AddrTxOutput {
+	return &AddrTxOutput{SpendTo: &SpendTo{}}
+}
+
+func (a *AddrTxOutput) Encode() []byte {
+	bytes, _ := util.Encode(a)
+	return bytes
+}
+
+func DecodeAddrTxOutput(bytes []byte) (*AddrTxOutput, error) {
+	output := &AddrTxOutput{}
+	return output, util.Decode(bytes, output)
 }
 
 type AddrTxOutputs []AddrTxOutput
@@ -66,21 +84,53 @@ func (s AddrTxOutputs) Len() int { return len(s) }
 func (s AddrTxOutputs) Swap(i, j int) { s[i], s[j] = s[j], s[i] }
 
 func (s AddrTxOutputs) Less(i, j int) bool {
-	return s[i].Block.Height < s[j].Block.Height
+	return s[i].Block.Order < s[j].Block.Order
 }
 
-type SpendStatus int32
+type TxConfirmed struct {
+	TxId          string
+	Confirmations uint32
+	TxStatus
+}
+
+type SpendStatus uint16
 
 const (
-	SpendStatusUnspent     SpendStatus = 0
-	SpendStatusSpend       SpendStatus = 1
-	SpendStatusUnconfirmed SpendStatus = 2
+	SpendStatusUnspent SpendStatus = 0
+	SpendStatusSpend   SpendStatus = 1
 )
 
+type TxStatus uint16
+
+const (
+	TxStatusMemPool     TxStatus = 0
+	TxStatusUnConfirmed TxStatus = 1
+	TxStatusConfirmed   TxStatus = 2
+	TxStatusFailed      TxStatus = 3
+	TxStatusRead        TxStatus = 4
+)
+
+type UnconfirmTx struct {
+	Order         uint32
+	Confirmations uint32
+}
+
+func (u *UnconfirmTx) Marshal() []byte {
+	bytes, _ := json.Marshal(u)
+	return bytes
+}
+
+func UnMarshalUnconfirmTx(bytes []byte) (*UnconfirmTx, error) {
+	u := &UnconfirmTx{}
+	err := json.Unmarshal(bytes, u)
+	return u, err
+}
+
 type UTxo struct {
-	TxId   string
-	Index  uint32
-	Amount types.Amount
+	Address string
+	TxId    string
+	Index   uint32
+	Amount  types.Amount
 }
 
 // incidence records the block hash and blockchain height of a mined transaction.
@@ -174,18 +224,14 @@ func (s *Store) InsertAddrTxOut(ns walletdb.ReadWriteBucket, txOut *AddrTxOutput
 		return err
 	} else {
 		k := canonicalOutPoint(&txOut.TxId, txOut.Index)
-		if !txOut.IsBlue && txOut.IsCoinbase {
-			return nil
-		}
-		v := ValueAddrTxOutput(txOut)
-
-		txOut := outRw.Get(k)
-		if txOut == nil || len(txOut) == 0 {
+		v := txOut.Encode()
+		oldTxOut := outRw.Get(k)
+		if oldTxOut == nil || len(oldTxOut) == 0 {
 			err := outRw.Put(k, v)
 			return err
 		} else {
-			addTxOutPut := AddrTxOutput{}
-			err := ReadAddrTxOutput(txOut, &addTxOutPut)
+			addTxOutPut := NewAddrTxOutput()
+			addTxOutPut, err := DecodeAddrTxOutput(oldTxOut)
 			if err != nil {
 				return err
 			}
@@ -193,7 +239,11 @@ func (s *Store) InsertAddrTxOut(ns walletdb.ReadWriteBucket, txOut *AddrTxOutput
 				err := outRw.Put(k, v)
 				return err
 			} else {
-				return nil
+				txOut.SpendTo = addTxOutPut.SpendTo
+				txOut.Spend = addTxOutPut.Spend
+				v := txOut.Encode()
+				err := outRw.Put(k, v)
+				return err
 			}
 		}
 	}
@@ -204,7 +254,7 @@ func (s *Store) UpdateAddrTxOut(ns walletdb.ReadWriteBucket, txOut *AddrTxOutput
 		return err
 	} else {
 		k := canonicalOutPoint(&txOut.TxId, txOut.Index)
-		v := ValueAddrTxOutput(txOut)
+		v := txOut.Encode()
 		err := outRw.Put(k, v)
 		return err
 	}
@@ -213,12 +263,12 @@ func (s *Store) GetAddrTxOut(ns walletdb.ReadWriteBucket, address string, point 
 	outRw := ns.NestedReadWriteBucket([]byte(address))
 	k := canonicalOutPoint(&point.Hash, point.OutIndex)
 	txOut := outRw.Get(k)
-	addTxOutPut := AddrTxOutput{}
-	err := ReadAddrTxOutput(txOut, &addTxOutPut)
+	addTxOutPut := NewAddrTxOutput()
+	addTxOutPut, err := DecodeAddrTxOutput(txOut)
 	if err != nil {
 		return nil, err
 	}
-	return &addTxOutPut, nil
+	return addTxOutPut, nil
 }
 
 // updateMinedBalance updates the mined balance within the store, if changed,
@@ -227,7 +277,7 @@ func (s *Store) updateMinedBalance(ns walletdb.ReadWriteBucket, rec *TxRecord,
 	block *BlockMeta) error {
 
 	// Fetch the mined balance in case we need to update it.
-	minedBalance, err := fetchMinedBalance(ns)
+	minedBalance, err := fetchMinedBalance(ns, types.MEERID)
 	if err != nil {
 		return err
 	}
@@ -265,7 +315,7 @@ func (s *Store) updateMinedBalance(ns walletdb.ReadWriteBucket, rec *TxRecord,
 			return err
 		}
 
-		newMinedBalance -= amt
+		newMinedBalance.Value -= amt.Value
 	}
 
 	// For each output of the record that is marked as a credit, if the
@@ -306,7 +356,7 @@ func (s *Store) updateMinedBalance(ns walletdb.ReadWriteBucket, rec *TxRecord,
 			return err
 		}
 
-		newMinedBalance += amount
+		newMinedBalance.Value += amount.Value
 	}
 	if it.err != nil {
 		return it.err
@@ -375,7 +425,7 @@ func (s *Store) insertMinedTx(ns walletdb.ReadWriteBucket, rec *TxRecord,
 	// block, insert a block record first. Otherwise, update it by adding
 	// the transaction hash to the set of transactions from this block.
 	var err error
-	blockKey, blockValue := existsBlockRecord(ns, block.Height)
+	blockKey, blockValue := existsBlockRecord(ns, uint32(block.Order))
 	if blockValue == nil {
 		err = putBlockRecord(ns, block, &rec.Hash)
 	} else {
@@ -402,7 +452,7 @@ func (s *Store) insertMinedTx(ns walletdb.ReadWriteBucket, rec *TxRecord,
 	// we'll need to remove it from the unMined bucket.
 	if v := existsRawUnMined(ns, rec.Hash[:]); v != nil {
 		log.Info(fmt.Sprintf("Marking unconfirmed transaction %v mined in block %d",
-			&rec.Hash, block.Height))
+			&rec.Hash, block.Order))
 
 		if err := s.deleteUnMinedTx(ns, rec); err != nil {
 			return err
@@ -446,7 +496,7 @@ func (s *Store) addCredit(ns walletdb.ReadWriteBucket, rec *TxRecord, block *Blo
 		if existsRawUnspent(ns, k) != nil {
 			return false, nil
 		}
-		v := valueUnMinedCredit(types.Amount(rec.MsgTx.TxOut[index].Amount), change)
+		v := valueUnMinedCredit(rec.MsgTx.TxOut[index].Amount, change)
 		return true, putRawUnMinedCredit(ns, k, v)
 	}
 
@@ -455,7 +505,7 @@ func (s *Store) addCredit(ns walletdb.ReadWriteBucket, rec *TxRecord, block *Blo
 		return false, nil
 	}
 
-	txOutAmt := types.Amount(rec.MsgTx.TxOut[index].Amount)
+	txOutAmt := rec.MsgTx.TxOut[index].Amount
 	log.Debug("Marking transaction %v output %d (%v) spendable",
 		rec.Hash, index, txOutAmt)
 
@@ -475,11 +525,12 @@ func (s *Store) addCredit(ns walletdb.ReadWriteBucket, rec *TxRecord, block *Blo
 		return false, err
 	}
 
-	minedBalance, err := fetchMinedBalance(ns)
+	minedBalance, err := fetchMinedBalance(ns, txOutAmt.Id)
 	if err != nil {
 		return false, err
 	}
-	err = putMinedBalance(ns, minedBalance+txOutAmt)
+	a := types.Amount{Value: minedBalance.Value + txOutAmt.Value, Id: txOutAmt.Id}
+	err = putMinedBalance(ns, a)
 	if err != nil {
 		return false, err
 	}
@@ -514,8 +565,17 @@ func IsCoinBaseTx(tx *types.Transaction) bool {
 	return true
 }
 
+func TxRawIsCoinBase(tx corejson.TxRawResult) bool {
+	for _, vin := range tx.Vin {
+		if vin.Coinbase != "" {
+			return true
+		}
+	}
+	return false
+}
+
 func (s *Store) rollback(ns walletdb.ReadWriteBucket, height int32) error {
-	minedBalance, err := fetchMinedBalance(ns)
+	minedBalance, err := fetchMinedBalance(ns, types.MEERID)
 	if err != nil {
 		return err
 	}
@@ -533,13 +593,13 @@ func (s *Store) rollback(ns walletdb.ReadWriteBucket, height int32) error {
 	it := makeReverseBlockIterator(ns)
 	for it.prev() {
 		b := &it.elem
-		if it.elem.Height < height {
+		if it.elem.Order < height {
 			break
 		}
 
-		heightsToRemove = append(heightsToRemove, it.elem.Height)
+		heightsToRemove = append(heightsToRemove, it.elem.Order)
 
-		log.Info("Rolling back transactions", "transactions", len(b.transactions), "block", b.Hash, "height", b.Height)
+		log.Info("Rolling back transactions", "transactions", len(b.transactions), "block", b.Hash, "height", b.Order)
 
 		for i := range b.transactions {
 			txHash := &b.transactions[i]
@@ -575,7 +635,7 @@ func (s *Store) rollback(ns walletdb.ReadWriteBucket, height int32) error {
 
 					unspentKey, credKey := existsUnspent(ns, &op)
 					if credKey != nil {
-						minedBalance -= types.Amount(output.Amount)
+						minedBalance.Value -= output.Amount.Value
 						err = deleteRawUnspent(ns, unspentKey)
 						if err != nil {
 							return err
@@ -642,14 +702,14 @@ func (s *Store) rollback(ns walletdb.ReadWriteBucket, height int32) error {
 				// rollback, the credit amount is zero.  Only
 				// mark the previously spent credit as unspent
 				// if it still exists.
-				if amt == 0 {
+				if amt.Value == 0 {
 					continue
 				}
 				unspentVal, err := fetchRawCreditUnspentValue(credKey)
 				if err != nil {
 					return err
 				}
-				minedBalance += amt
+				minedBalance.Value += amt.Value
 				err = putRawUnspent(ns, prevOutKey, unspentVal)
 				if err != nil {
 					return err
@@ -687,7 +747,7 @@ func (s *Store) rollback(ns walletdb.ReadWriteBucket, height int32) error {
 
 				credKey := existsRawUnspent(ns, outPointKey)
 				if credKey != nil {
-					minedBalance -= types.Amount(output.Amount)
+					minedBalance.Value -= output.Amount.Value
 					err = deleteRawUnspent(ns, outPointKey)
 					if err != nil {
 						return err
@@ -696,7 +756,7 @@ func (s *Store) rollback(ns walletdb.ReadWriteBucket, height int32) error {
 			}
 		}
 
-		it.reposition(it.elem.Height)
+		it.reposition(uint32(it.elem.Order))
 
 	}
 	if it.err != nil {
@@ -706,7 +766,7 @@ func (s *Store) rollback(ns walletdb.ReadWriteBucket, height int32) error {
 	// Delete the block records outside of the iteration since cursor deletion
 	// is broken.
 	for _, h := range heightsToRemove {
-		err = deleteBlockRecord(ns, h)
+		err = deleteBlockRecord(ns, uint32(h))
 		if err != nil {
 			return err
 		}
@@ -763,7 +823,7 @@ func (s *Store) UnspentOutputs(ns walletdb.ReadBucket) ([]Credit, error) {
 			return err
 		}
 
-		blockTime, err := fetchBlockTime(ns, block.Height)
+		blockTime, err := fetchBlockTime(ns, uint32(block.Order))
 		if err != nil {
 			return err
 		}
@@ -821,7 +881,7 @@ func (s *Store) UnspentOutputs(ns walletdb.ReadBucket) ([]Credit, error) {
 		cred := Credit{
 			TxOutPoint: op,
 			BlockMeta: BlockMeta{
-				Block: Block{Height: -1},
+				Block: Block{Order: -1},
 			},
 			Amount:       types.Amount(txOut.Amount),
 			PkScript:     txOut.PkScript,
@@ -849,10 +909,10 @@ func (s *Store) UnspentOutputs(ns walletdb.ReadBucket) ([]Credit, error) {
 //
 // Balance may return unexpected results if syncHeight is lower than the block
 // height of the most recent mined transaction in the store.
-func (s *Store) Balance(ns walletdb.ReadBucket, minConf int32, syncHeight int32) (types.Amount, error) {
-	bal, err := fetchMinedBalance(ns)
+func (s *Store) Balance(ns walletdb.ReadBucket, minConf int32, syncOrder int32, coinId types.CoinID) (types.Amount, error) {
+	bal, err := fetchMinedBalance(ns, coinId)
 	if err != nil {
-		return 0, err
+		return types.Amount{}, err
 	}
 
 	// Subtract the balance for each credit that is spent by an unMined
@@ -874,16 +934,16 @@ func (s *Store) Balance(ns walletdb.ReadBucket, minConf int32, syncHeight int32)
 			if err != nil {
 				return err
 			}
-			bal -= amt
+			bal.Value -= amt.Value
 		}
 		return nil
 	})
 	if err != nil {
 		if _, ok := err.(Error); ok {
-			return 0, err
+			return types.Amount{}, err
 		}
 		str := "failed iterating unspent outputs"
-		return 0, storeError(ErrDatabase, str, err)
+		return types.Amount{}, storeError(ErrDatabase, str, err)
 	}
 
 	// Decrement the balance for any unspent credit with less than
@@ -893,12 +953,12 @@ func (s *Store) Balance(ns walletdb.ReadBucket, minConf int32, syncHeight int32)
 	if coinBaseMaturity > stopConf {
 		stopConf = coinBaseMaturity
 	}
-	lastHeight := syncHeight - stopConf
+	lastOrder := syncOrder - stopConf
 	blockIt := makeReadReverseBlockIterator(ns)
 	for blockIt.prev() {
 		block := &blockIt.elem
 
-		if block.Height < lastHeight {
+		if block.Order < lastOrder {
 			break
 		}
 
@@ -906,7 +966,7 @@ func (s *Store) Balance(ns walletdb.ReadBucket, minConf int32, syncHeight int32)
 			txHash := &block.transactions[i]
 			rec, err := fetchTxRecord(ns, txHash, &block.Block)
 			if err != nil {
-				return 0, err
+				return types.Amount{}, err
 			}
 			numOuts := uint32(len(rec.MsgTx.TxOut))
 			for i := uint32(0); i < numOuts; i++ {
@@ -924,21 +984,21 @@ func (s *Store) Balance(ns walletdb.ReadBucket, minConf int32, syncHeight int32)
 				}
 				amt, spent, err := fetchRawCreditAmountSpent(v)
 				if err != nil {
-					return 0, err
+					return types.Amount{}, err
 				}
 				if spent {
 					continue
 				}
-				confirms := syncHeight - block.Height + 1
+				confirms := syncOrder - block.Order + 1
 				if confirms < minConf || (IsCoinBaseTx(&rec.MsgTx) &&
 					confirms < coinBaseMaturity) {
-					bal -= amt
+					bal.Value -= amt.Value
 				}
 			}
 		}
 	}
 	if blockIt.err != nil {
-		return 0, blockIt.err
+		return types.Amount{}, blockIt.err
 	}
 
 	// If unMined outputs are included, increment the balance for each
@@ -955,15 +1015,15 @@ func (s *Store) Balance(ns walletdb.ReadBucket, minConf int32, syncHeight int32)
 			if err != nil {
 				return err
 			}
-			bal += amount
+			bal.Value += amount.Value
 			return nil
 		})
 		if err != nil {
 			if _, ok := err.(Error); ok {
-				return 0, err
+				return types.Amount{}, err
 			}
 			str := "failed to iterate over unMined credits bucket"
-			return 0, storeError(ErrDatabase, str, err)
+			return types.Amount{}, storeError(ErrDatabase, str, err)
 		}
 	}
 

@@ -69,7 +69,6 @@ func newHTTPClient(cfg *Config) (*http.Client, error) {
 	return &client, nil
 }
 
-
 type Response struct {
 	Jsonrpc string          `json:"jsonrpc"`
 	Result  json.RawMessage `json:"result"`
