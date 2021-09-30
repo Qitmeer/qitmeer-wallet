@@ -1161,8 +1161,13 @@ func (w *Wallet) parseTxDetail(tr corejson.TxRawResult, order uint32, isBlue boo
 					return nil, nil, 0, false, fmt.Errorf("little hex %s to uint64 error, %s", codes[0], err.Error())
 				}
 			}
+		case "nonstandard":
+			continue
 		}
-		txOut := wtxmgr.AddrTxOutput{
+		if len(vo.ScriptPubKey.Addresses) == 0{
+			fmt.Printf("")
+		}
+			txOut := wtxmgr.AddrTxOutput{
 			Address: vo.ScriptPubKey.Addresses[0],
 			TxId:    *txId,
 			Index:   uint32(index),

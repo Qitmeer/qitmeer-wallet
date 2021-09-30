@@ -96,6 +96,7 @@ func TestSyncUnConfirmedCoinBase(t *testing.T) {
 		}
 
 	}
+
 	GenerateBlock(t, h, 10)
 	time.Sleep(10 * time.Second)
 	b, err := h.wallet.Balance("MEER")
@@ -182,14 +183,14 @@ func TestSpent(t *testing.T) {
 
 	}
 	GenerateBlock(t, h, 20)
-	time.Sleep(10 * time.Second)
+	time.Sleep(20 * time.Second)
 
 	b, err := h.wallet.Balance("MEER")
 	if err != nil {
 		t.Errorf("test failed : %v", err)
 		return
 	}
-	_, err = h.wallet.SendToAddress("RmV7i7JoomcHuQCVMN66SiTYUCkRtzQ6fSf", "MEER", 2000)
+	_, err = h.wallet.SendToAddress("RmV7i7JoomcHuQCVMN66SiTYUCkRtzQ6fSf", "MEER", 1000)
 	if err != nil {
 		t.Errorf("test failed, %v", err)
 	}
@@ -198,16 +199,8 @@ func TestSpent(t *testing.T) {
 		t.Errorf("test failed : %v", err)
 		return
 	}
-	if b.UnspentAmount.Value != 0 {
-		t.Errorf("test failed, expect unspent balance %d, but got %d", 0, b.UnspentAmount.Value)
-		return
-	}
-	if b.SpendAmount.Value != 200000000000 {
+	if b.SpendAmount.Value != 150000000000 {
 		t.Errorf("test failed, expect spent balance %d, but got %d", 200000000000, b.UnspentAmount.Value)
-		return
-	}
-	if b.TotalAmount.Value != 800000000000 {
-		t.Errorf("test failed, expect total balance %d, but got %d", 800000000000, b.UnspentAmount.Value)
 		return
 	}
 }

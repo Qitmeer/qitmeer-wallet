@@ -139,7 +139,7 @@ var getBalanceCmd = &cobra.Command{
 			} else {
 				for name, v := range b {
 					fmt.Printf("coin:%s\n", name)
-					fmt.Printf("%.8f\n", v.UnspentAmount.ToCoin)
+					fmt.Printf("%.8f\n", v.UnspentAmount.ToCoin())
 					fmt.Println()
 				}
 			}

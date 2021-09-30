@@ -7,11 +7,11 @@ package keystore
 import (
 	"bytes"
 	"crypto/rand"
+	"github.com/Qitmeer/qitmeer-wallet/utils"
 	"math/big"
 	"reflect"
 	"testing"
 
-	"github.com/Qitmeer/qitmeer-wallet/utils"
 	"github.com/Qitmeer/qitmeer/common/hash"
 	"github.com/Qitmeer/qitmeer/core/types"
 	btcec "github.com/Qitmeer/qitmeer/crypto/ecc/secp256k1"
@@ -665,7 +665,7 @@ func TestWatchingWalletExport(t *testing.T) {
 		return
 	}
 	pk, _ := btcec.PrivKeyFromBytes(make([]byte, 32))
-	wif, err := util.NewWIF(pk, tstNetParams, true)
+	wif, err := utils.NewWIF(pk, tstNetParams, true)
 	if err != nil {
 		t.Fatal(err)
 	}
