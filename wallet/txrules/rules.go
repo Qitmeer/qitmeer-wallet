@@ -11,14 +11,15 @@ import (
 	"github.com/Qitmeer/qitmeer/core/serialization"
 	"github.com/Qitmeer/qitmeer/core/types"
 	"github.com/Qitmeer/qitmeer/engine/txscript"
+	"github.com/Qitmeer/qitmeer/services/mempool"
 )
 
 // DefaultRelayFeePerKb is the default minimum relay fee policy for a mempool.
-const DefaultRelayFeePerKb types.Amount = 1e3
+const DefaultRelayFeePerKb = mempool.DefaultMinRelayTxFee
 
 // GetDustThreshold is used to define the amount below which output will be
 // determined as dust. Threshold is determined as 3 times the relay fee.
-func GetDustThreshold(scriptSize int, relayFeePerKb types.Amount) types.Amount {
+func GetDustThreshold(scriptSize int, relayFeePerKb int64) int64 {
 	// Calculate the total (estimated) cost to the network.  This is
 	// calculated using the serialize size of the output plus the serial
 	// size of a transaction input which redeems it.  The output is assumed
@@ -29,23 +30,23 @@ func GetDustThreshold(scriptSize int, relayFeePerKb types.Amount) types.Amount {
 		scriptSize + 148
 
 	byteFee := relayFeePerKb / 1000
-	relayFee := types.Amount(totalSize) * byteFee
-	return 3 * relayFee
+	replayFee := byteFee * int64(totalSize)
+	return replayFee * 3
 }
 
 // IsDustAmount determines whether a transaction output value and script length would
 // cause the output to be considered dust.  Transactions with dust outputs are
 // not standard and are rejected by mempools with default policies.
-func IsDustAmount(amount types.Amount, scriptSize int, relayFeePerKb types.Amount) bool {
-	return amount < GetDustThreshold(scriptSize, relayFeePerKb)
+func IsDustAmount(amount types.Amount, scriptSize int, relayFeePerKb int64) bool {
+	return amount.Value < GetDustThreshold(scriptSize, relayFeePerKb)
 }
 
 // IsDustOutput determines whether a transaction output is considered dust.
 // Transactions with dust outputs are not standard and are rejected by mempools
 // with default policies.
-func IsDustOutput(output *types.TxOutput, relayFeePerKb types.Amount) bool {
+func IsDustOutput(output *types.TxOutput, relayFeePerKb int64) bool {
 	// Unspendable outputs which solely carry data are not checked for dust.
-	if txscript.GetScriptClass(0,output.PkScript) == txscript.NullDataTy {
+	if txscript.GetScriptClass(0, output.PkScript) == txscript.NullDataTy {
 		return false
 	}
 
@@ -64,6 +65,7 @@ var (
 	ErrAmountExceedsMax = errors.New("transaction output amount exceeds maximum value")
 	ErrOutputIsDust     = errors.New("transaction output is dust")
 )
+
 const (
 	// SatoshiPerBitcoin is the number of satoshi in one bitcoin (1 BTC).
 	SatoshiPerBitcoin = 1e8
@@ -72,14 +74,13 @@ const (
 	MaxSatoshi = 21e6 * SatoshiPerBitcoin
 )
 
-
 // CheckOutput performs simple consensus and policy tests on a transaction
 // output.
-func CheckOutput(output *types.TxOutput, relayFeePerKb types.Amount) error {
-	if output.Amount < 0 {
+func CheckOutput(output *types.TxOutput, relayFeePerKb int64) error {
+	if output.Amount.Value < 0 {
 		return ErrAmountNegative
 	}
-	if output.Amount > MaxSatoshi {
+	if output.Amount.Value > MaxSatoshi {
 		return ErrAmountExceedsMax
 	}
 	if IsDustOutput(output, relayFeePerKb) {
@@ -91,15 +92,15 @@ func CheckOutput(output *types.TxOutput, relayFeePerKb types.Amount) error {
 // FeeForSerializeSize calculates the required fee for a transaction of some
 // arbitrary size given a mempool's relay fee policy.
 func FeeForSerializeSize(relayFeePerKb types.Amount, txSerializeSize int) types.Amount {
-	fee := relayFeePerKb * types.Amount(txSerializeSize) / 1000
+	fee := relayFeePerKb.MulF64(float64(txSerializeSize) / 1000)
 
-	if fee == 0 && relayFeePerKb > 0 {
-		fee = relayFeePerKb
+	if fee.Value == 0 && relayFeePerKb.Value > 0 {
+		fee = &relayFeePerKb
 	}
 
-	if fee < 0 || fee > MaxSatoshi {
-		fee = MaxSatoshi
+	if fee.Value < 0 || fee.Value > MaxSatoshi {
+		fee.Value = MaxSatoshi
 	}
 
-	return fee
+	return *fee
 }

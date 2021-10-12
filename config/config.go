@@ -52,8 +52,8 @@ type Config struct {
 	DebugLevel string
 	LogDir     string
 	Create     bool
-
-	Network string
+	Version    bool `short:"V" long:"version" description:"Display version information and exit"`
+	Network    string
 
 	//WalletRPC
 	UI            bool
@@ -65,9 +65,7 @@ type Config struct {
 	RPCMaxClients int64
 	DisableRPC    bool
 	DisableTLS    bool
-
-	Confirmations    int64
-	CoinbaseMaturity int64
+	Confirmations uint32
 
 	// tx fee
 	MinTxFee int64
@@ -152,21 +150,19 @@ func NewDefaultConfig() (cfg *Config) {
 		DisableTLS:    false,
 
 		APIs: []string{"account", "wallet", "qitmeerd"},
-
-		QServer:          "127.0.0.1:18130",
-		QUser:            "",
-		QPass:            "",
-		QCert:            "",
-		QNoTLS:           true,
-		QTLSSkipVerify:   true,
-		QProxy:           "",
-		QProxyUser:       "",
-		QProxyPass:       "",
-		WalletPass:       "public",
-		MinTxFee:         DefaultMinRelayTxFee,
-		Confirmations:    10,
-		CoinbaseMaturity: 740,
-		UI:               true,
+		QServer:        "127.0.0.1:18130",
+		QUser:          "",
+		QPass:          "",
+		QCert:          "",
+		QNoTLS:         true,
+		QTLSSkipVerify: true,
+		QProxy:         "",
+		QProxyUser:     "",
+		QProxyPass:     "",
+		WalletPass:     "public",
+		MinTxFee:       DefaultMinRelayTxFee,
+		Confirmations:  10,
+		UI:             true,
 	}
 	return
 }

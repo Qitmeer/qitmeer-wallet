@@ -1,7 +1,10 @@
 package commands
 
 import (
+	"encoding/hex"
 	"fmt"
+	"github.com/Qitmeer/qitmeer-wallet/config"
+	util "github.com/Qitmeer/qitmeer-wallet/utils"
 	"github.com/Qitmeer/qitmeer/qx"
 	"github.com/spf13/cobra"
 )
@@ -12,7 +15,7 @@ var QxCmd = &cobra.Command{
 	Long:  `qitmeer wallet qx util`,
 }
 
-func AddQxCommand()  {
+func AddQxCommand() {
 	QxCmd.AddCommand(generatemnemonicCmd)
 	QxCmd.AddCommand(mnemonictoseedCmd)
 	QxCmd.AddCommand(seedtopriCmd)
@@ -21,7 +24,7 @@ func AddQxCommand()  {
 	QxCmd.AddCommand(seedtoaddrCmd)
 	QxCmd.AddCommand(pritoaddrCmd)
 	QxCmd.AddCommand(pubtoaddrCmd)
-	QxCmd.AddCommand(wifToPriCmd)
+	QxCmd.AddCommand(newWifToPriCmd())
 }
 
 var generatemnemonicCmd = &cobra.Command{
@@ -93,14 +96,14 @@ var pritopubCmd = &cobra.Command{
 	},
 }
 var pubtoaddrCmd = &cobra.Command{
-	Use:   "pubtoaddr {public key} {string,network value: mainnet,privnet,testnet}",
+	Use:   "pubtoaddr {public key} {string,network value: mainnet,privnet,testnet,mixnet}",
 	Short: "public key to address",
 	Example: `
 		pubtoaddr "pub" "testnet"
 		`,
 	Args: cobra.MinimumNArgs(2),
 	Run: func(cmd *cobra.Command, args []string) {
-		if args[1] != "mainnet" && args[1] != "privnet" && args[1] != "testnet" {
+		if args[1] != "mainnet" && args[1] != "privnet" && args[1] != "testnet" && args[1] != "mixnet" {
 			fmt.Println("Wrong network type")
 			return
 		}
@@ -114,14 +117,14 @@ var pubtoaddrCmd = &cobra.Command{
 }
 
 var mnemonictoaddrCmd = &cobra.Command{
-	Use:   "mnemonictoaddr {mnemonic} {string,network value: mainnet,privnet,testnet}",
+	Use:   "mnemonictoaddr {mnemonic} {string,network value: mainnet,privnet,testnet,mixnet}",
 	Short: "mnemonic to address",
 	Example: `
 		mnemonictoaddr "mnemonic" "testnet"
 		`,
 	Args: cobra.MinimumNArgs(2),
 	Run: func(cmd *cobra.Command, args []string) {
-		if args[1] != "mainnet" && args[1] != "privnet" && args[1] != "testnet" {
+		if args[1] != "mainnet" && args[1] != "privnet" && args[1] != "testnet" && args[1] != "mixnet" {
 			fmt.Println("Wrong network type")
 			return
 		}
@@ -134,14 +137,14 @@ var mnemonictoaddrCmd = &cobra.Command{
 	},
 }
 var seedtoaddrCmd = &cobra.Command{
-	Use:   "seedtoaddr {seed} {string,network value: mainnet,privnet,testnet}",
+	Use:   "seedtoaddr {seed} {string,network value: mainnet,privnet,testnet,mixnet}",
 	Short: "seed to address",
 	Example: `
 		seedtoaddr "seed" "testnet"
 		`,
 	Args: cobra.MinimumNArgs(2),
 	Run: func(cmd *cobra.Command, args []string) {
-		if args[1] != "mainnet" && args[1] != "privnet" && args[1] != "testnet" {
+		if args[1] != "mainnet" && args[1] != "privnet" && args[1] != "testnet" && args[1] != "mixnet" {
 			fmt.Println("Wrong network type")
 			return
 		}
@@ -154,20 +157,20 @@ var seedtoaddrCmd = &cobra.Command{
 	},
 }
 
-var pritoaddrCmd=&cobra.Command{
-	Use:"pritoaddr {pri} {string,network value: mainnet,privnet,testnet}",
-	Short:"private key to address",
+var pritoaddrCmd = &cobra.Command{
+	Use:   "pritoaddr {pri} {string,network value: mainnet,privnet,testnet,mixnet}",
+	Short: "private key to address",
 	Example: `
 		pritoaddr "pri" "testnet"
 		`,
 	Args: cobra.MinimumNArgs(2),
 	Run: func(cmd *cobra.Command, args []string) {
-		if args[1]!="mainnet" && args[1]!="privnet"&&args[1]!="testnet"{
+		if args[1] != "mainnet" && args[1] != "privnet" && args[1] != "testnet" && args[1] != "mixnet" {
 			fmt.Println("Wrong network type")
 			return
 		}
-		msg,err:=priToAddr(args[0],args[1])
-		if err!=nil{
+		msg, err := priToAddr(args[0], args[1])
+		if err != nil {
 			fmt.Println(err.Error())
 			return
 		}
@@ -175,14 +178,31 @@ var pritoaddrCmd=&cobra.Command{
 	},
 }
 
-var wifToPriCmd = &cobra.Command{
-	Use:   "wiftopri {string, wif}",
-	Short: "WIF key to private key",
-	Example: `
+func newWifToPriCmd() *cobra.Command {
+	var format string
+	var wifToPriCmd = &cobra.Command{
+		Use:   "wiftopri {string, wif}",
+		Short: "WIF key to private key",
+		Example: `
 		wiftopri  5HueCGU8rMjxEXxiPuD5BDku4MkFqeZyd4dZ1jvhTVqvbTLvyTJ
+		wiftopri  PxBefLecRtTYPoxUUwAbq8m7xGmzDK8gQ71N9qKyhp2j5yN42Rpzc --format=wallet_v0.9 --network=mixnet
 		`,
-	Args: cobra.MinimumNArgs(1),
-	Run: func(cmd *cobra.Command, args []string) {
-		qx.WifToEcPrivateKey(args[0])
-	},
+		Args: cobra.MinimumNArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			var wif *util.WIF
+			var err error
+			if format == "wallet_v0.9" {
+				if wif, err = util.DecodeWIFV09(args[0], config.ActiveNet); err != nil {
+					return err
+				}
+				fmt.Println(hex.EncodeToString(wif.PrivKey.Serialize()))
+			} else {
+				qx.WifToEcPrivateKey(args[0])
+			}
+			return nil
+		},
+	}
+	wifToPriCmd.Flags().StringVarP(
+		&format, "format", "f", "", "Wif format. {wallet_v0.9}")
+	return wifToPriCmd
 }

@@ -7,12 +7,10 @@ type AddMultisigAddressCmd struct {
 	Account   *string
 }
 
-
 // AddWitnessAddressCmd defines the addwitnessaddress JSON-RPC command.
 type AddWitnessAddressCmd struct {
 	Address string
 }
-
 
 // CreateMultisigCmd defines the createmultisig JSON-RPC command.
 type CreateMultisigCmd struct {
@@ -20,42 +18,35 @@ type CreateMultisigCmd struct {
 	Keys      []string
 }
 
-
 // DumpPrivKeyCmd defines the dumpprivkey JSON-RPC command.
 type DumpPrivKeyCmd struct {
 	Address string
 }
-
 
 // EncryptWalletCmd defines the encryptwallet JSON-RPC command.
 type EncryptWalletCmd struct {
 	Passphrase string
 }
 
-
 // EstimateFeeCmd defines the estimatefee JSON-RPC command.
 type EstimateFeeCmd struct {
 	NumBlocks int64
 }
-
 
 // EstimatePriorityCmd defines the estimatepriority JSON-RPC command.
 type EstimatePriorityCmd struct {
 	NumBlocks int64
 }
 
-
 // GetAccountCmd defines the getaccount JSON-RPC command.
 type GetAccountCmd struct {
 	Address string
 }
 
-
 // GetAccountAddressCmd defines the getaccountaddress JSON-RPC command.
 type GetAccountAddressCmd struct {
 	Account string
 }
-
 
 // GetAddressesByAccountCmd defines the getaddressesbyaccount JSON-RPC command.
 type GetAddressesByAccountCmd struct {
@@ -70,10 +61,10 @@ type GetBalanceByAddressCmd struct {
 	Address string
 }
 type GetListTxByAddrCmd struct {
-	Address string
-	Page int32
+	Address  string
+	Page     int32
 	PageSize int32
-	Stype int32
+	Stype    int32
 }
 
 type GetBillByAddrCmd struct {
@@ -88,31 +79,26 @@ type GetNewAddressCmd struct {
 	Account *string
 }
 
-
 // GetRawChangeAddressCmd defines the getrawchangeaddress JSON-RPC command.
 type GetRawChangeAddressCmd struct {
 	Account *string
 }
-
 
 // GetReceivedByAccountCmd defines the getreceivedbyaccount JSON-RPC command.
 type GetReceivedByAccountCmd struct {
 	Account string
 }
 
-
 // GetReceivedByAddressCmd defines the getreceivedbyaddress JSON-RPC command.
 type GetReceivedByAddressCmd struct {
 	Address string
 }
-
 
 // GetTransactionCmd defines the gettransaction JSON-RPC command.
 type GetTransactionCmd struct {
 	Txid             string
 	IncludeWatchOnly *bool `jsonrpcdefault:"false"`
 }
-
 
 // GetWalletInfoCmd defines the getwalletinfo JSON-RPC command.
 type GetWalletInfoCmd struct{}
@@ -127,12 +113,10 @@ type ImportPrivKeyCmd struct {
 	Rescan  *bool `jsonrpcdefault:"true"`
 }
 
-
 // KeyPoolRefillCmd defines the keypoolrefill JSON-RPC command.
 type KeyPoolRefillCmd struct {
 	NewSize *uint `jsonrpcdefault:"100"`
 }
-
 
 // ListAddressGroupingsCmd defines the listaddressgroupings JSON-RPC command.
 type ListAddressGroupingsCmd struct{}
@@ -140,20 +124,17 @@ type ListAddressGroupingsCmd struct{}
 // ListLockUnspentCmd defines the listlockunspent JSON-RPC command.
 type ListLockUnspentCmd struct{}
 
-
 // ListReceivedByAccountCmd defines the listreceivedbyaccount JSON-RPC command.
 type ListReceivedByAccountCmd struct {
 	IncludeEmpty     *bool `jsonrpcdefault:"false"`
 	IncludeWatchOnly *bool `jsonrpcdefault:"false"`
 }
 
-
 // ListReceivedByAddressCmd defines the listreceivedbyaddress JSON-RPC command.
 type ListReceivedByAddressCmd struct {
 	IncludeEmpty     *bool `jsonrpcdefault:"false"`
 	IncludeWatchOnly *bool `jsonrpcdefault:"false"`
 }
-
 
 // ListSinceBlockCmd defines the listsinceblock JSON-RPC command.
 type ListSinceBlockCmd struct {
@@ -170,13 +151,11 @@ type ListTransactionsCmd struct {
 	IncludeWatchOnly *bool `jsonrpcdefault:"false"`
 }
 
-
 // ListUnspentCmd defines the listunspent JSON-RPC command.
 type ListUnspentCmd struct {
 	MaxConf   *int `jsonrpcdefault:"9999999"`
 	Addresses *[]string
 }
-
 
 // LockUnspentCmd defines the lockunspent JSON-RPC command.
 type LockUnspentCmd struct {
@@ -184,18 +163,15 @@ type LockUnspentCmd struct {
 	Transactions []TransactionInput
 }
 
-
 // CreateNewAccountCmd defines the createnewaccount JSON-RPC command.
 type CreateNewAccountCmd struct {
 	Account string
 }
 
-
 // DumpWalletCmd defines the dumpwallet JSON-RPC command.
 type DumpWalletCmd struct {
 	Filename string
 }
-
 
 // ImportAddressCmd defines the importaddress JSON-RPC command.
 type ImportAddressCmd struct {
@@ -204,19 +180,16 @@ type ImportAddressCmd struct {
 	Rescan  *bool `jsonrpcdefault:"true"`
 }
 
-
 // ImportPubKeyCmd defines the importpubkey JSON-RPC command.
 type ImportPubKeyCmd struct {
 	PubKey string
 	Rescan *bool `jsonrpcdefault:"true"`
 }
 
-
 // ImportWalletCmd defines the importwallet JSON-RPC command.
 type ImportWalletCmd struct {
 	Filename string
 }
-
 
 // RenameAccountCmd defines the renameaccount JSON-RPC command.
 type RenameAccountCmd struct {
@@ -232,7 +205,6 @@ type MoveCmd struct {
 	Comment     *string
 }
 
-
 // SendFromCmd defines the sendfrom JSON-RPC command.
 type SendFromCmd struct {
 	FromAccount string
@@ -242,7 +214,6 @@ type SendFromCmd struct {
 	CommentTo   *string
 }
 
-
 // SendManyCmd defines the sendmany JSON-RPC command.
 type SendManyCmd struct {
 	FromAccount string
@@ -250,18 +221,27 @@ type SendManyCmd struct {
 	Comment     *string
 }
 
-
 // SendToAddressCmd defines the sendtoaddress JSON-RPC command.
 type SendToAddressCmd struct {
 	Address   string
 	Amount    float64
+	Coin      string
 	Comment   *string
 	CommentTo *string
 }
-type UpdateBlockToCmd struct {
-	Toheight   int64
+
+type SendLockedToAddressCmd struct {
+	Address      string
+	Amount       float64
+	Coin         string
+	LockedHeight uint64
+	Comment      *string
+	CommentTo    *string
 }
 
+type UpdateBlockToCmd struct {
+	ToOrder int64
+}
 
 // SetAccountCmd defines the setaccount JSON-RPC command.
 type SetAccountCmd struct {
@@ -306,7 +286,6 @@ type SignRawTransactionCmd struct {
 	Flags    *string `jsonrpcdefault:"\"ALL\""`
 }
 
-
 // WalletLockCmd defines the walletlock JSON-RPC command.
 type WalletLockCmd struct{}
 
@@ -327,4 +306,3 @@ type WalletPassphraseChangeCmd struct {
 	OldPassphrase string
 	NewPassphrase string
 }
-

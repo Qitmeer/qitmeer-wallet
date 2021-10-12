@@ -60,7 +60,6 @@ func TestGan(t *testing.T) {
 
 	ver := "mainnet"
 
-
 	s, err := qx.NewEntropy(32)
 	if err != nil {
 		t.Logf("An error occurred generating s，%s", err)

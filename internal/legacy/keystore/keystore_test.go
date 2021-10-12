@@ -7,11 +7,11 @@ package keystore
 import (
 	"bytes"
 	"crypto/rand"
+	"github.com/Qitmeer/qitmeer-wallet/utils"
 	"math/big"
 	"reflect"
 	"testing"
 
-	"github.com/Qitmeer/qitmeer-wallet/utils"
 	"github.com/Qitmeer/qitmeer/common/hash"
 	"github.com/Qitmeer/qitmeer/core/types"
 	btcec "github.com/Qitmeer/qitmeer/crypto/ecc/secp256k1"
@@ -664,7 +664,7 @@ func TestWatchingWalletExport(t *testing.T) {
 		t.Errorf("Nonsensical func ExportWatchingWallet returned no or incorrect error: %v", err)
 		return
 	}
-	pk, _ := btcec.PrivKeyFromBytes( make([]byte, 32))
+	pk, _ := btcec.PrivKeyFromBytes(make([]byte, 32))
 	wif, err := utils.NewWIF(pk, tstNetParams, true)
 	if err != nil {
 		t.Fatal(err)
@@ -674,6 +674,7 @@ func TestWatchingWalletExport(t *testing.T) {
 		return
 	}
 }
+
 //
 //func TestImportPrivateKey(t *testing.T) {
 //	createHeight := int32(100)
@@ -909,7 +910,7 @@ func TestImportScript(t *testing.T) {
 		return
 	}
 
-	if string(sinfo.Address().ScriptAddress()) != sinfo.AddrHash() {
+	if string(sinfo.Address().Script()) != sinfo.AddrHash() {
 		t.Error("script hash doesn't match address.")
 		return
 	}
@@ -993,7 +994,7 @@ func TestImportScript(t *testing.T) {
 		return
 	}
 
-	if string(sinfo2.Address().ScriptAddress()) != sinfo2.AddrHash() {
+	if string(sinfo2.Address().Script()) != sinfo2.AddrHash() {
 		t.Error("script hash doesn't match address.")
 		return
 	}

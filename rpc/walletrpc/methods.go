@@ -44,17 +44,13 @@ func CreateNewAccount(iCmd interface{}, w *wallet.Wallet) (interface{}, error) {
 // listAccounts handles a listaccounts request by returning a map of account
 // names to their balances.
 func ListAccounts(w *wallet.Wallet) (interface{}, error) {
-	accountBalances := map[string]float64{}
 	results, err := w.AccountBalances(waddrmgr.KeyScopeBIP0044)
 	if err != nil {
 		return nil, err
 	}
-	for _, result := range results {
-		accountBalances[result.AccountName] = result.AccountBalance.ToCoin()
 
-	}
 	// Return the map.  This will be marshaled into a JSON object.
-	return accountBalances, nil
+	return results, nil
 }
 
 // getNewAddress handles a GetNewAddress request by returning a new
@@ -250,32 +246,83 @@ func SendToAddress(iCmd interface{}, w *wallet.Wallet) (interface{}, error) {
 		}
 	}
 
-	amt, err := types.NewAmount(cmd.Amount)
+	var amt *types.Amount
+	var err error
+	amt, err = types.NewAmount(cmd.Amount)
+	amt.Id, err = w.CoinID(cmd.Coin)
+	if err != nil {
+		return nil, err
+	}
+	if amt.Id.Name() != cmd.Coin {
+		return nil, fmt.Errorf("%s does not exist", cmd.Coin)
+	}
 	if err != nil {
 		return nil, err
 	}
 
 	// Check that signed integer parameters are positive.
-	if amt < 0 {
+	if amt.Value < 0 {
 		return nil, qitmeerjson.ErrNeedPositiveAmount
 	}
 
 	// Mock up map of address and amount pairs.
 	pairs := map[string]types.Amount{
-		cmd.Address: amt,
+		cmd.Address: *amt,
 	}
 
-	return w.SendPairs(pairs, int64(waddrmgr.AccountMergePayNum), txrules.DefaultRelayFeePerKb)
+	return w.SendPairs(pairs, int64(waddrmgr.AccountMergePayNum), txrules.DefaultRelayFeePerKb, 0)
+}
+
+func SendLockedToAddress(iCmd interface{}, w *wallet.Wallet) (interface{}, error) {
+	cmd := iCmd.(*qitmeerjson.SendLockedToAddressCmd)
+
+	// Transaction comments are not yet supported.  Error instead of
+	// pretending to save them.
+	if !isNilOrEmpty(cmd.Comment) || !isNilOrEmpty(cmd.CommentTo) {
+		return nil, &qitmeerjson.RPCError{
+			Code:    qitmeerjson.ErrRPCUnimplemented,
+			Message: "Transaction comments are not yet supported",
+		}
+	}
+
+	var amt *types.Amount
+	var err error
+	amt, err = types.NewAmount(cmd.Amount)
+	amt.Id, err = w.CoinID(cmd.Coin)
+	if err != nil {
+		return "", err
+	}
+
+	// Check that signed integer parameters are positive.
+	if amt.Value < 0 {
+		return nil, qitmeerjson.ErrNeedPositiveAmount
+	}
+
+	// Mock up map of address and amount pairs.
+	pairs := map[string]types.Amount{
+		cmd.Address: *amt,
+	}
+
+	return w.SendPairs(pairs, int64(waddrmgr.AccountMergePayNum), txrules.DefaultRelayFeePerKb, cmd.LockedHeight)
 }
 
 func UpdateBlock(iCmd interface{}, w *wallet.Wallet) error {
 	cmd := iCmd.(*qitmeerjson.UpdateBlockToCmd)
-	err := w.UpdateBlock(cmd.Toheight)
+	err := w.UpdateBlock(uint64(cmd.ToOrder))
 	if err != nil {
 		return err
 	}
 	return nil
 }
+
+func ClearTxData(w *wallet.Wallet) error {
+	err := w.ClearTxData()
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 func GetTx(txId string, w *wallet.Wallet) (interface{}, error) {
 	tx, err := w.GetTx(txId)
 	if err != nil {
@@ -283,6 +330,7 @@ func GetTx(txId string, w *wallet.Wallet) (interface{}, error) {
 	}
 	return tx, nil
 }
+
 func GetBalance(iCmd interface{}, w *wallet.Wallet) (interface{}, error) {
 	cmd := iCmd.(*qitmeerjson.GetBalanceByAddressCmd)
 	m, err := w.GetBalance(cmd.Address)

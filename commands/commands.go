@@ -7,12 +7,15 @@ import (
 	"fmt"
 	"github.com/Qitmeer/qitmeer-wallet/config"
 	"github.com/Qitmeer/qitmeer-wallet/utils"
+	"github.com/Qitmeer/qitmeer-wallet/version"
 	"github.com/Qitmeer/qitmeer-wallet/wallet"
 	"github.com/Qitmeer/qitmeer/log"
+	"github.com/jessevdk/go-flags"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"os"
 	"path/filepath"
+	"runtime"
 )
 
 var RootCmd = &cobra.Command{
@@ -65,6 +68,14 @@ func checkDefaultConf() error {
 func bindFlags() error {
 	cobra.OnInitialize(initConfig)
 
+	cfg := config.Config{}
+	parser := flags.NewParser(&cfg, flags.HelpFlag)
+	parser.Parse()
+	if cfg.Version {
+		fmt.Printf("qitmeer-wallet version %s (Go version %s)\n", version.Version(), runtime.Version())
+		os.Exit(0)
+	}
+
 	dcf := config.DefaultConfigFile
 	if err := checkDefaultConf(); err != nil {
 		return err
@@ -100,7 +111,7 @@ func bindFlags() error {
 	pf.Bool("disablerpc", uc.DisableRPC, "disable RPC server")
 	pf.Bool("disabletls", uc.DisableTLS, "disable TLS for the RPC server")
 
-	pf.Int64("confirmations", uc.Confirmations, "Number of block confirmations ")
+	pf.Uint32("confirmations", uc.Confirmations, "Number of block confirmations ")
 	pf.Int64("mintxfee", uc.MinTxFee, "The minimum transaction fee in QIT/kB default 20000 (aka. 0.0002 MEER/KB)")
 	pf.StringArray("apis", uc.APIs, "enabled APIs")
 

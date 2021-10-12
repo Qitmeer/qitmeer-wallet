@@ -127,7 +127,7 @@ if you have golang environment, you can build it by yourself
    #configFile="" #Your config.toml profile directory
    #appDataDir="" # Your DB storage path
    #logDir="" # log path
-   #network="mainnet" #network mainnet,testnet,privnet default testnet
+   #network="mainnet" #network mainnet,testnet,privnet,mixnet default testnet
    network="testnet"
    #Qitmeerd
    QServer="127.0.0.1:8131"
@@ -200,7 +200,7 @@ if you have golang environment, you can build it by yourself
 ```
 
     
-5:  must use updateback to see the balance change after the transfer transaction
+5:  must use updateblock to see the balance change after the transfer transaction
 
 ```shell script
     ./qitmeer-wallet qc sendtoaddress TmbsdsjwzuGboFQ9GcKg6EUmrr3tokzozyF 0.01 youpassword
@@ -209,7 +209,7 @@ if you have golang environment, you can build it by yourself
     
     0e441ecee44defe28711103eef0cc3d01c187c257738150869c032fbbf96d4c9
 
-    ./qitmeer-wallet qc updateback
+    ./qitmeer-wallet qc updateblock
 
 ```
 

@@ -54,7 +54,6 @@ type ReadBucket interface {
 	// NestedReadBucket retrieves a nested bucket with the given key.
 	// Returns nil if the bucket does not exist.
 	NestedReadBucket(key []byte) ReadBucket
-
 	// ForEach invokes the passed function with every key/value pair in
 	// the bucket.  This includes nested buckets, in which case the value
 	// is nil, but it does not include the key/value pairs within those
@@ -88,6 +87,8 @@ type ReadWriteBucket interface {
 	// NestedReadWriteBucket retrieves a nested bucket with the given key.
 	// Returns nil if the bucket does not exist.
 	NestedReadWriteBucket(key []byte) ReadWriteBucket
+
+	NestedAndCreateReadWriteBucket(key []byte) ReadWriteBucket
 
 	// CreateBucket creates and returns a new nested bucket with the given
 	// key.  Returns ErrBucketExists if the bucket already exists,

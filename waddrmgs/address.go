@@ -1,13 +1,12 @@
-
 package waddrmgr
 
 import (
 	"encoding/hex"
 	"fmt"
+	"github.com/Qitmeer/qitmeer/qx"
 	"sync"
 
 	"github.com/Qitmeer/qitmeer-wallet/internal/zero"
-	"github.com/Qitmeer/qitmeer-wallet/utils"
 	"github.com/Qitmeer/qitmeer-wallet/walletdb"
 	"github.com/Qitmeer/qitmeer/common/hash"
 	addr "github.com/Qitmeer/qitmeer/core/address"
@@ -96,7 +95,7 @@ type ManagedPubKeyAddress interface {
 
 	// ExportPrivKey returns the private key associated with the address
 	// serialized as Wallet Import Format (WIF).
-	ExportPrivKey() (*utils.WIF, error)
+	ExportPrivKey() (string, error)
 
 	// DerivationInfo contains the information required to derive the key
 	// that backs the address via traditional methods from the HD root. For
@@ -298,13 +297,13 @@ func (a *managedAddress) PrivKey() (*ecc.PrivateKey, error) {
 // Import Format (WIF).
 //
 // This is part of the ManagedPubKeyAddress interface implementation.
-func (a *managedAddress) ExportPrivKey() (*utils.WIF, error) {
+func (a *managedAddress) ExportPrivKey() (string, error) {
 	pk, err := a.PrivKey()
 	if err != nil {
-		return nil, err
+		return "", err
 	}
 
-	return utils.NewWIF(pk, a.manager.rootManager.chainParams, a.compressed)
+	return qx.EncodeWIF(a.compressed, hex.EncodeToString(pk.Serialize()))
 }
 
 // Derivationinfo contains the information required to derive the key that
@@ -578,7 +577,7 @@ func (a *scriptAddress) Script() ([]byte, error) {
 func newScriptAddress(m *ScopedKeyManager, account uint32, scriptHash,
 	scriptEncrypted []byte) (*scriptAddress, error) {
 
-	address, err := addr.NewAddressScriptHashFromHash(scriptHash, m.rootManager.chainParams)
+	address, err := addr.NewScriptHashAddressFromHash(scriptHash, m.rootManager.chainParams)
 	if err != nil {
 		return nil, err
 	}

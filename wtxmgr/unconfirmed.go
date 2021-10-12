@@ -1,4 +1,3 @@
-
 package wtxmgr
 
 import (
@@ -30,7 +29,7 @@ func (s *Store) insertMemPoolTx(ns walletdb.ReadWriteBucket, rec *TxRecord) erro
 		}
 	}
 
-	log.Trace("Inserting unconfirmed transaction ","rec.Hash", rec.Hash)
+	log.Trace("Inserting unconfirmed transaction ", "rec.Hash", rec.Hash)
 	v, err := valueTxRecord(rec)
 	if err != nil {
 		return err
