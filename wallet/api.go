@@ -72,29 +72,29 @@ func (api *API) Lock() error {
 }
 
 // GetAccountsAndBalance List all accounts[{account,balance}]
-func (api *API) GetAccountsAndBalance(coin string) (map[string]*Balance, error) {
-	accountsBalances := make(map[string]*Balance)
+func (api *API) GetAccountsAndBalance(coin string) (map[string]*Value, error) {
+	accountsBalances := make(map[string]*Value)
 	aaas, err := api.wt.GetAccountAndAddress(waddrmgr.KeyScopeBIP0044)
 	if err != nil {
 		return nil, err
 	}
 	coinID, err := api.wt.CoinID(coin)
 	if err != nil {
-		return map[string]*Balance{}, err
+		return map[string]*Value{}, err
 	}
 	for _, aaa := range aaas {
 
 		if _, ok := accountsBalances[aaa.AccountName]; !ok {
-			accountsBalances[aaa.AccountName] = NewBalance(coinID)
+			accountsBalances[aaa.AccountName] = &Value{}
 		}
 
 		accountBalance := accountsBalances[aaa.AccountName]
 		for _, addr := range aaa.AddrsOutput {
-			accountBalance.TotalAmount.Value += addr.balanceMap[coinID].TotalAmount.Value
-			accountBalance.SpendAmount.Value += addr.balanceMap[coinID].SpendAmount.Value
-			accountBalance.UnspentAmount.Value += addr.balanceMap[coinID].UnspentAmount.Value
-			accountBalance.UnconfirmedAmount.Value += addr.balanceMap[coinID].UnconfirmedAmount.Value
-			accountBalance.LockAmount.Value += addr.balanceMap[coinID].LockAmount.Value
+			accountBalance.TotalAmount += addr.balanceMap[coinID].TotalAmount.Value
+			accountBalance.SpendAmount += addr.balanceMap[coinID].SpendAmount.Value
+			accountBalance.UnspentAmount += addr.balanceMap[coinID].UnspentAmount.Value
+			accountBalance.UnconfirmedAmount += addr.balanceMap[coinID].UnconfirmedAmount.Value
+			accountBalance.LockAmount += addr.balanceMap[coinID].LockAmount.Value
 		}
 
 	}
@@ -102,7 +102,7 @@ func (api *API) GetAccountsAndBalance(coin string) (map[string]*Balance, error) 
 }
 
 // GetBalanceByAccount get account balance
-func (api *API) GetBalanceByAccount(name string, coin string) (*Balance, error) {
+func (api *API) GetBalanceByAccount(name string, coin string) (*Value, error) {
 	results, err := api.wt.GetAccountAndAddress(waddrmgr.KeyScopeBIP0044)
 	if err != nil {
 		return nil, err
@@ -112,15 +112,15 @@ func (api *API) GetBalanceByAccount(name string, coin string) (*Balance, error) 
 	if err != nil {
 		return nil, err
 	}
-	accountBalance := NewBalance(coinID)
+	accountBalance := &Value{}
 	for _, result := range results {
 		if result.AccountName == name {
 			for _, addr := range result.AddrsOutput {
-				accountBalance.TotalAmount.Value += addr.balanceMap[coinID].TotalAmount.Value
-				accountBalance.SpendAmount.Value += addr.balanceMap[coinID].SpendAmount.Value
-				accountBalance.UnspentAmount.Value += addr.balanceMap[coinID].UnspentAmount.Value
-				accountBalance.UnconfirmedAmount.Value += addr.balanceMap[coinID].UnconfirmedAmount.Value
-				accountBalance.LockAmount.Value += addr.balanceMap[coinID].LockAmount.Value
+				accountBalance.TotalAmount += addr.balanceMap[coinID].TotalAmount.Value
+				accountBalance.SpendAmount += addr.balanceMap[coinID].SpendAmount.Value
+				accountBalance.UnspentAmount += addr.balanceMap[coinID].UnspentAmount.Value
+				accountBalance.UnconfirmedAmount += addr.balanceMap[coinID].UnconfirmedAmount.Value
+				accountBalance.LockAmount += addr.balanceMap[coinID].LockAmount.Value
 			}
 		}
 	}
@@ -423,7 +423,7 @@ func (api *API) SendToAddressByAccount(accountName string, addressStr string, am
 }
 
 //GetBalanceByAddr get balance by address
-func (api *API) GetBalanceByAddr(addrStr, coin string) (map[string]Balance, error) {
+func (api *API) GetBalanceByAddr(addrStr, coin string) (map[string]Value, error) {
 	m, err := api.wt.GetBalanceByCoin(addrStr, coin)
 	if err != nil {
 		return nil, err

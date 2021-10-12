@@ -211,6 +211,14 @@ func (a *Amount) ToCoin() float64 {
 	return (&types.Amount{Value: a.Value, Id: a.Id}).ToCoin()
 }
 
+type Value struct {
+	TotalAmount       int64 // 总余额
+	UnspentAmount     int64 // 可用余额
+	LockAmount        int64 // 锁定
+	UnconfirmedAmount int64 // 待确认
+	SpendAmount       int64 // 已花费
+}
+
 type Balance struct {
 	TotalAmount       *Amount // 总余额
 	UnspentAmount     *Amount // 可用余额
@@ -913,8 +921,8 @@ func (w *Wallet) getPagedBillByAddr(addr string, filter int, pageNo int, pageSiz
 	return &allTxs, nil
 }
 
-func (w *Wallet) GetBalanceByCoin(addr, coin string) (map[string]Balance, error) {
-	balanceMap := map[string]Balance{}
+func (w *Wallet) GetBalanceByCoin(addr, coin string) (map[string]Value, error) {
+	balanceMap := map[string]Value{}
 	if addr == "" {
 		return nil, errors.New("addr is nil")
 	}
@@ -923,7 +931,13 @@ func (w *Wallet) GetBalanceByCoin(addr, coin string) (map[string]Balance, error)
 		return nil, err
 	}
 	for key, val := range res.balanceMap {
-		balanceMap[key.Name()] = val
+		balanceMap[key.Name()] = Value{
+			TotalAmount:       val.TotalAmount.Value,
+			UnspentAmount:     val.UnspentAmount.Value,
+			LockAmount:        val.LockAmount.Value,
+			UnconfirmedAmount: val.UnconfirmedAmount.Value,
+			SpendAmount:       val.SpendAmount.Value,
+		}
 	}
 	return balanceMap, nil
 }
@@ -1306,7 +1320,6 @@ func (w *Wallet) UpdateBlock(toOrder uint64) error {
 	if err != nil {
 		return err
 	}
-
 	err = w.updateSyncToOrder(uint32(toOrder))
 	if err != nil {
 		return err
@@ -1673,6 +1686,9 @@ func (w *Wallet) updateTxStatus(txRaw corejson.TxRawResult, status wtxmgr.TxStat
 			return err
 		}
 		for i, vout := range txRaw.Vout {
+			if vout.ScriptPubKey.Addresses == nil{
+				continue
+			}
 			if bucket, ok = coinBucket[vout.Coin]; ok {
 				bucket = coinBucket[vout.Coin]
 			} else {
@@ -1755,11 +1771,12 @@ func (w *Wallet) AccountBalances(scope waddrmgr.KeyScope) ([]AccountBalanceResul
 		return nil, err
 	}
 	results := make([]AccountBalanceResult, len(aaaRs))
-	for _, id := range types.CoinIDList {
+	for _, token := range w.tokens.tokens {
+		id := types.CoinID(token.CoinId)
 		for index, aaa := range aaaRs {
 			results[index].AccountNumber = aaa.AccountNumber
 			results[index].AccountName = aaa.AccountName
-			balance := Balance{}
+			balance := NewBalance(id)
 			for _, addr := range aaa.AddrsOutput {
 				balance.UnspentAmount.Value += addr.balanceMap[id].UnspentAmount.Value
 				balance.LockAmount.Value += addr.balanceMap[id].LockAmount.Value
@@ -1774,7 +1791,7 @@ func (w *Wallet) AccountBalances(scope waddrmgr.KeyScope) ([]AccountBalanceResul
 				balance.SpendAmount.Id = addr.balanceMap[id].SpendAmount.Id
 
 			}
-			results[index].AccountBalanceList = append(results[index].AccountBalanceList, balance)
+			results[index].AccountBalanceList = append(results[index].AccountBalanceList, *balance)
 		}
 	}
 	return results, nil
