@@ -14,7 +14,7 @@
     <el-main class="cmain">
       <el-table :data="accountsTable" :key="Math.random()">
         <el-table-column prop="account" label="名称" width="120"></el-table-column>
-        <el-table-column prop="UnspendAmount" label="余额(可花费)"></el-table-column>
+        <el-table-column prop="UnspentAmount" label="余额(可花费)"></el-table-column>
         <el-table-column prop="ConfirmAmount" label="余额(待确认)"></el-table-column>
         <el-table-column prop="LockAmount" label="余额(锁定)"></el-table-column>
       </el-table>
@@ -57,9 +57,9 @@ export default {
         console.log(k)
          tmpTable.push({
            account: k,
-           UnspendAmount: listAccounts[k]['UnspentAmount']['Value'] / 1e8,
-           LockAmount: listAccounts[k]['LockAmount']['Value'] / 1e8,
-           ConfirmAmount: listAccounts[k]['UnconfirmedAmount']['Value'] / 1e8,
+           UnspentAmount: listAccounts[k]['UnspentAmount'] / 1e8,
+           LockAmount: listAccounts[k]['LockAmount'] / 1e8,
+           ConfirmAmount: listAccounts[k]['UnconfirmedAmount'] / 1e8,
          });
        }
       return tmpTable;
