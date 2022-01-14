@@ -184,13 +184,15 @@ func createWallet() (*wallet.Wallet, error) {
 	if err != nil {
 		return nil, err
 	}
+	fmt.Println("Creating the wallet...")
+	fmt.Println("mnemonic: ", mnemonicStr)
+
 	seed, err = bip39.NewSeedWithErrorChecking(mnemonicStr, "")
 	seedKey, err := bip32.NewMasterKey(seed)
 	if err != nil {
 		fmt.Println("failed to derive master extended key.")
 		return nil, err
 	}
-	fmt.Println("Creating the wallet...")
 	w, err := loader.CreateNewWallet(pubPass, privPass, seed, time.Now())
 	if err != nil {
 		return nil, err
