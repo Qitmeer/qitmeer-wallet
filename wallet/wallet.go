@@ -1178,10 +1178,10 @@ func (w *Wallet) parseTxDetail(tr corejson.TxRawResult, order uint32, isBlue boo
 		case "nonstandard":
 			continue
 		}
-		if len(vo.ScriptPubKey.Addresses) == 0{
+		if len(vo.ScriptPubKey.Addresses) == 0 {
 			fmt.Printf("")
 		}
-			txOut := wtxmgr.AddrTxOutput{
+		txOut := wtxmgr.AddrTxOutput{
 			Address: vo.ScriptPubKey.Addresses[0],
 			TxId:    *txId,
 			Index:   uint32(index),
@@ -1357,7 +1357,7 @@ func (w *Wallet) UpdateBlock(toOrder uint64) error {
 	go w.notifyTxConfirmed()
 
 	w.syncWg.Add(1)
-	go w.notifyScanTxByAddr(addrs)
+	go w.notifyScanTxByAddr(addrs, toOrder)
 
 	w.notificationRpc.WaitForShutdown()
 	w.syncWg.Wait()
@@ -1366,7 +1366,7 @@ func (w *Wallet) UpdateBlock(toOrder uint64) error {
 	return nil
 }
 
-func (w *Wallet) notifyScanTxByAddr(addrs []string) {
+func (w *Wallet) notifyScanTxByAddr(addrs []string, startOrder uint64) {
 	defer w.syncWg.Done()
 	var startScan bool
 
@@ -1386,10 +1386,10 @@ func (w *Wallet) notifyScanTxByAddr(addrs []string) {
 					w.stopSync()
 					break
 				}
-				if w.getToOrder() > w.getSyncOrder()+1 {
+				if w.getToOrder() > uint32(startOrder)+1 {
 					w.syncLatest = false
-					log.Info("notification rescan block", "start", w.getSyncOrder(), "end", w.getToOrder()-1)
-					err := w.notificationRpc.Rescan(uint64(w.getSyncOrder()), uint64(w.getToOrder()), addrs, nil)
+					log.Info("notification rescan block", "start", startOrder, "end", w.getToOrder()-1)
+					err := w.notificationRpc.Rescan(startOrder, uint64(w.getToOrder()), addrs, nil)
 					if err != nil {
 						return
 					}
@@ -1686,7 +1686,7 @@ func (w *Wallet) updateTxStatus(txRaw corejson.TxRawResult, status wtxmgr.TxStat
 			return err
 		}
 		for i, vout := range txRaw.Vout {
-			if vout.ScriptPubKey.Addresses == nil{
+			if vout.ScriptPubKey.Addresses == nil {
 				continue
 			}
 			if bucket, ok = coinBucket[vout.Coin]; ok {
