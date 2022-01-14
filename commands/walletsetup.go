@@ -7,6 +7,7 @@ package commands
 import (
 	"bufio"
 	"fmt"
+	"github.com/Qitmeer/qitmeer/crypto/bip39"
 	"os"
 	"path/filepath"
 	"time"
@@ -179,6 +180,11 @@ func createWallet() (*wallet.Wallet, error) {
 	if err != nil {
 		return nil, err
 	}
+	mnemonicStr, err := bip39.NewMnemonic(seed)
+	if err != nil {
+		return nil, err
+	}
+	seed, err = bip39.NewSeedWithErrorChecking(mnemonicStr, "")
 	seedKey, err := bip32.NewMasterKey(seed)
 	if err != nil {
 		fmt.Println("failed to derive master extended key.")
