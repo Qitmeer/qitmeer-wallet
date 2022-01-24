@@ -149,6 +149,14 @@ if you have golang environment, you can build it by yourself
 
 2:  create a  wallet
 
+- The old create method
+
+         $ ./build/bin/qitmeer-wallet qc create
+
+- The new create method . this will be same with rule with kahf wallet app
+
+         $ ./build/bin/qitmeer-wallet qc create mnemonic
+- 
 ```shell script
     ./qitmeer-wallet qc create 
     
