@@ -37,12 +37,16 @@ func AddQcCommand() {
 }
 
 var createWalletCmd = &cobra.Command{
-	Use:     "create",
+	Use:     "create or create {mnemonic}",
 	Short:   "create wallet",
-	Example: "create",
-	Args:    cobra.NoArgs,
+	Example: "create or create mnemonic",
+	Args:    cobra.MaximumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		CreatWallet()
+		needMn := ""
+		if len(args) >= 1 {
+			needMn = args[0]
+		}
+		CreatWallet(needMn)
 	},
 }
 
