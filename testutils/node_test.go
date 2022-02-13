@@ -27,7 +27,7 @@ func TestNewNodeCmdArgs(t *testing.T) {
 		t.Errorf("failed to create node, expect %v but got %v", "", node.cmd.Dir)
 	}
 	args := []string{
-		"./qng/build/bin/qng",
+		"qng",
 		"--listen=127.0.0.1:38130",
 		"--rpclisten=127.0.0.1:38131",
 		"--rpcuser=testuser",
@@ -53,7 +53,7 @@ func TestNewNodeCmdArgs(t *testing.T) {
 }
 
 func TestNodeStartStop(t *testing.T) {
-	found, err := exec.LookPath("./qng/build/bin/qng")
+	found, err := exec.LookPath("qng")
 	if err != nil {
 		t.Skip(fmt.Sprintf("skip the test since: %v", err))
 	} else {
