@@ -23,8 +23,8 @@ jobs:
 
     - name: Get dependencies
       run: |
-        git clone https://github.com/Qitmeer/qng.git
-        cd qng && make && pwd && cp ./build/bin/qng /usr/local/bin/
+        git clone https://github.com/Qitmeer/qitmeer.git
+        cd qitmeer && make && pwd && cp ./build/bin/qitmeer /usr/local/bin/
         cd ..
         go get -v -t -d ./...
         if [ -f Gopkg.toml ]; then

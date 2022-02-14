@@ -35,7 +35,7 @@ type nodeConfig struct {
 
 func newNodeConfig(homeDir string, extraArgs []string) *nodeConfig {
 	c := &nodeConfig{
-		program:   "qng",
+		program:   "qitmeer",
 		listen:    "127.0.0.1:" + params.PrivNetParam.DefaultPort, //38130 by default
 		rpclisten: "127.0.0.1:" + params.PrivNetParam.RpcPort,     //38131 by default
 		rpcuser:   "testuser",
