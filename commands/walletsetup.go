@@ -7,6 +7,7 @@ package commands
 import (
 	"bufio"
 	"fmt"
+	"github.com/Qitmeer/qitmeer/crypto/bip39"
 	"os"
 	"path/filepath"
 	"time"
@@ -89,7 +90,7 @@ func createSimulationWallet() error {
 // createWallet prompts the user for information needed to generate a new wallet
 // and generates the wallet accordingly.  The new wallet will reside at the
 // provided path.
-func createWallet() (*wallet.Wallet, error) {
+func createWallet(needMnemonic string) (*wallet.Wallet, error) {
 	dbDir := networkDir(config.Cfg.AppDataDir, config.ActiveNet)
 	loader := wallet.NewLoader(config.ActiveNet, dbDir, 250, &config.Config{})
 
@@ -179,12 +180,25 @@ func createWallet() (*wallet.Wallet, error) {
 	if err != nil {
 		return nil, err
 	}
+	fmt.Println("Creating the wallet...")
+	if needMnemonic == "mnemonic" {
+		mnemonicStr, err := bip39.NewMnemonic(seed)
+		if err != nil {
+			return nil, err
+		}
+		fmt.Println("mnemonic: ", mnemonicStr)
+
+		seed, err = bip39.NewSeedWithErrorChecking(mnemonicStr, "")
+		if err != nil {
+			fmt.Println("failed to derive master extended key with mnemonic.")
+			return nil, err
+		}
+	}
 	seedKey, err := bip32.NewMasterKey(seed)
 	if err != nil {
 		fmt.Println("failed to derive master extended key.")
 		return nil, err
 	}
-	fmt.Println("Creating the wallet...")
 	w, err := loader.CreateNewWallet(pubPass, privPass, seed, time.Now())
 	if err != nil {
 		return nil, err

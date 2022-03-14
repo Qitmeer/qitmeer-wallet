@@ -33,14 +33,18 @@ var ConsoleCmd = &cobra.Command{
 	Example: `
 		Enter console mode
 		`,
-	Args: cobra.NoArgs,
+	Args: cobra.MaximumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		b := checkWalletIeExist(config.Cfg)
 		if b == false {
 			fmt.Println("Please create a wallet first,[qitmeer-wallet qc create ]")
 			return
 		}
-		startConsole()
+		needMn := ""
+		if len(args) >= 1 {
+			needMn = args[0]
+		}
+		startConsole(needMn)
 	},
 }
 
@@ -48,13 +52,13 @@ func AddConsoleCommand() {
 
 }
 
-func CreatWallet() {
+func CreatWallet(needMnemonic string) {
 	b := checkWalletIeExist(config.Cfg)
 	if b {
 		fmt.Println("db is exist", filepath.Join(networkDir(config.Cfg.AppDataDir, config.ActiveNet), config.WalletDbName))
 		return
 	} else {
-		_, err := createWallet()
+		_, err := createWallet(needMnemonic)
 		if err != nil {
 			fmt.Println("createWallet err:", err.Error())
 			return
@@ -88,7 +92,7 @@ func UnLock(password string) error {
 	return nil
 }
 
-func startConsole() {
+func startConsole(needMnemonic string) {
 	b := checkWalletIeExist(config.Cfg)
 	var err error
 	if b {
@@ -100,7 +104,7 @@ func startConsole() {
 		}
 		w.Start()
 	} else {
-		w, err = createWallet()
+		w, err = createWallet(needMnemonic)
 		if err != nil {
 			fmt.Println("createWallet err:", err.Error())
 			return

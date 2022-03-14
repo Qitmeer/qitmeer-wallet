@@ -69,7 +69,6 @@ func (h *Harness) Setup() error {
 	if err := h.connectRPCClient(); err != nil {
 		return err
 	}
-
 	if err := h.wallet.Start(); err != nil {
 		return err
 	}
@@ -85,7 +84,6 @@ func (h *Harness) connectRPCClient() error {
 	var http = "https://"
 	url, user, pass, notls := h.Node.config.rpclisten, h.Node.config.rpcuser, h.Node.config.rpcpass, h.Node.config.rpcnotls
 	certs := h.Node.config.certFile
-
 	if notls {
 		http = "http://"
 	}
@@ -109,6 +107,16 @@ func (h *Harness) Teardown() error {
 	harnessStateMutex.Lock()
 	defer harnessStateMutex.Unlock()
 	return h.teardown()
+}
+
+func (h *Harness) WaitWalletInit() {
+	for {
+		if h.wallet.wallet.UploadRun {
+			break
+		} else {
+			time.Sleep(500 * time.Millisecond)
+		}
+	}
 }
 
 // teardown func stop the running test, stop the rpc client shutdown the node,

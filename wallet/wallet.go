@@ -68,8 +68,6 @@ var (
 
 const CoinBaseMaturity = 720
 
-var UploadRun = false
-
 type Wallet struct {
 	cfg *config.Config
 
@@ -91,9 +89,11 @@ type Wallet struct {
 	chainParams *chaincfg.Params
 	wg          *sync.WaitGroup
 
-	started bool
-	quit    chan struct{}
-	quitMu  sync.Mutex
+	started   bool
+	UploadRun bool
+
+	quit   chan struct{}
+	quitMu sync.Mutex
 
 	syncAll    bool
 	syncLatest bool
@@ -134,14 +134,14 @@ func (w *Wallet) Start() {
 		for {
 			select {
 			case <-updateBlockTicker.C:
-				if UploadRun == false {
+				if w.UploadRun == false {
 					log.Trace("Updateblock start")
-					UploadRun = true
+					w.UploadRun = true
 					err := w.UpdateBlock(0)
 					if err != nil {
 						log.Error("Start.Updateblock err", "err", err.Error())
 					}
-					UploadRun = false
+					w.UploadRun = false
 				}
 			}
 
@@ -1178,10 +1178,10 @@ func (w *Wallet) parseTxDetail(tr corejson.TxRawResult, order uint32, isBlue boo
 		case "nonstandard":
 			continue
 		}
-		if len(vo.ScriptPubKey.Addresses) == 0{
+		if len(vo.ScriptPubKey.Addresses) == 0 {
 			fmt.Printf("")
 		}
-			txOut := wtxmgr.AddrTxOutput{
+		txOut := wtxmgr.AddrTxOutput{
 			Address: vo.ScriptPubKey.Addresses[0],
 			TxId:    *txId,
 			Index:   uint32(index),
@@ -1326,7 +1326,6 @@ func (w *Wallet) UpdateBlock(toOrder uint64) error {
 	}
 	w.setOrder(w.Manager.SyncedTo().Order)
 	w.scanEnd <- struct{}{}
-
 	ntfnHandlers := client.NotificationHandlers{
 		OnBlockConnected:    w.OnBlockConnected,
 		OnTxConfirm:         w.OnTxConfirm,
@@ -1340,7 +1339,6 @@ func (w *Wallet) UpdateBlock(toOrder uint64) error {
 	if err != nil {
 		return err
 	}
-
 	if err = w.notifyBlock(); err != nil {
 		return err
 	}
@@ -1361,7 +1359,6 @@ func (w *Wallet) UpdateBlock(toOrder uint64) error {
 
 	w.notificationRpc.WaitForShutdown()
 	w.syncWg.Wait()
-
 	log.Info("Stop notify sync process")
 	return nil
 }
@@ -1548,7 +1545,7 @@ func (w *Wallet) notifyNewTransaction() error {
 func (w *Wallet) notifyTxConfirmed() {
 	defer w.syncWg.Done()
 
-	t := time.NewTicker(time.Second * 30)
+	t := time.NewTicker(time.Second * 10)
 	for {
 		select {
 		case <-w.syncQuit:
@@ -1686,7 +1683,7 @@ func (w *Wallet) updateTxStatus(txRaw corejson.TxRawResult, status wtxmgr.TxStat
 			return err
 		}
 		for i, vout := range txRaw.Vout {
-			if vout.ScriptPubKey.Addresses == nil{
+			if vout.ScriptPubKey.Addresses == nil {
 				continue
 			}
 			if bucket, ok = coinBucket[vout.Coin]; ok {

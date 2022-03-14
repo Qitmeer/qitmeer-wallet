@@ -66,6 +66,7 @@ func TestHarness(t *testing.T) {
 			wg.Done()
 		}()
 	}
+
 	wg.Wait()
 }
 
@@ -83,8 +84,8 @@ func TestSyncUnConfirmedCoinBase(t *testing.T) {
 		t.Errorf("setup harness failed:%v", err)
 		return
 	}
-	time.Sleep(500 * time.Millisecond)
 
+	h.WaitWalletInit()
 	if info, err := h.Client.NodeInfo(); err != nil {
 		t.Errorf("test failed : %v", err)
 		return
@@ -96,7 +97,6 @@ func TestSyncUnConfirmedCoinBase(t *testing.T) {
 		}
 
 	}
-
 	GenerateBlock(t, h, 10)
 	time.Sleep(10 * time.Second)
 	b, err := h.wallet.Balance("MEER")
@@ -124,8 +124,8 @@ func TestSyncConfirmedCoinBase(t *testing.T) {
 		t.Errorf("setup harness failed:%v", err)
 		return
 	}
-	time.Sleep(500 * time.Millisecond)
 
+	h.WaitWalletInit()
 	if info, err := h.Client.NodeInfo(); err != nil {
 		t.Errorf("test failed : %v", err)
 		return
@@ -140,13 +140,15 @@ func TestSyncConfirmedCoinBase(t *testing.T) {
 	GenerateBlock(t, h, 20)
 	time.Sleep(10 * time.Second)
 
+	GenerateBlock(t, h, 1)
+	time.Sleep(10 * time.Second)
 	b, err := h.wallet.Balance("MEER")
 	if err != nil {
 		t.Errorf("test failed : %v", err)
 		return
 	}
-	if b.UnspentAmount.Value != 200000000000 {
-		t.Errorf("test failed, expect unspent balance %d, but got %d", 200000000000, b.UnspentAmount.Value)
+	if b.UnspentAmount.Value != 250000000000 {
+		t.Errorf("test failed, expect unspent balance %d, but got %d", 250000000000, b.UnspentAmount.Value)
 		return
 	}
 	if b.UnconfirmedAmount.Value != 800000000000 {
@@ -169,7 +171,7 @@ func TestSpent(t *testing.T) {
 		t.Errorf("setup harness failed:%v", err)
 		return
 	}
-	time.Sleep(500 * time.Millisecond)
+	h.WaitWalletInit()
 
 	if info, err := h.Client.NodeInfo(); err != nil {
 		t.Errorf("test failed : %v", err)
@@ -183,8 +185,9 @@ func TestSpent(t *testing.T) {
 
 	}
 	GenerateBlock(t, h, 20)
-	time.Sleep(20 * time.Second)
-
+	time.Sleep(10 * time.Second)
+	GenerateBlock(t, h, 1)
+	time.Sleep(10 * time.Second)
 	b, err := h.wallet.Balance("MEER")
 	if err != nil {
 		t.Errorf("test failed : %v", err)
