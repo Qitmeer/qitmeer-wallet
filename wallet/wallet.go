@@ -15,6 +15,7 @@ import (
 	"github.com/Qitmeer/qitmeer-wallet/json/qitmeerjson"
 	"github.com/Qitmeer/qitmeer-wallet/util"
 	"github.com/Qitmeer/qng/common/marshal"
+	"github.com/Qitmeer/qng/params"
 	"github.com/Qitmeer/qng/qx"
 	"io/ioutil"
 	"os"
@@ -1991,6 +1992,17 @@ func (w *Wallet) AccountAddresses(account uint32) (addrs []types.Address, err er
 		addrMgrNs := tx.ReadBucket(waddrmgrNamespaceKey)
 		return w.Manager.ForEachAccountAddress(addrMgrNs, account, func(mAddr waddrmgr.ManagedAddress) error {
 			addrs = append(addrs, mAddr.Address())
+			p, err := w.getPrivateKey(mAddr.Address())
+			if err != nil {
+				log.Error("do not have private key", mAddr.Address())
+				return err
+			}
+			pkaddr, err := address.NewSecpPubKeyAddress(p.PubKey().SerializeCompressed(), &params.MainNetParams)
+			if err != nil {
+				log.Error("PubKey Create Failed", mAddr.Address())
+				return err
+			}
+			addrs = append(addrs, pkaddr)
 			return nil
 		})
 	})
@@ -2177,9 +2189,15 @@ func (w *Wallet) createTx(addrs []types.Address, coin2outputs []*TxOutput, coinI
 	for _, utxo := range uxtoList {
 		addr, _ := address.DecodeAddress(utxo.Address)
 		vinPkScript = append(vinPkScript, utxo.PkScript)
+		typ := types.TxTypeRegular
+		_, ok := addr.(*address.SecpPubKeyAddress)
+		if ok {
+			typ = types.TxTypeCrossChainExport
+		}
 		inputs = append(inputs, qx.Input{
-			TxID:     utxo.TxId.String(),
-			OutIndex: utxo.Index})
+			TxID:      utxo.TxId.String(),
+			InputType: typ,
+			OutIndex:  utxo.Index})
 		pri, err := w.getPrivateKey(addr)
 		if err != nil {
 			return "", 0, nil, err
