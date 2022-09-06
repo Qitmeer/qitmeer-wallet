@@ -7,7 +7,7 @@ package commands
 import (
 	"bufio"
 	"fmt"
-	"github.com/Qitmeer/qitmeer/crypto/bip39"
+	"github.com/Qitmeer/qng/crypto/bip39"
 	"os"
 	"path/filepath"
 	"time"
@@ -17,13 +17,13 @@ import (
 	"github.com/Qitmeer/qitmeer-wallet/internal/prompt"
 	"github.com/Qitmeer/qitmeer-wallet/utils"
 	waddrmgr "github.com/Qitmeer/qitmeer-wallet/waddrmgs"
-	"github.com/Qitmeer/qitmeer/crypto/bip32"
-	btcec "github.com/Qitmeer/qitmeer/crypto/ecc/secp256k1"
+	"github.com/Qitmeer/qng/crypto/bip32"
+	btcec "github.com/Qitmeer/qng/crypto/ecc/secp256k1"
 
 	"github.com/Qitmeer/qitmeer-wallet/wallet"
 	"github.com/Qitmeer/qitmeer-wallet/walletdb"
-	"github.com/Qitmeer/qitmeer/crypto/ecc/secp256k1"
-	chaincfg "github.com/Qitmeer/qitmeer/params"
+	"github.com/Qitmeer/qng/crypto/ecc/secp256k1"
+	chaincfg "github.com/Qitmeer/qng/params"
 )
 
 // networkDir returns the directory name of a network directory to hold wallet

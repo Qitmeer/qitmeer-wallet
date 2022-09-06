@@ -5,12 +5,12 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
-	"github.com/Qitmeer/qitmeer/qx"
+	"github.com/Qitmeer/qng/qx"
 
-	"github.com/Qitmeer/qitmeer/common/encode/base58"
-	"github.com/Qitmeer/qitmeer/common/hash"
-	"github.com/Qitmeer/qitmeer/crypto/ecc/secp256k1"
-	"github.com/Qitmeer/qitmeer/params"
+	"github.com/Qitmeer/qng/common/encode/base58"
+	"github.com/Qitmeer/qng/common/hash"
+	"github.com/Qitmeer/qng/crypto/ecc/secp256k1"
+	"github.com/Qitmeer/qng/params"
 )
 
 // ErrMalformedPrivateKey describes an error where a WIF-encoded private

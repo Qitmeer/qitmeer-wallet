@@ -27,7 +27,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/Qitmeer/qitmeer/log"
+	"github.com/Qitmeer/qng/log"
 )
 
 const (

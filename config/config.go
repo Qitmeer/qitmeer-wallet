@@ -15,7 +15,7 @@ import (
 
 	"github.com/BurntSushi/toml"
 
-	"github.com/Qitmeer/qitmeer/params"
+	"github.com/Qitmeer/qng/params"
 
 	"github.com/Qitmeer/qitmeer-wallet/rpc/client"
 	"github.com/Qitmeer/qitmeer-wallet/utils"
@@ -149,7 +149,7 @@ func NewDefaultConfig() (cfg *Config) {
 		DisableRPC:    false,
 		DisableTLS:    false,
 
-		APIs: []string{"account", "wallet", "qitmeerd"},
+		APIs:           []string{"account", "wallet", "qitmeerd"},
 		QServer:        "127.0.0.1:18130",
 		QUser:          "",
 		QPass:          "",

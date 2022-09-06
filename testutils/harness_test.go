@@ -5,7 +5,7 @@
 package testutils
 
 import (
-	"github.com/Qitmeer/qitmeer/params"
+	"github.com/Qitmeer/qng/params"
 	"sync"
 	"testing"
 	"time"

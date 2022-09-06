@@ -7,8 +7,8 @@ package testutils
 import (
 	"bufio"
 	"fmt"
-	"github.com/Qitmeer/qitmeer/params"
-	"github.com/Qitmeer/qitmeer/rpc"
+	"github.com/Qitmeer/qng/params"
+	"github.com/Qitmeer/qng/rpc"
 	"io"
 	"os"
 	"os/exec"

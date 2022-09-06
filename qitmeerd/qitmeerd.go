@@ -7,7 +7,7 @@ import (
 
 	"github.com/Qitmeer/qitmeer-wallet/wallet"
 
-	"github.com/Qitmeer/qitmeer/log"
+	"github.com/Qitmeer/qng/log"
 )
 
 // Qitmeerd mgr

@@ -3,7 +3,7 @@ package testutils
 import (
 	"github.com/Qitmeer/qitmeer-wallet/config"
 	waddrmgr "github.com/Qitmeer/qitmeer-wallet/waddrmgs"
-	"github.com/Qitmeer/qitmeer/params"
+	"github.com/Qitmeer/qng/params"
 	"testing"
 )
 

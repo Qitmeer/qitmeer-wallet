@@ -7,13 +7,13 @@ import (
 
 	util "github.com/Qitmeer/qitmeer-wallet/utils"
 	"github.com/Qitmeer/qitmeer-wallet/wallet/txrules"
-	"github.com/Qitmeer/qitmeer/core/address"
-	"github.com/Qitmeer/qitmeer/crypto/ecc/secp256k1"
-	"github.com/Qitmeer/qitmeer/log"
+	"github.com/Qitmeer/qng/core/address"
+	"github.com/Qitmeer/qng/crypto/ecc/secp256k1"
+	"github.com/Qitmeer/qng/log"
 
 	"github.com/Qitmeer/qitmeer-wallet/json/qitmeerjson"
 	waddrmgr "github.com/Qitmeer/qitmeer-wallet/waddrmgs"
-	"github.com/Qitmeer/qitmeer/core/types"
+	"github.com/Qitmeer/qng/core/types"
 
 	"github.com/Qitmeer/qitmeer-wallet/wallet"
 )

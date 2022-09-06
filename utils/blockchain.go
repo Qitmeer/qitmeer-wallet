@@ -1,7 +1,7 @@
 package utils
 
 import (
-	"github.com/Qitmeer/qitmeer/params"
+	"github.com/Qitmeer/qng/params"
 )
 
 // GetNetParams by network name

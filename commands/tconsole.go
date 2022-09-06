@@ -3,7 +3,7 @@ package commands
 import (
 	"fmt"
 	"github.com/Qitmeer/qitmeer-wallet/wallet"
-	"github.com/Qitmeer/qitmeer/log"
+	"github.com/Qitmeer/qng/log"
 	"github.com/mattn/go-colorable"
 	"github.com/peterh/liner"
 	"io"

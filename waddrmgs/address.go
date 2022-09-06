@@ -3,16 +3,16 @@ package waddrmgr
 import (
 	"encoding/hex"
 	"fmt"
-	"github.com/Qitmeer/qitmeer/qx"
+	"github.com/Qitmeer/qng/qx"
 	"sync"
 
 	"github.com/Qitmeer/qitmeer-wallet/internal/zero"
 	"github.com/Qitmeer/qitmeer-wallet/walletdb"
-	"github.com/Qitmeer/qitmeer/common/hash"
-	addr "github.com/Qitmeer/qitmeer/core/address"
-	"github.com/Qitmeer/qitmeer/core/types"
-	"github.com/Qitmeer/qitmeer/crypto/bip32"
-	ecc "github.com/Qitmeer/qitmeer/crypto/ecc/secp256k1"
+	"github.com/Qitmeer/qng/common/hash"
+	addr "github.com/Qitmeer/qng/core/address"
+	"github.com/Qitmeer/qng/core/types"
+	"github.com/Qitmeer/qng/crypto/bip32"
+	ecc "github.com/Qitmeer/qng/crypto/ecc/secp256k1"
 )
 
 // AddressType represents the various address types waddrmgr is currently able
@@ -40,6 +40,7 @@ const (
 	// WitnessPubKey represents a p2wkh (pay-to-witness-key-hash) address
 	// type.
 	WitnessPubKey
+	SecpPubKey
 )
 
 // ManagedAddress is an interface that provides acces to information regarding
@@ -204,6 +205,8 @@ func (a *managedAddress) AddrHash() []byte {
 		hash = n.Hash160()[:]
 	case *addr.ScriptHashAddress:
 		hash = n.Hash160()[:]
+	case *addr.SecpPubKeyAddress:
+		hash = n.PubKey().SerializeCompressed()
 	}
 	return hash
 }
@@ -352,6 +355,12 @@ func newManagedAddressWithoutPrivKey(m *ScopedKeyManager,
 		if err != nil {
 			return nil, err
 		}
+
+	case SecpPubKey:
+		address, err = addr.NewSecpPubKeyAddress(pubKey.SerializeCompressed(), m.rootManager.chainParams)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	return &managedAddress{
@@ -446,6 +455,7 @@ type scriptAddress struct {
 	manager         *ScopedKeyManager
 	account         uint32
 	address         *addr.ScriptHashAddress
+	pkaddress       *addr.SecpPubKeyAddress
 	scriptEncrypted []byte
 	scriptCT        []byte
 	scriptMutex     sync.Mutex

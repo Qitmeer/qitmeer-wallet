@@ -17,7 +17,7 @@ import (
 
 	"github.com/Qitmeer/qitmeer-wallet/internal/legacy/keystore"
 
-	hdkeychain "github.com/Qitmeer/qitmeer/crypto/seed"
+	hdkeychain "github.com/Qitmeer/qng/crypto/seed"
 )
 
 // ProvideSeed is used to prompt for the wallet seed which maybe required during

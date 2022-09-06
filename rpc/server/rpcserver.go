@@ -17,13 +17,13 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/Qitmeer/qitmeer/log"
+	"github.com/Qitmeer/qng/log"
 	mapset "github.com/deckarep/golang-set"
 	"golang.org/x/net/context"
 
-	"github.com/Qitmeer/qitmeer/common/util"
-	// "github.com/Qitmeer/qitmeer/config"
-	//"github.com/Qitmeer/qitmeer/log"
+	"github.com/Qitmeer/qng/common/util"
+	// "github.com/Qitmeer/qng/config"
+	//"github.com/Qitmeer/qng/log"
 )
 
 // API describes the set of methods offered over the RPC interface

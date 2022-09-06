@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"github.com/Qitmeer/qitmeer-wallet/config"
 	"github.com/Qitmeer/qitmeer-wallet/wserver"
-	"github.com/Qitmeer/qitmeer/log"
+	"github.com/Qitmeer/qng/log"
 	"github.com/spf13/cobra"
 )
 

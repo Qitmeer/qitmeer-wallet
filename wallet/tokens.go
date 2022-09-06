@@ -4,8 +4,8 @@ import (
 	json2 "encoding/json"
 	"fmt"
 	"github.com/Qitmeer/qitmeer-wallet/walletdb"
-	"github.com/Qitmeer/qitmeer/core/json"
-	"github.com/Qitmeer/qitmeer/core/types"
+	"github.com/Qitmeer/qng/core/json"
+	"github.com/Qitmeer/qng/core/types"
 	"sync"
 )
 

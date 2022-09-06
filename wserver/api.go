@@ -10,11 +10,11 @@ import (
 	"github.com/Qitmeer/qitmeer-wallet/utils"
 	waddrmgs "github.com/Qitmeer/qitmeer-wallet/waddrmgs"
 	"github.com/Qitmeer/qitmeer-wallet/wallet"
-	"github.com/Qitmeer/qitmeer/crypto/bip32"
-	"github.com/Qitmeer/qitmeer/crypto/bip39"
-	"github.com/Qitmeer/qitmeer/crypto/ecc/secp256k1"
-	"github.com/Qitmeer/qitmeer/crypto/seed"
-	"github.com/Qitmeer/qitmeer/log"
+	"github.com/Qitmeer/qng/crypto/bip32"
+	"github.com/Qitmeer/qng/crypto/bip39"
+	"github.com/Qitmeer/qng/crypto/ecc/secp256k1"
+	"github.com/Qitmeer/qng/crypto/seed"
+	"github.com/Qitmeer/qng/log"
 )
 
 // API wallet

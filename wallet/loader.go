@@ -12,8 +12,8 @@ import (
 	waddrmgr "github.com/Qitmeer/qitmeer-wallet/waddrmgs"
 	"github.com/Qitmeer/qitmeer-wallet/walletdb"
 	_ "github.com/Qitmeer/qitmeer-wallet/walletdb/bdb"
-	"github.com/Qitmeer/qitmeer/log"
-	chaincfg "github.com/Qitmeer/qitmeer/params"
+	"github.com/Qitmeer/qng/log"
+	chaincfg "github.com/Qitmeer/qng/params"
 )
 
 const (

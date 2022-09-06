@@ -4,8 +4,8 @@ package commands
 
 import (
 	"fmt"
-	"github.com/Qitmeer/qitmeer/log"
-	"github.com/Qitmeer/qitmeer/log/term"
+	"github.com/Qitmeer/qng/log"
+	"github.com/Qitmeer/qng/log/term"
 	"github.com/jrick/logrotate/rotator"
 	"github.com/mattn/go-colorable"
 	"io"

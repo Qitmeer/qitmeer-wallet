@@ -2,7 +2,7 @@ package main
 
 import (
 	"github.com/Qitmeer/qitmeer-wallet/commands"
-	"github.com/Qitmeer/qitmeer/log"
+	"github.com/Qitmeer/qng/log"
 	"os"
 )
 
