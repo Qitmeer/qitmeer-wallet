@@ -4,15 +4,15 @@ import (
 	"encoding/json"
 	"fmt"
 	util "github.com/Qitmeer/qitmeer-wallet/utils"
-	"github.com/Qitmeer/qitmeer/common/math"
-	corejson "github.com/Qitmeer/qitmeer/core/json"
+	"github.com/Qitmeer/qng/common/math"
+	corejson "github.com/Qitmeer/qng/core/json"
 	"time"
 
 	"github.com/Qitmeer/qitmeer-wallet/walletdb"
-	"github.com/Qitmeer/qitmeer/common/hash"
-	"github.com/Qitmeer/qitmeer/core/types"
-	"github.com/Qitmeer/qitmeer/log"
-	"github.com/Qitmeer/qitmeer/params"
+	"github.com/Qitmeer/qng/common/hash"
+	"github.com/Qitmeer/qng/core/types"
+	"github.com/Qitmeer/qng/log"
+	"github.com/Qitmeer/qng/params"
 )
 
 // Block contains the minimum amount of data to uniquely identify any block on

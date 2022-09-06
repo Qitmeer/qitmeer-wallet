@@ -9,8 +9,8 @@ import (
 
 	"github.com/julienschmidt/httprouter"
 
-	qJson "github.com/Qitmeer/qitmeer/core/json"
-	"github.com/Qitmeer/qitmeer/log"
+	qJson "github.com/Qitmeer/qng/core/json"
+	"github.com/Qitmeer/qng/log"
 
 	"github.com/Qitmeer/qitmeer-wallet/assets"
 	"github.com/Qitmeer/qitmeer-wallet/config"

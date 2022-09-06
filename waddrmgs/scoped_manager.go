@@ -4,13 +4,13 @@ import (
 	"fmt"
 	"github.com/Qitmeer/qitmeer-wallet/internal/zero"
 	"github.com/Qitmeer/qitmeer-wallet/utils"
-	"github.com/Qitmeer/qitmeer/common/hash"
-	"github.com/Qitmeer/qitmeer/crypto/bip32"
+	"github.com/Qitmeer/qng/common/hash"
+	"github.com/Qitmeer/qng/crypto/bip32"
 
 	"github.com/Qitmeer/qitmeer-wallet/walletdb"
-	addrs "github.com/Qitmeer/qitmeer/core/address"
-	"github.com/Qitmeer/qitmeer/core/types"
-	ecc "github.com/Qitmeer/qitmeer/crypto/ecc/secp256k1"
+	addrs "github.com/Qitmeer/qng/core/address"
+	"github.com/Qitmeer/qng/core/types"
+	ecc "github.com/Qitmeer/qng/crypto/ecc/secp256k1"
 	"sync"
 )
 

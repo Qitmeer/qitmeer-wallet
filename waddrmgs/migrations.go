@@ -6,8 +6,8 @@ import (
 	"github.com/Qitmeer/qitmeer-wallet/walletdb"
 	"github.com/Qitmeer/qitmeer-wallet/walletdb/migration"
 	"github.com/Qitmeer/qitmeer-wallet/wtxmgr"
-	"github.com/Qitmeer/qitmeer/log"
-	chaincfg "github.com/Qitmeer/qitmeer/params"
+	"github.com/Qitmeer/qng/log"
+	chaincfg "github.com/Qitmeer/qng/params"
 	"time"
 )
 

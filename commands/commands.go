@@ -9,7 +9,7 @@ import (
 	"github.com/Qitmeer/qitmeer-wallet/utils"
 	"github.com/Qitmeer/qitmeer-wallet/version"
 	"github.com/Qitmeer/qitmeer-wallet/wallet"
-	"github.com/Qitmeer/qitmeer/log"
+	"github.com/Qitmeer/qng/log"
 	"github.com/jessevdk/go-flags"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"

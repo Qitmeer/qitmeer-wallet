@@ -2,7 +2,7 @@ package wallet
 
 import (
 	"encoding/hex"
-	corejson "github.com/Qitmeer/qitmeer/core/json"
+	corejson "github.com/Qitmeer/qng/core/json"
 	"time"
 
 	"github.com/Qitmeer/qitmeer-wallet/config"
@@ -12,10 +12,10 @@ import (
 	waddrmgr "github.com/Qitmeer/qitmeer-wallet/waddrmgs"
 	"github.com/Qitmeer/qitmeer-wallet/wallet/txrules"
 	"github.com/Qitmeer/qitmeer-wallet/wtxmgr"
-	"github.com/Qitmeer/qitmeer/core/address"
-	"github.com/Qitmeer/qitmeer/core/types"
-	"github.com/Qitmeer/qitmeer/crypto/ecc/secp256k1"
-	"github.com/Qitmeer/qitmeer/log"
+	"github.com/Qitmeer/qng/core/address"
+	"github.com/Qitmeer/qng/core/types"
+	"github.com/Qitmeer/qng/crypto/ecc/secp256k1"
+	"github.com/Qitmeer/qng/log"
 )
 
 // API for wallet

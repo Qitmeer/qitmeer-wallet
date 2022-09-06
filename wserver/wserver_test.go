@@ -6,12 +6,12 @@ import (
 	"testing"
 
 	"github.com/Qitmeer/qitmeer-wallet/utils"
-	"github.com/Qitmeer/qitmeer/crypto/bip32"
-	"github.com/Qitmeer/qitmeer/crypto/bip39"
-	"github.com/Qitmeer/qitmeer/crypto/ecc/secp256k1"
-	"github.com/Qitmeer/qitmeer/crypto/seed"
+	"github.com/Qitmeer/qng/crypto/bip32"
+	"github.com/Qitmeer/qng/crypto/bip39"
+	"github.com/Qitmeer/qng/crypto/ecc/secp256k1"
+	"github.com/Qitmeer/qng/crypto/seed"
 
-	"github.com/Qitmeer/qitmeer/qx"
+	"github.com/Qitmeer/qng/qx"
 )
 
 func TestSeed(t *testing.T) {
@@ -24,7 +24,7 @@ func TestSeed(t *testing.T) {
 		return
 	}
 	seed := hex.EncodeToString(seedBuf)
-	if seed == ""{
+	if seed == "" {
 		t.Error("failed to encode seed to string")
 	}
 
@@ -32,7 +32,7 @@ func TestSeed(t *testing.T) {
 
 	s3, err := bip39.EntropyFromMnemonic(mnemonic)
 
-	if hex.EncodeToString(s3) != seed{
+	if hex.EncodeToString(s3) != seed {
 		t.Errorf("generate entropy by mnemonic, Got:%s, Expected:%s", s3, seed)
 	}
 

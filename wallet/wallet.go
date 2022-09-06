@@ -14,8 +14,9 @@ import (
 	"fmt"
 	"github.com/Qitmeer/qitmeer-wallet/json/qitmeerjson"
 	"github.com/Qitmeer/qitmeer-wallet/util"
-	"github.com/Qitmeer/qitmeer/common/marshal"
-	"github.com/Qitmeer/qitmeer/qx"
+	"github.com/Qitmeer/qng/common/marshal"
+	"github.com/Qitmeer/qng/params"
+	"github.com/Qitmeer/qng/qx"
 	"io/ioutil"
 	"os"
 	"sort"
@@ -25,16 +26,16 @@ import (
 	"time"
 
 	wt "github.com/Qitmeer/qitmeer-wallet/types"
-	"github.com/Qitmeer/qitmeer/common/hash"
-	"github.com/Qitmeer/qitmeer/core/address"
-	corejson "github.com/Qitmeer/qitmeer/core/json"
-	j "github.com/Qitmeer/qitmeer/core/json"
-	"github.com/Qitmeer/qitmeer/core/types"
-	"github.com/Qitmeer/qitmeer/engine/txscript"
-	"github.com/Qitmeer/qitmeer/log"
-	chaincfg "github.com/Qitmeer/qitmeer/params"
-	"github.com/Qitmeer/qitmeer/rpc/client"
-	"github.com/Qitmeer/qitmeer/rpc/client/cmds"
+	"github.com/Qitmeer/qng/common/hash"
+	"github.com/Qitmeer/qng/core/address"
+	corejson "github.com/Qitmeer/qng/core/json"
+	j "github.com/Qitmeer/qng/core/json"
+	"github.com/Qitmeer/qng/core/types"
+	"github.com/Qitmeer/qng/engine/txscript"
+	"github.com/Qitmeer/qng/log"
+	chaincfg "github.com/Qitmeer/qng/params"
+	"github.com/Qitmeer/qng/rpc/client"
+	"github.com/Qitmeer/qng/rpc/client/cmds"
 
 	"github.com/Qitmeer/qitmeer-wallet/config"
 	clijson "github.com/Qitmeer/qitmeer-wallet/json"
@@ -1991,6 +1992,17 @@ func (w *Wallet) AccountAddresses(account uint32) (addrs []types.Address, err er
 		addrMgrNs := tx.ReadBucket(waddrmgrNamespaceKey)
 		return w.Manager.ForEachAccountAddress(addrMgrNs, account, func(mAddr waddrmgr.ManagedAddress) error {
 			addrs = append(addrs, mAddr.Address())
+			p, err := w.getPrivateKey(mAddr.Address())
+			if err != nil {
+				log.Error("do not have private key", mAddr.Address())
+				return err
+			}
+			pkaddr, err := address.NewSecpPubKeyAddress(p.PubKey().SerializeCompressed(), &params.MainNetParams)
+			if err != nil {
+				log.Error("PubKey Create Failed", mAddr.Address())
+				return err
+			}
+			addrs = append(addrs, pkaddr)
 			return nil
 		})
 	})
@@ -2129,7 +2141,7 @@ func (w *Wallet) SendOutputs(coin2outputs []*TxOutput, coinId types.CoinID, acco
 
 func (w *Wallet) createTx(addrs []types.Address, coin2outputs []*TxOutput, coinId types.CoinID, fees int64, satPerKb int64) (string, int64, []*wtxmgr.AddrTxOutput, error) {
 	var sum int64
-	outputs := make(map[string]qx.Amount)
+	outputs := make([]qx.Output, 0)
 	inputs := make([]qx.Input, 0)
 	priKeyList := make([]string, 0)
 	payAmount := types.Amount{Id: coinId}
@@ -2138,11 +2150,14 @@ func (w *Wallet) createTx(addrs []types.Address, coin2outputs []*TxOutput, coinI
 			return "", 0, nil, err
 		}
 		payAmount.Value += output.Amount.Value
-		outputs[output.Address] = qx.Amount{
+		outputs = append(outputs, qx.Output{
 			TargetLockTime: int64(output.LockHeight),
-			Value:          payAmount.Value,
-			Id:             payAmount.Id,
-		}
+			Amount: types.Amount{
+				Value: payAmount.Value,
+				Id:    payAmount.Id,
+			},
+			OutputType: types.TxTypeRegular,
+		})
 	}
 
 	payAmount.Value = payAmount.Value + fees
@@ -2159,11 +2174,14 @@ func (w *Wallet) createTx(addrs []types.Address, coin2outputs []*TxOutput, coinI
 			Id:    coinId,
 		}, addrScript)
 		if err := txrules.CheckOutput(changeOut, satPerKb); err == nil {
-			outputs[uxtoList[0].Address] = qx.Amount{
+			outputs = append(outputs, qx.Output{
 				TargetLockTime: 0,
-				Value:          change,
-				Id:             coinId,
-			}
+				Amount: types.Amount{
+					Value: change,
+					Id:    coinId,
+				},
+				OutputType: types.TxTypeRegular,
+			})
 		}
 	}
 
@@ -2171,9 +2189,15 @@ func (w *Wallet) createTx(addrs []types.Address, coin2outputs []*TxOutput, coinI
 	for _, utxo := range uxtoList {
 		addr, _ := address.DecodeAddress(utxo.Address)
 		vinPkScript = append(vinPkScript, utxo.PkScript)
+		typ := types.TxTypeRegular
+		_, ok := addr.(*address.SecpPubKeyAddress)
+		if ok {
+			typ = types.TxTypeCrossChainExport
+		}
 		inputs = append(inputs, qx.Input{
-			TxID:     utxo.TxId.String(),
-			OutIndex: utxo.Index})
+			TxID:      utxo.TxId.String(),
+			InputType: typ,
+			OutIndex:  utxo.Index})
 		pri, err := w.getPrivateKey(addr)
 		if err != nil {
 			return "", 0, nil, err
@@ -2189,7 +2213,7 @@ func (w *Wallet) createTx(addrs []types.Address, coin2outputs []*TxOutput, coinI
 	if err != nil {
 		return "", 0, nil, err
 	}
-	signedRaw, err := qx.TxSign(priKeyList, raw, config.Cfg.Network, vinPkScript)
+	signedRaw, err := qx.TxSign(priKeyList, raw, config.Cfg.Network)
 	if err != nil {
 		return "", 0, nil, err
 	}

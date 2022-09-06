@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/Qitmeer/qitmeer-wallet/config"
-	"github.com/Qitmeer/qitmeer/log"
+	"github.com/Qitmeer/qng/log"
 
 	"testing"
 
@@ -13,8 +13,8 @@ import (
 	"github.com/Qitmeer/qitmeer-wallet/json/qitmeerjson"
 	util "github.com/Qitmeer/qitmeer-wallet/utils"
 	"github.com/Qitmeer/qitmeer-wallet/wallet"
-	"github.com/Qitmeer/qitmeer/crypto/ecc/secp256k1"
-	"github.com/Qitmeer/qitmeer/params"
+	"github.com/Qitmeer/qng/crypto/ecc/secp256k1"
+	"github.com/Qitmeer/qng/params"
 )
 
 func TestOpenWallet(t *testing.T) {

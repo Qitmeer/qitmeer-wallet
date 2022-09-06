@@ -7,15 +7,15 @@ import (
 	"encoding/json"
 	"fmt"
 	clijson "github.com/Qitmeer/qitmeer-wallet/json"
-	"github.com/Qitmeer/qitmeer/common/hash"
-	"github.com/Qitmeer/qitmeer/log"
+	"github.com/Qitmeer/qng/common/hash"
+	"github.com/Qitmeer/qng/log"
 	"io/ioutil"
 	"net"
 	"net/http"
 	"strconv"
 	"strings"
 
-	qJson "github.com/Qitmeer/qitmeer/core/json"
+	qJson "github.com/Qitmeer/qng/core/json"
 
 	"github.com/Qitmeer/qitmeer-wallet/config"
 	"github.com/Qitmeer/qitmeer-wallet/rpc/client"

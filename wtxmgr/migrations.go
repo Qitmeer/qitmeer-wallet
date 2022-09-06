@@ -3,8 +3,8 @@ package wtxmgr
 import (
 	"github.com/Qitmeer/qitmeer-wallet/walletdb"
 	"github.com/Qitmeer/qitmeer-wallet/walletdb/migration"
-	"github.com/Qitmeer/qitmeer/core/types"
-	"github.com/Qitmeer/qitmeer/log"
+	"github.com/Qitmeer/qng/core/types"
+	"github.com/Qitmeer/qng/log"
 )
 
 // versions is a list of the different database versions. The last entry should

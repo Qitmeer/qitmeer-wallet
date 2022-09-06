@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"github.com/Qitmeer/qitmeer-wallet/walletdb"
 	"github.com/Qitmeer/qitmeer-wallet/wtxmgr"
-	chainhash "github.com/Qitmeer/qitmeer/common/hash"
+	chainhash "github.com/Qitmeer/qng/common/hash"
 	"time"
 )
 

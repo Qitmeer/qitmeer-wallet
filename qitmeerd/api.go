@@ -3,7 +3,7 @@ package qitmeerd
 import (
 	"fmt"
 
-	"github.com/Qitmeer/qitmeer/log"
+	"github.com/Qitmeer/qng/log"
 
 	"github.com/Qitmeer/qitmeer-wallet/config"
 	"github.com/Qitmeer/qitmeer-wallet/rpc/client"

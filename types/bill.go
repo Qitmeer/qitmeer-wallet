@@ -1,7 +1,7 @@
 package types
 
 import (
-	"github.com/Qitmeer/qitmeer/common/hash"
+	"github.com/Qitmeer/qng/common/hash"
 )
 
 //  effects that a transaction makes on a specific address

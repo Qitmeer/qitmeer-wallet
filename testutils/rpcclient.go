@@ -12,7 +12,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"github.com/Qitmeer/qitmeer/rpc/client/cmds"
+	"github.com/Qitmeer/qng/rpc/client/cmds"
 	"io"
 	"io/ioutil"
 	"net/http"

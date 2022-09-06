@@ -5,7 +5,7 @@ import (
 	"fmt"
 	util "github.com/Qitmeer/qitmeer-wallet/utils"
 	"github.com/Qitmeer/qitmeer-wallet/wallet"
-	"github.com/Qitmeer/qitmeer/log"
+	"github.com/Qitmeer/qng/log"
 	"github.com/spf13/cobra"
 	"strconv"
 )
