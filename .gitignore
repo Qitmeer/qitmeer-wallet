@@ -36,3 +36,5 @@ yarn-error.log*
 *.exe*
 *.*.bak
 config.toml
+ca.cert
+linux-wallet
