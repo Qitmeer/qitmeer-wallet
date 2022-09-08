@@ -27,7 +27,7 @@ func TestNewNodeCmdArgs(t *testing.T) {
 		t.Errorf("failed to create node, expect %v but got %v", "", node.cmd.Dir)
 	}
 	args := []string{
-		"qitmeer",
+		"qng",
 		"--listen=127.0.0.1:38130",
 		"--rpclisten=127.0.0.1:38131",
 		"--rpcuser=testuser",

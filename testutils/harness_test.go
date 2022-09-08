@@ -15,6 +15,7 @@ func TestHarness(t *testing.T) {
 	h, err := NewHarness(t, params.PrivNetParam.Params)
 	if err != nil {
 		t.Errorf("create new test harness instance failed %v", err)
+		return
 	}
 	if err := h.Setup(); err != nil {
 		t.Errorf("setup test harness instance failed %v", err)
