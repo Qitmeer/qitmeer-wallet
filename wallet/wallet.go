@@ -2149,6 +2149,7 @@ func (w *Wallet) createTx(addrs []types.Address, coin2outputs []*TxOutput, coinI
 		payAmount.Value += output.Amount.Value
 		outputs = append(outputs, qx.Output{
 			TargetLockTime: int64(output.LockHeight),
+			TargetAddress:  output.Address,
 			Amount: types.Amount{
 				Value: payAmount.Value,
 				Id:    payAmount.Id,
@@ -2177,7 +2178,8 @@ func (w *Wallet) createTx(addrs []types.Address, coin2outputs []*TxOutput, coinI
 					Value: change,
 					Id:    coinId,
 				},
-				OutputType: types.TxTypeRegular,
+				TargetAddress: uxtoList[0].Address,
+				OutputType:    types.TxTypeRegular,
 			})
 		}
 	}
@@ -2185,17 +2187,22 @@ func (w *Wallet) createTx(addrs []types.Address, coin2outputs []*TxOutput, coinI
 	var vinPkScript = make([]string, 0)
 	for _, utxo := range uxtoList {
 		addr, _ := address.DecodeAddress(utxo.Address)
+
 		vinPkScript = append(vinPkScript, utxo.PkScript)
 		typ := types.TxTypeRegular
-		_, ok := addr.(*address.SecpPubKeyAddress)
-		if ok {
+		pkhAddr := addr
+		switch addr.(type) {
+		case *address.SecpPubKeyAddress:
 			typ = types.TxTypeCrossChainExport
+			pkaddr := addr.(*address.SecpPubKeyAddress)
+			pkhAddr = pkaddr.PKHAddress()
+		default:
 		}
 		inputs = append(inputs, qx.Input{
 			TxID:      utxo.TxId.String(),
 			InputType: typ,
 			OutIndex:  utxo.Index})
-		pri, err := w.getPrivateKey(addr)
+		pri, err := w.getPrivateKey(pkhAddr)
 		if err != nil {
 			return "", 0, nil, err
 		}
