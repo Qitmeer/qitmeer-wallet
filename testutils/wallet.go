@@ -66,7 +66,7 @@ func (w *Wallet) GenerateAddress() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	if len(addrs) != 1 {
+	if len(addrs) != 2 {
 		return "", fmt.Errorf("wrong address")
 	}
 	w.address = addrs[0].String()

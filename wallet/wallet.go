@@ -15,9 +15,7 @@ import (
 	"github.com/Qitmeer/qitmeer-wallet/json/qitmeerjson"
 	"github.com/Qitmeer/qitmeer-wallet/util"
 	"github.com/Qitmeer/qng/common/marshal"
-	"github.com/Qitmeer/qng/params"
 	"github.com/Qitmeer/qng/qx"
-	"io/ioutil"
 	"os"
 	"sort"
 	"strconv"
@@ -417,32 +415,31 @@ func Open(db walletdb.DB, pubPass []byte, _ *waddrmgr.OpenCallbacks,
 }
 
 func NewNotificationRpc(cfg *config.Config, handlers client.NotificationHandlers) (*client.Client, error) {
-
 	connCfg := &client.ConnConfig{
-		Host:       cfg.QServer,
-		Endpoint:   "ws",
-		User:       cfg.QUser,
-		Pass:       cfg.QPass,
-		DisableTLS: cfg.QNoTLS,
+		Host:               cfg.QServer,
+		Endpoint:           "ws",
+		User:               cfg.QUser,
+		Pass:               cfg.QPass,
+		DisableTLS:         cfg.QNoTLS,
+		HTTPPostMode:       false,
+		InsecureSkipVerify: cfg.QTLSSkipVerify,
 	}
-	if !connCfg.DisableTLS {
-		certs, err := ioutil.ReadFile(cfg.QCert)
-		if err != nil {
-			return nil, err
-		}
-		connCfg.Certificates = certs
-	}
+	//if !connCfg.DisableTLS {
+	//	certs, err := ioutil.ReadFile(cfg.QCert)
+	//	if err != nil {
+	//		return nil, err
+	//	}
+	//	connCfg.Certificates = certs
+	//}
 
 	client, err := client.New(connCfg, &handlers)
 	if err != nil {
 		return nil, err
 	}
-
 	// Register for block connect and disconnect notifications.
 	if err := client.NotifyBlocks(); err != nil {
 		return nil, err
 	}
-
 	return client, nil
 }
 
@@ -1992,12 +1989,12 @@ func (w *Wallet) AccountAddresses(account uint32) (addrs []types.Address, err er
 		addrMgrNs := tx.ReadBucket(waddrmgrNamespaceKey)
 		return w.Manager.ForEachAccountAddress(addrMgrNs, account, func(mAddr waddrmgr.ManagedAddress) error {
 			addrs = append(addrs, mAddr.Address())
-			p, err := w.getPrivateKey(mAddr.Address())
-			if err != nil {
-				log.Error("do not have private key", mAddr.Address())
-				return err
+			// Get private key from wallet if it exists.
+			pka, ok := mAddr.(waddrmgr.ManagedPubKeyAddress)
+			if !ok {
+				return fmt.Errorf("address %s is not a key type", mAddr.Address())
 			}
-			pkaddr, err := address.NewSecpPubKeyAddress(p.PubKey().SerializeCompressed(), &params.MainNetParams)
+			pkaddr, err := address.NewSecpPubKeyAddress(pka.PubKey().SerializeCompressed(), w.chainParams)
 			if err != nil {
 				log.Error("PubKey Create Failed", mAddr.Address())
 				return err
@@ -2152,6 +2149,7 @@ func (w *Wallet) createTx(addrs []types.Address, coin2outputs []*TxOutput, coinI
 		payAmount.Value += output.Amount.Value
 		outputs = append(outputs, qx.Output{
 			TargetLockTime: int64(output.LockHeight),
+			TargetAddress:  output.Address,
 			Amount: types.Amount{
 				Value: payAmount.Value,
 				Id:    payAmount.Id,
@@ -2180,7 +2178,8 @@ func (w *Wallet) createTx(addrs []types.Address, coin2outputs []*TxOutput, coinI
 					Value: change,
 					Id:    coinId,
 				},
-				OutputType: types.TxTypeRegular,
+				TargetAddress: uxtoList[0].Address,
+				OutputType:    types.TxTypeRegular,
 			})
 		}
 	}
@@ -2188,17 +2187,22 @@ func (w *Wallet) createTx(addrs []types.Address, coin2outputs []*TxOutput, coinI
 	var vinPkScript = make([]string, 0)
 	for _, utxo := range uxtoList {
 		addr, _ := address.DecodeAddress(utxo.Address)
+
 		vinPkScript = append(vinPkScript, utxo.PkScript)
 		typ := types.TxTypeRegular
-		_, ok := addr.(*address.SecpPubKeyAddress)
-		if ok {
+		pkhAddr := addr
+		switch addr.(type) {
+		case *address.SecpPubKeyAddress:
 			typ = types.TxTypeCrossChainExport
+			pkaddr := addr.(*address.SecpPubKeyAddress)
+			pkhAddr = pkaddr.PKHAddress()
+		default:
 		}
 		inputs = append(inputs, qx.Input{
 			TxID:      utxo.TxId.String(),
 			InputType: typ,
 			OutIndex:  utxo.Index})
-		pri, err := w.getPrivateKey(addr)
+		pri, err := w.getPrivateKey(pkhAddr)
 		if err != nil {
 			return "", 0, nil, err
 		}
