@@ -326,7 +326,7 @@ type ApiAmount struct {
 //payment address.  Leftover inputs not sent to the payment address or a fee
 //for the miner are sent back to a new address in the wallet.  Upon success,
 //the TxID for the created transaction is returned.
-func (api *API) SendToAddress(addressStr string, amount float64, coin string) (string, error) {
+func (api *API) SendToAddress(addressStr string, amount float64, coin, byAddress string) (string, error) {
 
 	// Check that signed integer parameters are positive.
 	if amount < 0 {
@@ -344,7 +344,7 @@ func (api *API) SendToAddress(addressStr string, amount float64, coin string) (s
 		addressStr: amt,
 	}
 
-	return api.wt.SendPairs(pairs, waddrmgr.AccountMergePayNum, txrules.DefaultRelayFeePerKb, 0)
+	return api.wt.SendPairs(pairs, waddrmgr.AccountMergePayNum, txrules.DefaultRelayFeePerKb, 0, byAddress)
 }
 
 //SendToAddress handles a sendtoaddress RPC request by creating a new
@@ -373,10 +373,10 @@ func (api *API) SendLockedToAddress(addressStr string, amount float64, coin stri
 		addressStr: *amt,
 	}
 
-	return api.wt.SendPairs(pairs, waddrmgr.AccountMergePayNum, txrules.DefaultRelayFeePerKb, lockHeight)
+	return api.wt.SendPairs(pairs, waddrmgr.AccountMergePayNum, txrules.DefaultRelayFeePerKb, lockHeight, "")
 }
 
-func (api *API) SendToMany(addAmounts map[string]float64, coin string) (string, error) {
+func (api *API) SendToMany(addAmounts map[string]float64, coin, byAddress string) (string, error) {
 
 	pairs := make(map[string]types.Amount)
 	for addr, amount := range addAmounts {
@@ -392,7 +392,7 @@ func (api *API) SendToMany(addAmounts map[string]float64, coin string) (string, 
 		pairs[addr] = amt
 	}
 
-	return api.wt.SendPairs(pairs, waddrmgr.AccountMergePayNum, txrules.DefaultRelayFeePerKb, 0)
+	return api.wt.SendPairs(pairs, waddrmgr.AccountMergePayNum, txrules.DefaultRelayFeePerKb, 0, byAddress)
 }
 
 // SendToAddressByAccount by account
@@ -419,7 +419,7 @@ func (api *API) SendToAddressByAccount(accountName string, addressStr string, am
 		addressStr: amt,
 	}
 
-	return api.wt.SendPairs(pairs, int64(accountNum), txrules.DefaultRelayFeePerKb, 0)
+	return api.wt.SendPairs(pairs, int64(accountNum), txrules.DefaultRelayFeePerKb, 0, "")
 }
 
 //GetBalanceByAddr get balance by address

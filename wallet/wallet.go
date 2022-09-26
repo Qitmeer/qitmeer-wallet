@@ -2092,7 +2092,7 @@ var syncSendOutputs = new(sync.Mutex)
 
 // SendOutputs creates and sends payment transactions. It returns the
 // transaction upon success.
-func (w *Wallet) SendOutputs(coin2outputs []*TxOutput, coinId types.CoinID, account int64, satPerKb int64) (*string, error) {
+func (w *Wallet) SendOutputs(coin2outputs []*TxOutput, coinId types.CoinID, account int64, satPerKb int64, byAddr string) (*string, error) {
 	// Ensure the outputs to be created adhere to the network's consensus
 	// rules.
 	syncSendOutputs.Lock()
@@ -2103,6 +2103,13 @@ func (w *Wallet) SendOutputs(coin2outputs []*TxOutput, coinId types.CoinID, acco
 		addrs, err = w.GetAccountAddress(waddrmgr.KeyScopeBIP0044)
 	} else {
 		addrs, err = w.AccountAddresses(uint32(account))
+	}
+	if byAddr != "" {
+		addr, err := address.DecodeAddress(byAddr)
+		if err != nil {
+			return nil, err
+		}
+		addrs = []types.Address{addr}
 	}
 	if err != nil {
 		return nil, err
@@ -2310,7 +2317,7 @@ func (w *Wallet) multiAddressMergeSign(redeemTx types.Transaction, txInPkScript 
 //It returns the transaction hash in string format upon success
 //All errors are returned in btcjson.RPCError format
 func (w *Wallet) SendPairs(amounts map[string]types.Amount,
-	account int64, feeSatPerKb int64, lockHeight uint64) (string, error) {
+	account int64, feeSatPerKb int64, lockHeight uint64, byAddress string) (string, error) {
 	//check, err := w.HttpClient.CheckSyncUpdate(int64(w.Manager.SyncedTo().Order))
 
 	/*if check == false {
@@ -2320,7 +2327,7 @@ func (w *Wallet) SendPairs(amounts map[string]types.Amount,
 	if err != nil {
 		return "", err
 	}
-	tx, err := w.SendOutputs(outputs, coinId, account, feeSatPerKb)
+	tx, err := w.SendOutputs(outputs, coinId, account, feeSatPerKb, byAddress)
 	if err != nil {
 		if err == txrules.ErrAmountNegative {
 			return "", qitmeerjson.ErrNeedPositiveAmount

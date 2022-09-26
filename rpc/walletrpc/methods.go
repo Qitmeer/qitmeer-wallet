@@ -270,7 +270,7 @@ func SendToAddress(iCmd interface{}, w *wallet.Wallet) (interface{}, error) {
 		cmd.Address: *amt,
 	}
 
-	return w.SendPairs(pairs, int64(waddrmgr.AccountMergePayNum), txrules.DefaultRelayFeePerKb, 0)
+	return w.SendPairs(pairs, int64(waddrmgr.AccountMergePayNum), txrules.DefaultRelayFeePerKb, 0, "")
 }
 
 func SendLockedToAddress(iCmd interface{}, w *wallet.Wallet) (interface{}, error) {
@@ -303,7 +303,7 @@ func SendLockedToAddress(iCmd interface{}, w *wallet.Wallet) (interface{}, error
 		cmd.Address: *amt,
 	}
 
-	return w.SendPairs(pairs, int64(waddrmgr.AccountMergePayNum), txrules.DefaultRelayFeePerKb, cmd.LockedHeight)
+	return w.SendPairs(pairs, int64(waddrmgr.AccountMergePayNum), txrules.DefaultRelayFeePerKb, cmd.LockedHeight, "")
 }
 
 func UpdateBlock(iCmd interface{}, w *wallet.Wallet) error {
