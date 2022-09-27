@@ -16,6 +16,7 @@ import (
 	"github.com/Qitmeer/qitmeer-wallet/util"
 	"github.com/Qitmeer/qng/common/marshal"
 	"github.com/Qitmeer/qng/qx"
+	"io/ioutil"
 	"os"
 	"sort"
 	"strconv"
@@ -423,13 +424,13 @@ func NewNotificationRpc(cfg *config.Config, handlers client.NotificationHandlers
 		HTTPPostMode:       false,
 		InsecureSkipVerify: cfg.QTLSSkipVerify,
 	}
-	//if !connCfg.DisableTLS {
-	//	certs, err := ioutil.ReadFile(cfg.QCert)
-	//	if err != nil {
-	//		return nil, err
-	//	}
-	//	connCfg.Certificates = certs
-	//}
+	if !connCfg.DisableTLS {
+		certs, err := ioutil.ReadFile(cfg.QCert)
+		if err != nil {
+			return nil, err
+		}
+		connCfg.Certificates = certs
+	}
 
 	client, err := client.New(connCfg, &handlers)
 	if err != nil {
