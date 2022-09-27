@@ -37,7 +37,7 @@ func (q *QitmeerToken) Add(t json.TokenState) {
 	q.lock.Lock()
 	defer q.lock.Unlock()
 
-	q.tokens[t.CoinName] = &t
+	q.tokens[types.CoinID(t.CoinId).Name()] = &t
 }
 
 func (q *QitmeerToken) GetToken(coin string) (*json.TokenState, error) {

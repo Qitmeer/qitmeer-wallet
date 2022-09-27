@@ -12,7 +12,8 @@ import (
 )
 
 func TestHarness(t *testing.T) {
-	h, err := NewHarness(t, params.PrivNetParam.Params)
+	args := []string{"--modules=miner", "--modules=qitmeer", "--notls"}
+	h, err := NewHarness(t, params.PrivNetParam.Params, args...)
 	if err != nil {
 		t.Errorf("create new test harness instance failed %v", err)
 		return
@@ -21,7 +22,7 @@ func TestHarness(t *testing.T) {
 		t.Errorf("setup test harness instance failed %v", err)
 	}
 
-	h2, err := NewHarness(t, params.PrivNetParam.Params)
+	h2, err := NewHarness(t, params.PrivNetParam.Params, args...)
 	defer func() {
 
 		if err := h.Teardown(); err != nil {
@@ -63,7 +64,8 @@ func TestHarness(t *testing.T) {
 	for i := 0; i < 10; i++ {
 		wg.Add(1)
 		go func() {
-			NewHarness(t, params.PrivNetParam.Params)
+			args := []string{"--modules=miner", "--modules=qitmeer", "--notls"}
+			NewHarness(t, params.PrivNetParam.Params, args...)
 			wg.Done()
 		}()
 	}

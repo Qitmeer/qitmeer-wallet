@@ -1274,8 +1274,9 @@ func (w *Wallet) updateTokens() error {
 		w.tokens.Add(token)
 		walletdb.Update(w.db, func(tx walletdb.ReadWriteTx) error {
 			bucket := tx.ReadWriteBucket(tokenmgrNamespaceKey)
-			types.CoinNameMap[types.CoinID(token.CoinId)] = token.CoinName
-			bucket.Put([]byte(token.CoinName), EncodeToken(token))
+
+			types.CoinNameMap[types.CoinID(token.CoinId)] = types.CoinID(token.CoinId).Name()
+			bucket.Put([]byte(types.CoinID(token.CoinId).Name()), EncodeToken(token))
 			return nil
 		})
 	}
