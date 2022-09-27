@@ -162,7 +162,6 @@ func (w *Wallet) Stop() {
 	w.quitMu.Lock()
 	quit := w.quit
 	w.quitMu.Unlock()
-
 	select {
 	case <-quit:
 	default:
@@ -641,7 +640,7 @@ func (w *Wallet) getAddrAndAddrTxOutputByAddr(addr string) (*AddrAndAddrTxOutput
 	ato := NewAddrAndAddrTxOutput()
 	for _, token := range w.tokens.tokens {
 		b := Balance{}
-		txOuts, err := w.getAddrTxOutputByCoin(addr, token.CoinName)
+		txOuts, err := w.getAddrTxOutputByCoin(addr, types.CoinID(token.CoinId).Name())
 		if err != nil {
 			return nil, err
 		}
@@ -1684,11 +1683,12 @@ func (w *Wallet) updateTxStatus(txRaw corejson.TxRawResult, status wtxmgr.TxStat
 			if vout.ScriptPubKey.Addresses == nil {
 				continue
 			}
-			if bucket, ok = coinBucket[vout.Coin]; ok {
-				bucket = coinBucket[vout.Coin]
+			coinName := types.CoinID(vout.CoinId).Name()
+			if bucket, ok = coinBucket[coinName]; ok {
+				bucket = coinBucket[coinName]
 			} else {
-				bucket = ns.NestedAndCreateReadWriteBucket(wtxmgr.CoinBucket(wtxmgr.BucketAddrtxout, vout.Coin))
-				coinBucket[vout.Coin] = bucket
+				bucket = ns.NestedAndCreateReadWriteBucket(wtxmgr.CoinBucket(wtxmgr.BucketAddrtxout, coinName))
+				coinBucket[coinName] = bucket
 			}
 			out, err := w.TxStore.GetAddrTxOut(bucket, vout.ScriptPubKey.Addresses[0], types.TxOutPoint{
 				Hash:     *txHash,
