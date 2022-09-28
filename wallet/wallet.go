@@ -2160,8 +2160,8 @@ func (w *Wallet) createTx(addrs []types.Address, coin2outputs []*TxOutput, coinI
 			TargetLockTime: int64(output.LockHeight),
 			TargetAddress:  output.Address,
 			Amount: types.Amount{
-				Value: payAmount.Value,
-				Id:    payAmount.Id,
+				Value: output.Amount.Value,
+				Id:    output.Amount.Id,
 			},
 			OutputType: types.TxTypeRegular,
 		})
