@@ -2195,10 +2195,10 @@ func (w *Wallet) createTx(addrs []types.Address, coin2outputs []*TxOutput, coinI
 
 	outputVal := uint64(0)
 	for i, v := range outputs {
-		log.Info("output", "index", i, "val", v)
+		log.Debug("output", "index", i, "val", v)
 		outputVal += uint64(v.Amount.Value)
 	}
-	log.Info("output all val is: ", "val", outputVal)
+	log.Debug("output all val is: ", "val", outputVal)
 	var vinPkScript = make([]string, 0)
 	for _, utxo := range uxtoList {
 		addr, _ := address.DecodeAddress(utxo.Address)
@@ -2214,7 +2214,7 @@ func (w *Wallet) createTx(addrs []types.Address, coin2outputs []*TxOutput, coinI
 		default:
 		}
 		if fees > 0 {
-			log.Info("uxtoList", "utxo detail", *utxo, "pkhAddr", pkhAddr.String())
+			log.Debug("uxtoList", "utxo detail", *utxo, "pkhAddr", pkhAddr.String())
 		}
 		inputs = append(inputs, qx.Input{
 			TxID:      utxo.TxId.String(),
@@ -2239,7 +2239,7 @@ func (w *Wallet) createTx(addrs []types.Address, coin2outputs []*TxOutput, coinI
 	if err != nil {
 		return "", 0, nil, err
 	}
-	log.Info("signedRaw", "str", signedRaw)
+	log.Trace("signedRaw", "str", signedRaw)
 	return signedRaw, payAmount.Value, uxtoList, nil
 }
 
@@ -2333,7 +2333,7 @@ func (w *Wallet) multiAddressMergeSign(redeemTx types.Transaction, txInPkScript 
 func (w *Wallet) SendPairs(amounts map[string]types.Amount,
 	account int64, feeSatPerKb int64, lockHeight uint64, byAddress string) (string, error) {
 	//check, err := w.HttpClient.CheckSyncUpdate(int64(w.Manager.SyncedTo().Order))
-	log.Info("SendPairs", "amounts", amounts, "byAddress", byAddress)
+	log.Debug("SendPairs", "amounts", amounts, "byAddress", byAddress)
 	/*if check == false {
 		return "", err
 	}*/
