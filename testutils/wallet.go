@@ -85,6 +85,18 @@ func (w *Wallet) Balance(coin types.CoinID) (*wallet.Balance, error) {
 	}
 }
 
+func (w *Wallet) BalanceByAddr(coin types.CoinID, addr string) (*wallet.Balance, error) {
+	balance, err := w.wallet.GetBalance(addr)
+	if err != nil {
+		return nil, nil
+	}
+	if b, ok := balance[coin]; ok {
+		return &b, nil
+	} else {
+		return nil, fmt.Errorf("no coin %s", coin.Name())
+	}
+}
+
 func (w *Wallet) SendToAddress(addr string, coin types.CoinID, amount uint64) (string, error) {
 	// Check that signed integer parameters are positive.
 	if amount < 0 {

@@ -2116,7 +2116,7 @@ func (w *Wallet) SendOutputs(coin2outputs []*TxOutput, coinId types.CoinID, acco
 	if err != nil {
 		return nil, err
 	}
-
+	log.Info("SendOutputs", "addrs", addrs)
 	signedRaw, payAmount, allSpentUTXO, err := w.createTx(addrs, coin2outputs, coinId, 0, satPerKb)
 	if err != nil {
 		return nil, err
@@ -2271,6 +2271,7 @@ func (w *Wallet) GetUTXOByAddress(addrs []types.Address, amount types.Amount) ([
 			if sum >= amount.Value {
 				break
 			}
+			log.Info("GetUTXOByAddress", "utxo detail", *utxo)
 		}
 	}
 	if sum < amount.Value {
@@ -2321,7 +2322,7 @@ func (w *Wallet) multiAddressMergeSign(redeemTx types.Transaction, txInPkScript 
 func (w *Wallet) SendPairs(amounts map[string]types.Amount,
 	account int64, feeSatPerKb int64, lockHeight uint64, byAddress string) (string, error) {
 	//check, err := w.HttpClient.CheckSyncUpdate(int64(w.Manager.SyncedTo().Order))
-
+	log.Info("SendPairs", "amounts", amounts, "byAddress", byAddress)
 	/*if check == false {
 		return "", err
 	}*/

@@ -5,6 +5,7 @@
 package testutils
 
 import (
+	"fmt"
 	"github.com/Qitmeer/qng/core/types"
 	"github.com/Qitmeer/qng/params"
 	"sync"
@@ -210,4 +211,13 @@ func TestSpent(t *testing.T) {
 		t.Errorf("test failed, expect spent balance %d, but got %d", 200000000000, b.UnspentAmount.Value)
 		return
 	}
+	GenerateBlock(t, h, 1)
+	b, err = h.wallet.BalanceByAddr(types.MEERID, "RmV7i7JoomcHuQCVMN66SiTYUCkRtzQ6fSf")
+	if err != nil {
+		t.Errorf("test failed : %v", err)
+		return
+	}
+
+	fmt.Println(b.LockAmount, b.UnspentAmount, b.TotalAmount, b.SpendAmount, b.UnconfirmedAmount)
+
 }
