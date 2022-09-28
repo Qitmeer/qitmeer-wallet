@@ -2197,7 +2197,7 @@ func (w *Wallet) createTx(addrs []types.Address, coin2outputs []*TxOutput, coinI
 	for _, v := range outputs {
 		outputVal += uint64(v.Amount.Value)
 	}
-	log.Info("output all val is: ", outputVal)
+	log.Info("output all val is: ", "val", outputVal)
 	var vinPkScript = make([]string, 0)
 	for _, utxo := range uxtoList {
 		addr, _ := address.DecodeAddress(utxo.Address)
@@ -2268,6 +2268,7 @@ func (w *Wallet) updateUTXOSpent(UTXOs []*wtxmgr.AddrTxOutput, spentTx *wtxmgr.S
 func (w *Wallet) GetUTXOByAddress(addrs []types.Address, amount types.Amount) ([]*wtxmgr.AddrTxOutput, int64, error) {
 	otxoList := make([]*wtxmgr.AddrTxOutput, 0)
 	var sum int64
+FindUTXO:
 	for _, addr := range addrs {
 		uxtoList, err := w.GetUnspentAddrOutput(addr.String(), amount.Id)
 		if err != nil {
@@ -2278,10 +2279,11 @@ func (w *Wallet) GetUTXOByAddress(addrs []types.Address, amount types.Amount) ([
 			sum += utxo.Amount.Value
 			otxoList = append(otxoList, utxo)
 			if sum >= amount.Value {
-				break
+				break FindUTXO
 			}
 		}
 	}
+
 	if sum < amount.Value {
 		return nil, 0, fmt.Errorf("the balance is not enough to send %v", amount)
 	}
