@@ -2194,7 +2194,8 @@ func (w *Wallet) createTx(addrs []types.Address, coin2outputs []*TxOutput, coinI
 	}
 
 	outputVal := uint64(0)
-	for _, v := range outputs {
+	for i, v := range outputs {
+		log.Info("output", "index", i, "val", v)
 		outputVal += uint64(v.Amount.Value)
 	}
 	log.Info("output all val is: ", "val", outputVal)
