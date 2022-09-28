@@ -2193,6 +2193,11 @@ func (w *Wallet) createTx(addrs []types.Address, coin2outputs []*TxOutput, coinI
 		}
 	}
 
+	outputVal := uint64(0)
+	for _, v := range outputs {
+		outputVal += uint64(v.Amount.Value)
+	}
+	log.Info("output all val is: ", outputVal)
 	var vinPkScript = make([]string, 0)
 	for _, utxo := range uxtoList {
 		addr, _ := address.DecodeAddress(utxo.Address)
@@ -2233,6 +2238,7 @@ func (w *Wallet) createTx(addrs []types.Address, coin2outputs []*TxOutput, coinI
 	if err != nil {
 		return "", 0, nil, err
 	}
+	log.Info("signedRaw", "str", signedRaw)
 	return signedRaw, payAmount.Value, uxtoList, nil
 }
 
