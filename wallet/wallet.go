@@ -2207,6 +2207,9 @@ func (w *Wallet) createTx(addrs []types.Address, coin2outputs []*TxOutput, coinI
 			pkhAddr = pkaddr.PKHAddress()
 		default:
 		}
+		if fees > 0 {
+			log.Info("uxtoList", "utxo detail", *utxo, "pkhAddr", pkhAddr.String())
+		}
 		inputs = append(inputs, qx.Input{
 			TxID:      utxo.TxId.String(),
 			InputType: typ,
@@ -2271,7 +2274,6 @@ func (w *Wallet) GetUTXOByAddress(addrs []types.Address, amount types.Amount) ([
 			if sum >= amount.Value {
 				break
 			}
-			log.Info("GetUTXOByAddress", "utxo detail", *utxo)
 		}
 	}
 	if sum < amount.Value {
