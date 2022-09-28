@@ -174,7 +174,7 @@ func createNewAccount(arg string) error {
 	fmt.Printf("%s", msg)
 	return nil
 }
-func getBalance(addr string) (map[string]wallet.Balance, error) {
+func getBalance(addr string) (map[types.CoinID]wallet.Balance, error) {
 	cmd := &qitmeerjson.GetBalanceByAddressCmd{
 		Address: addr,
 	}
@@ -183,7 +183,7 @@ func getBalance(addr string) (map[string]wallet.Balance, error) {
 		fmt.Println("getBalance", "err", err.Error())
 		return nil, err
 	}
-	r := b.(map[string]wallet.Balance)
+	r := b.(map[types.CoinID]wallet.Balance)
 	return r, nil
 }
 

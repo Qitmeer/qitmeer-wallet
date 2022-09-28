@@ -248,7 +248,7 @@ func (c *Console) Interactive() {
 					if company == "i" {
 						if detail == "true" {
 							for name, v := range b {
-								fmt.Printf("coin:%s\n", name)
+								fmt.Printf("coin:%s\n", name.Name())
 								fmt.Printf("unspent:%d\n", v.UnspentAmount.Value)
 								fmt.Printf("locked:%d\n", v.LockAmount.Value)
 								fmt.Printf("unconfirmed:%d\n", v.UnconfirmedAmount.Value)
