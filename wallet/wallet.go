@@ -604,12 +604,12 @@ func (w *Wallet) GetAddress(scope waddrmgr.KeyScope, account int) ([]AccountAndA
 	return results, err
 }
 
-func (w *Wallet) getAddrTxOutputByCoin(addr, coin string) (wtxmgr.AddrTxOutputs, error) {
+func (w *Wallet) getAddrTxOutputByCoin(addr string, coin types.CoinID) (wtxmgr.AddrTxOutputs, error) {
 	var txOuts wtxmgr.AddrTxOutputs
 	err := walletdb.View(w.db, func(tx walletdb.ReadTx) error {
 		hs := []byte(addr)
 		ns := tx.ReadBucket(wtxmgrNamespaceKey)
-		outNs := ns.NestedReadBucket(wtxmgr.CoinBucket(wtxmgr.BucketAddrtxout, coin))
+		outNs := ns.NestedReadBucket(wtxmgr.CoinBucket(wtxmgr.BucketAddrtxout, types.CoinID(coin)))
 		if outNs == nil {
 			return nil
 		}
@@ -641,7 +641,7 @@ func (w *Wallet) getAddrAndAddrTxOutputByAddr(addr string) (*AddrAndAddrTxOutput
 	ato := NewAddrAndAddrTxOutput()
 	for _, token := range w.tokens.tokens {
 		b := Balance{}
-		txOuts, err := w.getAddrTxOutputByCoin(addr, types.CoinID(token.CoinId).Name())
+		txOuts, err := w.getAddrTxOutputByCoin(addr, types.CoinID(token.CoinId))
 		if err != nil {
 			return nil, err
 		}
@@ -690,15 +690,15 @@ func (w *Wallet) getAddrAndAddrTxOutputByAddr(addr string) (*AddrAndAddrTxOutput
 	return ato, nil
 }
 
-func (w *Wallet) getAddrAndAddrTxOutputByCoin(addr, coin string) (*AddrAndAddrTxOutput, error) {
+func (w *Wallet) getAddrAndAddrTxOutputByCoin(addr string, coin int) (*AddrAndAddrTxOutput, error) {
 	height := w.Manager.ChainHeight()
 	ato := NewAddrAndAddrTxOutput()
 	b := Balance{}
-	txOuts, err := w.getAddrTxOutputByCoin(addr, coin)
+	txOuts, err := w.getAddrTxOutputByCoin(addr, types.CoinID(coin))
 	if err != nil {
 		return nil, err
 	}
-	token, err := w.tokens.GetToken(coin)
+	token, err := w.tokens.GetToken(types.CoinID(coin))
 	if err != nil {
 		return nil, err
 	}
@@ -919,12 +919,12 @@ func (w *Wallet) getPagedBillByAddr(addr string, filter int, pageNo int, pageSiz
 	return &allTxs, nil
 }
 
-func (w *Wallet) GetBalanceByCoin(addr, coin string) (map[string]Value, error) {
+func (w *Wallet) GetBalanceByCoin(addr string, coin types.CoinID) (map[string]Value, error) {
 	balanceMap := map[string]Value{}
 	if addr == "" {
 		return nil, errors.New("addr is nil")
 	}
-	res, err := w.getAddrAndAddrTxOutputByCoin(addr, coin)
+	res, err := w.getAddrAndAddrTxOutputByCoin(addr, int(coin))
 	if err != nil {
 		return nil, err
 	}
@@ -940,8 +940,8 @@ func (w *Wallet) GetBalanceByCoin(addr, coin string) (map[string]Value, error) {
 	return balanceMap, nil
 }
 
-func (w *Wallet) GetBalance(addr string) (map[string]Balance, error) {
-	balanceMap := map[string]Balance{}
+func (w *Wallet) GetBalance(addr string) (map[types.CoinID]Balance, error) {
+	balanceMap := map[types.CoinID]Balance{}
 	if addr == "" {
 		return nil, errors.New("addr is nil")
 	}
@@ -950,7 +950,7 @@ func (w *Wallet) GetBalance(addr string) (map[string]Balance, error) {
 		return nil, err
 	}
 	for key, val := range res.balanceMap {
-		balanceMap[key.Name()] = val
+		balanceMap[key] = val
 	}
 	return balanceMap, nil
 }
@@ -980,7 +980,7 @@ func (w *Wallet) GetTxSpendInfo(txId string) ([]*wtxmgr.AddrTxOutput, error) {
 				Hash:     *txHash,
 				OutIndex: uint32(i),
 			}
-			outNrb := rb.NestedAndCreateReadWriteBucket(wtxmgr.CoinBucket(wtxmgr.BucketAddrtxout, vOut.Coin))
+			outNrb := rb.NestedAndCreateReadWriteBucket(wtxmgr.CoinBucket(wtxmgr.BucketAddrtxout, types.CoinID(vOut.CoinId)))
 			var ato, err = w.TxStore.GetAddrTxOut(outNrb, addr, top)
 			if err != nil {
 				return err
@@ -1017,7 +1017,7 @@ func (w *Wallet) insertTx(order uint32, txins []wtxmgr.TxInputPoint, txouts []wt
 			}
 		}
 		for _, txo := range txouts {
-			outNs := ns.NestedAndCreateReadWriteBucket(wtxmgr.CoinBucket(wtxmgr.BucketAddrtxout, txo.Amount.Id.Name()))
+			outNs := ns.NestedAndCreateReadWriteBucket(wtxmgr.CoinBucket(wtxmgr.BucketAddrtxout, txo.Amount.Id))
 			err := w.TxStore.InsertAddrTxOut(outNs, &txo)
 			if err != nil {
 				return err
@@ -1034,7 +1034,7 @@ func (w *Wallet) insertTx(order uint32, txins []wtxmgr.TxInputPoint, txouts []wt
 				return err
 			}
 			addr := txr.Vout[txi.TxOutPoint.OutIndex].ScriptPubKey.Addresses[0]
-			outNs := ns.NestedAndCreateReadWriteBucket(wtxmgr.CoinBucket(wtxmgr.BucketAddrtxout, txr.Vout[txi.TxOutPoint.OutIndex].Coin))
+			outNs := ns.NestedAndCreateReadWriteBucket(wtxmgr.CoinBucket(wtxmgr.BucketAddrtxout, types.CoinID(txr.Vout[txi.TxOutPoint.OutIndex].CoinId)))
 			spendOut, err := w.TxStore.GetAddrTxOut(outNs, addr, txi.TxOutPoint)
 			if err != nil {
 				return err
@@ -1671,7 +1671,7 @@ func (w *Wallet) updateTxConfirm(confirmRs *cmds.TxConfirmResult) error {
 }
 
 func (w *Wallet) updateTxStatus(txRaw corejson.TxRawResult, status wtxmgr.TxStatus) error {
-	coinBucket := map[string]walletdb.ReadWriteBucket{}
+	coinBucket := map[types.CoinID]walletdb.ReadWriteBucket{}
 	err := walletdb.Update(w.db, func(tx walletdb.ReadWriteTx) error {
 		var bucket walletdb.ReadWriteBucket
 		var ok bool
@@ -1685,12 +1685,12 @@ func (w *Wallet) updateTxStatus(txRaw corejson.TxRawResult, status wtxmgr.TxStat
 			if vout.ScriptPubKey.Addresses == nil {
 				continue
 			}
-			coinName := types.CoinID(vout.CoinId).Name()
-			if bucket, ok = coinBucket[coinName]; ok {
-				bucket = coinBucket[coinName]
+			coinID := types.CoinID(vout.CoinId)
+			if bucket, ok = coinBucket[coinID]; ok {
+				bucket = coinBucket[coinID]
 			} else {
-				bucket = ns.NestedAndCreateReadWriteBucket(wtxmgr.CoinBucket(wtxmgr.BucketAddrtxout, coinName))
-				coinBucket[coinName] = bucket
+				bucket = ns.NestedAndCreateReadWriteBucket(wtxmgr.CoinBucket(wtxmgr.BucketAddrtxout, coinID))
+				coinBucket[coinID] = bucket
 			}
 			out, err := w.TxStore.GetAddrTxOut(bucket, vout.ScriptPubKey.Addresses[0], types.TxOutPoint{
 				Hash:     *txHash,
@@ -2037,7 +2037,7 @@ func (w *Wallet) AccountName(scope waddrmgr.KeyScope, accountNumber uint32) (str
 	return accountName, err
 }
 
-func (w *Wallet) GetUnspentUTXO(addr string, coin string) ([]wtxmgr.UTxo, error) {
+func (w *Wallet) GetUnspentUTXO(addr string, coin types.CoinID) ([]wtxmgr.UTxo, error) {
 	var utxos []wtxmgr.UTxo
 	outputs, err := w.GetUnspentAddrOutput(addr, coin)
 	if err != nil {
@@ -2054,13 +2054,13 @@ func (w *Wallet) GetUnspentUTXO(addr string, coin string) ([]wtxmgr.UTxo, error)
 	return utxos, nil
 }
 
-func (w *Wallet) GetUnspentAddrOutput(addr string, coin string) ([]*wtxmgr.AddrTxOutput, error) {
+func (w *Wallet) GetUnspentAddrOutput(addr string, coin types.CoinID) ([]*wtxmgr.AddrTxOutput, error) {
 	height := w.Manager.ChainHeight()
 	var utxos []*wtxmgr.AddrTxOutput
 	err := walletdb.View(w.db, func(tx walletdb.ReadTx) error {
 		hs := []byte(addr)
 		ns := tx.ReadBucket(wtxmgrNamespaceKey)
-		outns := ns.NestedReadBucket(wtxmgr.CoinBucket(wtxmgr.BucketAddrtxout, coin))
+		outns := ns.NestedReadBucket(wtxmgr.CoinBucket(wtxmgr.BucketAddrtxout, types.CoinID(coin)))
 		if outns == nil {
 			return nil
 		}
@@ -2237,7 +2237,7 @@ func (w *Wallet) updateUTXOSpent(UTXOs []*wtxmgr.AddrTxOutput, spentTx *wtxmgr.S
 	err := walletdb.Update(w.db, func(tx walletdb.ReadWriteTx) error {
 		ns := tx.ReadWriteBucket(wtxmgrNamespaceKey)
 		for _, txoutput := range UTXOs {
-			outns := ns.NestedAndCreateReadWriteBucket(wtxmgr.CoinBucket(wtxmgr.BucketAddrtxout, txoutput.Amount.Id.Name()))
+			outns := ns.NestedAndCreateReadWriteBucket(wtxmgr.CoinBucket(wtxmgr.BucketAddrtxout, txoutput.Amount.Id))
 			txoutput.Spend = wtxmgr.SpendStatusSpend
 			txoutput.SpendTo = spentTx
 			err := w.TxStore.UpdateAddrTxOut(outns, txoutput)
@@ -2260,7 +2260,7 @@ func (w *Wallet) GetUTXOByAddress(addrs []types.Address, amount types.Amount) ([
 	otxoList := make([]*wtxmgr.AddrTxOutput, 0)
 	var sum int64
 	for _, addr := range addrs {
-		uxtoList, err := w.GetUnspentAddrOutput(addr.String(), amount.Id.Name())
+		uxtoList, err := w.GetUnspentAddrOutput(addr.String(), amount.Id)
 		if err != nil {
 			log.Warn("Failed to get address utxo", "address", addr.String(), "coinId", amount.Id.Name())
 			continue
@@ -2350,7 +2350,7 @@ func (w *Wallet) SendPairs(amounts map[string]types.Amount,
 	return *tx, nil
 }
 
-func (w *Wallet) CoinID(coin string) (types.CoinID, error) {
+func (w *Wallet) CoinID(coin types.CoinID) (types.CoinID, error) {
 	token, err := w.tokens.GetToken(coin)
 	if err != nil {
 		return 0, err

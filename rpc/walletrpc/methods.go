@@ -249,12 +249,12 @@ func SendToAddress(iCmd interface{}, w *wallet.Wallet) (interface{}, error) {
 	var amt *types.Amount
 	var err error
 	amt, err = types.NewAmount(cmd.Amount)
-	amt.Id, err = w.CoinID(cmd.Coin)
+	amt.Id, err = w.CoinID(types.CoinID(cmd.Coin))
 	if err != nil {
 		return nil, err
 	}
-	if amt.Id.Name() != cmd.Coin {
-		return nil, fmt.Errorf("%s does not exist", cmd.Coin)
+	if amt.Id != types.CoinID(cmd.Coin) {
+		return nil, fmt.Errorf("%d does not exist", cmd.Coin)
 	}
 	if err != nil {
 		return nil, err
@@ -288,7 +288,7 @@ func SendLockedToAddress(iCmd interface{}, w *wallet.Wallet) (interface{}, error
 	var amt *types.Amount
 	var err error
 	amt, err = types.NewAmount(cmd.Amount)
-	amt.Id, err = w.CoinID(cmd.Coin)
+	amt.Id, err = w.CoinID(types.CoinID(cmd.Coin))
 	if err != nil {
 		return "", err
 	}

@@ -1,5 +1,7 @@
 package qitmeerjson
 
+import "github.com/Qitmeer/qng/core/types"
+
 // AddMultisigAddressCmd defines the addmutisigaddress JSON-RPC command.
 type AddMultisigAddressCmd struct {
 	NRequired int
@@ -225,7 +227,7 @@ type SendManyCmd struct {
 type SendToAddressCmd struct {
 	Address   string
 	Amount    float64
-	Coin      string
+	Coin      types.CoinID
 	Comment   *string
 	CommentTo *string
 }
@@ -233,7 +235,7 @@ type SendToAddressCmd struct {
 type SendLockedToAddressCmd struct {
 	Address      string
 	Amount       float64
-	Coin         string
+	Coin         types.CoinID
 	LockedHeight uint64
 	Comment      *string
 	CommentTo    *string

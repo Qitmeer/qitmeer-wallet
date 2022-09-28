@@ -5,6 +5,7 @@ import (
 	"fmt"
 	util "github.com/Qitmeer/qitmeer-wallet/utils"
 	"github.com/Qitmeer/qitmeer-wallet/wallet"
+	"github.com/Qitmeer/qng/core/types"
 	"github.com/Qitmeer/qng/log"
 	"github.com/spf13/cobra"
 	"strconv"
@@ -277,7 +278,12 @@ var sendToAddressCmd = &cobra.Command{
 			fmt.Println(err.Error())
 			return
 		}
-		sendToAddress(args[0], float64(f32), args[1])
+		coinID, err := strconv.Atoi(args[1])
+		if err != nil {
+			fmt.Println(err.Error())
+			return
+		}
+		sendToAddress(args[0], float64(f32), types.CoinID(coinID))
 	},
 }
 
@@ -309,7 +315,12 @@ var sendLockedToAddressCmd = &cobra.Command{
 			fmt.Println(err.Error())
 			return
 		}
-		sendLockedToAddress(args[0], float64(f32), lock, args[1])
+		coinID, err := strconv.Atoi(args[1])
+		if err != nil {
+			fmt.Println(err.Error())
+			return
+		}
+		sendLockedToAddress(args[0], float64(f32), lock, types.CoinID(coinID))
 	},
 }
 

@@ -5,6 +5,7 @@
 package testutils
 
 import (
+	"github.com/Qitmeer/qng/core/types"
 	"github.com/Qitmeer/qng/params"
 	"sync"
 	"testing"
@@ -102,7 +103,7 @@ func TestSyncUnConfirmedCoinBase(t *testing.T) {
 	}
 	GenerateBlock(t, h, 10)
 	time.Sleep(10 * time.Second)
-	b, err := h.wallet.Balance("MEER")
+	b, err := h.wallet.Balance(types.MEERID)
 	if err != nil {
 		t.Errorf("test failed:%v", err)
 		return
@@ -145,7 +146,7 @@ func TestSyncConfirmedCoinBase(t *testing.T) {
 
 	GenerateBlock(t, h, 1)
 	time.Sleep(10 * time.Second)
-	b, err := h.wallet.Balance("MEER")
+	b, err := h.wallet.Balance(types.MEERID)
 	if err != nil {
 		t.Errorf("test failed : %v", err)
 		return
@@ -191,16 +192,16 @@ func TestSpent(t *testing.T) {
 	time.Sleep(10 * time.Second)
 	GenerateBlock(t, h, 1)
 	time.Sleep(10 * time.Second)
-	b, err := h.wallet.Balance("MEER")
+	b, err := h.wallet.Balance(types.MEERID)
 	if err != nil {
 		t.Errorf("test failed : %v", err)
 		return
 	}
-	_, err = h.wallet.SendToAddress("RmV7i7JoomcHuQCVMN66SiTYUCkRtzQ6fSf", "MEER", 1000)
+	_, err = h.wallet.SendToAddress("RmV7i7JoomcHuQCVMN66SiTYUCkRtzQ6fSf", types.MEERID, 1000)
 	if err != nil {
 		t.Errorf("test failed, %v", err)
 	}
-	b, err = h.wallet.Balance("MEER")
+	b, err = h.wallet.Balance(types.MEERID)
 	if err != nil {
 		t.Errorf("test failed : %v", err)
 		return

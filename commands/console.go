@@ -10,6 +10,7 @@ import (
 	waddrmgr "github.com/Qitmeer/qitmeer-wallet/waddrmgs"
 	"github.com/Qitmeer/qitmeer-wallet/wallet"
 	"github.com/Qitmeer/qitmeer-wallet/wtxmgr"
+	"github.com/Qitmeer/qng/core/types"
 	"github.com/Qitmeer/qng/crypto/bip39"
 	"github.com/Qitmeer/qng/crypto/ecc/secp256k1"
 	"github.com/Qitmeer/qng/qx"
@@ -355,7 +356,7 @@ func getAccountAndAddress() (interface{}, error) {
 	}
 	return msg, nil
 }
-func sendToAddress(address string, amount float64, coin string) (interface{}, error) {
+func sendToAddress(address string, amount float64, coin types.CoinID) (interface{}, error) {
 	cmd := &qitmeerjson.SendToAddressCmd{
 		Address: address,
 		Amount:  amount,
@@ -369,7 +370,7 @@ func sendToAddress(address string, amount float64, coin string) (interface{}, er
 	fmt.Printf("%s\n", msg)
 	return msg, nil
 }
-func sendLockedToAddress(address string, amount float64, lockedHeight uint64, coin string) (interface{}, error) {
+func sendLockedToAddress(address string, amount float64, lockedHeight uint64, coin types.CoinID) (interface{}, error) {
 	cmd := &qitmeerjson.SendLockedToAddressCmd{
 		Address:      address,
 		Amount:       amount,

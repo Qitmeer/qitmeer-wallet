@@ -3,6 +3,7 @@ package commands
 import (
 	"fmt"
 	"github.com/Qitmeer/qitmeer-wallet/wallet"
+	"github.com/Qitmeer/qng/core/types"
 	"github.com/Qitmeer/qng/log"
 	"github.com/mattn/go-colorable"
 	"github.com/peterh/liner"
@@ -383,7 +384,8 @@ func (c *Console) Interactive() {
 						fmt.Println("getAccountAndAddress err :", err.Error())
 						break
 					}
-					sendToAddress(arg1, float64(f32), arg2)
+					coinID, err := strconv.Atoi(arg2)
+					sendToAddress(arg1, float64(f32), types.CoinID(coinID))
 					break
 				case "updateblock":
 					updateblock(0)

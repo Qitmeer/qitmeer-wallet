@@ -73,7 +73,7 @@ func (w *Wallet) GenerateAddress() (string, error) {
 	return w.address, nil
 }
 
-func (w *Wallet) Balance(coin string) (*wallet.Balance, error) {
+func (w *Wallet) Balance(coin types.CoinID) (*wallet.Balance, error) {
 	balance, err := w.wallet.GetBalance(w.address)
 	if err != nil {
 		return nil, nil
@@ -81,17 +81,17 @@ func (w *Wallet) Balance(coin string) (*wallet.Balance, error) {
 	if b, ok := balance[coin]; ok {
 		return &b, nil
 	} else {
-		return nil, fmt.Errorf("no coin %s", coin)
+		return nil, fmt.Errorf("no coin %s", coin.Name())
 	}
 }
 
-func (w *Wallet) SendToAddress(addr string, coin string, amount uint64) (string, error) {
+func (w *Wallet) SendToAddress(addr string, coin types.CoinID, amount uint64) (string, error) {
 	// Check that signed integer parameters are positive.
 	if amount < 0 {
 		return "", qitmeerjson.ErrNeedPositiveAmount
 	}
 
-	coinId, err := w.wallet.CoinID(coin)
+	coinId, err := w.wallet.CoinID(types.MEERID)
 	if err != nil {
 		return "", err
 	}
