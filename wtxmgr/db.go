@@ -1241,7 +1241,7 @@ func createStore(ns walletdb.ReadWriteBucket) error {
 
 	// Write a zero balance.
 	byteOrder.PutUint64(v[:], 0)
-	err = ns.Put(rootMinedBalanceKey(types.MEERID), v[:])
+	err = ns.Put(rootMinedBalanceKey(types.MEERA), v[:])
 	if err != nil {
 		str := "failed to write zero balance"
 		return storeError(ErrDatabase, str, err)

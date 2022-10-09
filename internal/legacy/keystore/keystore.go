@@ -2183,7 +2183,7 @@ func newBtcAddressWithoutPrivkey(s *Store, pubkey, iv []byte, bs *BlockStamp) (a
 	if err != nil {
 		return nil, err
 	}
-	address, err := address.NewPubKeyHashAddressByNetId(hash.Hash160(pubkey), s.netParams().PubKeyHashAddrID)
+	address, err := address.NewPubKeyHashAddress(hash.Hash160(pubkey), s.netParams(), ecc.ECDSA_Secp256k1)
 	if err != nil {
 		return nil, err
 	}
@@ -2332,7 +2332,7 @@ func (a *btcAddress) ReadFrom(r io.Reader) (n int64, err error) {
 	}
 	a.pubKey = pk
 
-	addr, err := address.NewPubKeyHashAddressByNetId(pubKeyHash[:], a.store.netParams().PubKeyHashAddrID)
+	addr, err := address.NewPubKeyHashAddress(pubKeyHash[:], a.store.netParams(), ecc.ECDSA_Secp256k1)
 	if err != nil {
 		return n, err
 	}

@@ -277,7 +277,7 @@ func (s *Store) updateMinedBalance(ns walletdb.ReadWriteBucket, rec *TxRecord,
 	block *BlockMeta) error {
 
 	// Fetch the mined balance in case we need to update it.
-	minedBalance, err := fetchMinedBalance(ns, types.MEERID)
+	minedBalance, err := fetchMinedBalance(ns, types.MEERA)
 	if err != nil {
 		return err
 	}
@@ -575,7 +575,7 @@ func TxRawIsCoinBase(tx corejson.TxRawResult) bool {
 }
 
 func (s *Store) rollback(ns walletdb.ReadWriteBucket, height int32) error {
-	minedBalance, err := fetchMinedBalance(ns, types.MEERID)
+	minedBalance, err := fetchMinedBalance(ns, types.MEERA)
 	if err != nil {
 		return err
 	}
