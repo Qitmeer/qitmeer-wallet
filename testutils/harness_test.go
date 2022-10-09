@@ -5,6 +5,8 @@
 package testutils
 
 import (
+	"fmt"
+	"github.com/Qitmeer/qng/core/types"
 	"github.com/Qitmeer/qng/params"
 	"sync"
 	"testing"
@@ -12,7 +14,8 @@ import (
 )
 
 func TestHarness(t *testing.T) {
-	h, err := NewHarness(t, params.PrivNetParam.Params)
+	args := []string{"--modules=miner", "--modules=qitmeer", "--notls"}
+	h, err := NewHarness(t, params.PrivNetParam.Params, args...)
 	if err != nil {
 		t.Errorf("create new test harness instance failed %v", err)
 		return
@@ -21,7 +24,7 @@ func TestHarness(t *testing.T) {
 		t.Errorf("setup test harness instance failed %v", err)
 	}
 
-	h2, err := NewHarness(t, params.PrivNetParam.Params)
+	h2, err := NewHarness(t, params.PrivNetParam.Params, args...)
 	defer func() {
 
 		if err := h.Teardown(); err != nil {
@@ -63,7 +66,8 @@ func TestHarness(t *testing.T) {
 	for i := 0; i < 10; i++ {
 		wg.Add(1)
 		go func() {
-			NewHarness(t, params.PrivNetParam.Params)
+			args := []string{"--modules=miner", "--modules=qitmeer", "--notls"}
+			NewHarness(t, params.PrivNetParam.Params, args...)
 			wg.Done()
 		}()
 	}
@@ -100,7 +104,7 @@ func TestSyncUnConfirmedCoinBase(t *testing.T) {
 	}
 	GenerateBlock(t, h, 10)
 	time.Sleep(10 * time.Second)
-	b, err := h.wallet.Balance("MEER")
+	b, err := h.wallet.Balance(types.MEERID)
 	if err != nil {
 		t.Errorf("test failed:%v", err)
 		return
@@ -143,7 +147,7 @@ func TestSyncConfirmedCoinBase(t *testing.T) {
 
 	GenerateBlock(t, h, 1)
 	time.Sleep(10 * time.Second)
-	b, err := h.wallet.Balance("MEER")
+	b, err := h.wallet.Balance(types.MEERID)
 	if err != nil {
 		t.Errorf("test failed : %v", err)
 		return
@@ -189,16 +193,16 @@ func TestSpent(t *testing.T) {
 	time.Sleep(10 * time.Second)
 	GenerateBlock(t, h, 1)
 	time.Sleep(10 * time.Second)
-	b, err := h.wallet.Balance("MEER")
+	b, err := h.wallet.Balance(types.MEERID)
 	if err != nil {
 		t.Errorf("test failed : %v", err)
 		return
 	}
-	_, err = h.wallet.SendToAddress("RmV7i7JoomcHuQCVMN66SiTYUCkRtzQ6fSf", "MEER", 1000)
+	_, err = h.wallet.SendToAddress("RmV7i7JoomcHuQCVMN66SiTYUCkRtzQ6fSf", types.MEERID, 1000)
 	if err != nil {
 		t.Errorf("test failed, %v", err)
 	}
-	b, err = h.wallet.Balance("MEER")
+	b, err = h.wallet.Balance(types.MEERID)
 	if err != nil {
 		t.Errorf("test failed : %v", err)
 		return
@@ -207,4 +211,13 @@ func TestSpent(t *testing.T) {
 		t.Errorf("test failed, expect spent balance %d, but got %d", 200000000000, b.UnspentAmount.Value)
 		return
 	}
+	GenerateBlock(t, h, 1)
+	b, err = h.wallet.BalanceByAddr(types.MEERID, "RmV7i7JoomcHuQCVMN66SiTYUCkRtzQ6fSf")
+	if err != nil {
+		t.Errorf("test failed : %v", err)
+		return
+	}
+
+	fmt.Println(b.LockAmount, b.UnspentAmount, b.TotalAmount, b.SpendAmount, b.UnconfirmedAmount)
+
 }

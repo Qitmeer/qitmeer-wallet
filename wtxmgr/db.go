@@ -1288,11 +1288,11 @@ func createBuckets(ns walletdb.ReadWriteBucket) error {
 	}
 
 	for _, id := range types.CoinIDList {
-		if _, err := ns.CreateBucket(CoinBucket(BucketAddrtxin, id.Name())); err != nil {
+		if _, err := ns.CreateBucket(CoinBucket(BucketAddrtxin, id)); err != nil {
 			str := fmt.Sprintf("failed to create unMined %s addrtxin bucket", id.Name())
 			return storeError(ErrDatabase, str, err)
 		}
-		if _, err := ns.CreateBucket(CoinBucket(BucketAddrtxout, id.Name())); err != nil {
+		if _, err := ns.CreateBucket(CoinBucket(BucketAddrtxout, id)); err != nil {
 			str := fmt.Sprintf("failed to create unMined %s addrtxout bucket", id.Name())
 			return storeError(ErrDatabase, str, err)
 		}
@@ -1322,9 +1322,9 @@ func deleteBuckets(ns walletdb.ReadWriteBucket) error {
 	ns.DeleteNestedBucket(bucketUnMinedInputs)
 
 	for _, id := range types.CoinIDList {
-		err := ns.DeleteNestedBucket(CoinBucket(BucketAddrtxin, id.Name()))
+		err := ns.DeleteNestedBucket(CoinBucket(BucketAddrtxin, id))
 		fmt.Println(err)
-		err = ns.DeleteNestedBucket(CoinBucket(BucketAddrtxout, id.Name()))
+		err = ns.DeleteNestedBucket(CoinBucket(BucketAddrtxout, id))
 		fmt.Println(err)
 	}
 
@@ -1351,8 +1351,8 @@ func DropTransactionHistory(ns walletdb.ReadWriteBucket) error {
 	return nil
 }
 
-func CoinBucket(bucket []byte, coin string) []byte {
-	return append([]byte(coin), bucket...)
+func CoinBucket(bucket []byte, coin types.CoinID) []byte {
+	return append([]byte{byte(coin)}, bucket...)
 }
 
 // putVersion modifies the version of the store to reflect the given version

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	util "github.com/Qitmeer/qitmeer-wallet/utils"
 	"github.com/Qitmeer/qitmeer-wallet/wallet"
+	"github.com/Qitmeer/qng/core/types"
 	"github.com/Qitmeer/qng/log"
 	"github.com/spf13/cobra"
 	"strconv"
@@ -114,7 +115,7 @@ var getBalanceCmd = &cobra.Command{
 		if company == "i" {
 			if detail == "true" {
 				for name, v := range b {
-					fmt.Printf("coin:%s\n", name)
+					fmt.Printf("coin:%s\n", name.Name())
 					fmt.Printf("unspent:%d\n", v.UnspentAmount.Value)
 					fmt.Printf("locked:%d\n", v.LockAmount.Value)
 					fmt.Printf("unconfirmed:%d\n", v.UnconfirmedAmount.Value)
@@ -124,7 +125,7 @@ var getBalanceCmd = &cobra.Command{
 				}
 			} else {
 				for name, v := range b {
-					fmt.Printf("coin:%s\n", name)
+					fmt.Printf("coin:%s\n", name.Name())
 					fmt.Printf("%d\n", v.UnspentAmount.Value)
 					fmt.Println()
 				}
@@ -132,7 +133,7 @@ var getBalanceCmd = &cobra.Command{
 		} else {
 			if detail == "true" {
 				for name, v := range b {
-					fmt.Printf("coin:%s\n", name)
+					fmt.Printf("coin:%s\n", name.Name())
 					fmt.Printf("unspent:%.8f\n", v.UnspentAmount.ToCoin())
 					fmt.Printf("locked:%.8f\n", v.LockAmount.ToCoin())
 					fmt.Printf("unconfirmed:%.8f\n", v.UnconfirmedAmount.ToCoin())
@@ -142,7 +143,7 @@ var getBalanceCmd = &cobra.Command{
 				}
 			} else {
 				for name, v := range b {
-					fmt.Printf("coin:%s\n", name)
+					fmt.Printf("coin:%s\n", name.Name())
 					fmt.Printf("%.8f\n", v.UnspentAmount.ToCoin())
 					fmt.Println()
 				}
@@ -277,7 +278,12 @@ var sendToAddressCmd = &cobra.Command{
 			fmt.Println(err.Error())
 			return
 		}
-		sendToAddress(args[0], float64(f32), args[1])
+		coinID, err := strconv.Atoi(args[1])
+		if err != nil {
+			fmt.Println(err.Error())
+			return
+		}
+		sendToAddress(args[0], float64(f32), types.CoinID(coinID))
 	},
 }
 
@@ -309,7 +315,12 @@ var sendLockedToAddressCmd = &cobra.Command{
 			fmt.Println(err.Error())
 			return
 		}
-		sendLockedToAddress(args[0], float64(f32), lock, args[1])
+		coinID, err := strconv.Atoi(args[1])
+		if err != nil {
+			fmt.Println(err.Error())
+			return
+		}
+		sendLockedToAddress(args[0], float64(f32), lock, types.CoinID(coinID))
 	},
 }
 

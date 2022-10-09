@@ -10,16 +10,16 @@ import (
 )
 
 type QitmeerToken struct {
-	tokens map[string]*json.TokenState
+	tokens map[types.CoinID]*json.TokenState
 	lock   sync.RWMutex
 }
 
 func NewQitmeerToken(ns walletdb.ReadWriteBucket) *QitmeerToken {
-	tokens := make(map[string]*json.TokenState, 0)
+	tokens := make(map[types.CoinID]*json.TokenState, 0)
 	_ = ns.ForEach(func(k, v []byte) error {
 		token, err := DecodeToken(v)
 		if err == nil {
-			tokens[string(k)] = token
+			tokens[types.CoinID(token.CoinId)] = token
 			types.CoinNameMap[types.CoinID(token.CoinId)] = token.CoinName
 			return nil
 		} else {
@@ -37,10 +37,10 @@ func (q *QitmeerToken) Add(t json.TokenState) {
 	q.lock.Lock()
 	defer q.lock.Unlock()
 
-	q.tokens[t.CoinName] = &t
+	q.tokens[types.CoinID(t.CoinId)] = &t
 }
 
-func (q *QitmeerToken) GetToken(coin string) (*json.TokenState, error) {
+func (q *QitmeerToken) GetToken(coin types.CoinID) (*json.TokenState, error) {
 	q.lock.RLock()
 	defer q.lock.RUnlock()
 
@@ -48,7 +48,7 @@ func (q *QitmeerToken) GetToken(coin string) (*json.TokenState, error) {
 	if ok {
 		return token, nil
 	}
-	return nil, fmt.Errorf("coin %s dose not exist", coin)
+	return nil, fmt.Errorf("coin %d dose not exist", coin)
 }
 
 func (q *QitmeerToken) Encode() []byte {

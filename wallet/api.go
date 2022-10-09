@@ -72,13 +72,13 @@ func (api *API) Lock() error {
 }
 
 // GetAccountsAndBalance List all accounts[{account,balance}]
-func (api *API) GetAccountsAndBalance(coin string) (map[string]*Value, error) {
+func (api *API) GetAccountsAndBalance(coin types.CoinID) (map[string]*Value, error) {
 	accountsBalances := make(map[string]*Value)
 	aaas, err := api.wt.GetAccountAndAddress(waddrmgr.KeyScopeBIP0044)
 	if err != nil {
 		return nil, err
 	}
-	coinID, err := api.wt.CoinID(coin)
+	coinID, err := api.wt.CoinID(types.CoinID(coin))
 	if err != nil {
 		return map[string]*Value{}, err
 	}
@@ -102,13 +102,13 @@ func (api *API) GetAccountsAndBalance(coin string) (map[string]*Value, error) {
 }
 
 // GetBalanceByAccount get account balance
-func (api *API) GetBalanceByAccount(name string, coin string) (*Value, error) {
+func (api *API) GetBalanceByAccount(name string, coin types.CoinID) (*Value, error) {
 	results, err := api.wt.GetAccountAndAddress(waddrmgr.KeyScopeBIP0044)
 	if err != nil {
 		return nil, err
 	}
 
-	coinID, err := api.wt.CoinID(coin)
+	coinID, err := api.wt.CoinID(types.CoinID(coin))
 	if err != nil {
 		return nil, err
 	}
@@ -129,7 +129,7 @@ func (api *API) GetBalanceByAccount(name string, coin string) (*Value, error) {
 }
 
 // GetUTxo addr unSpend UTxo
-func (api *API) GetUTxo(addr string, coin string) ([]wtxmgr.UTxo, error) {
+func (api *API) GetUTxo(addr string, coin types.CoinID) ([]wtxmgr.UTxo, error) {
 	results, err := api.wt.GetUnspentUTXO(addr, coin)
 	if err != nil {
 		return nil, err
@@ -326,14 +326,14 @@ type ApiAmount struct {
 //payment address.  Leftover inputs not sent to the payment address or a fee
 //for the miner are sent back to a new address in the wallet.  Upon success,
 //the TxID for the created transaction is returned.
-func (api *API) SendToAddress(addressStr string, amount float64, coin string) (string, error) {
+func (api *API) SendToAddress(addressStr string, amount float64, coin types.CoinID, byAddress string) (string, error) {
 
 	// Check that signed integer parameters are positive.
 	if amount < 0 {
 		return "", qitmeerjson.ErrNeedPositiveAmount
 	}
 
-	coinID, err := api.wt.CoinID(coin)
+	coinID, err := api.wt.CoinID(types.CoinID(coin))
 	if err != nil {
 		return "", err
 	}
@@ -344,7 +344,7 @@ func (api *API) SendToAddress(addressStr string, amount float64, coin string) (s
 		addressStr: amt,
 	}
 
-	return api.wt.SendPairs(pairs, waddrmgr.AccountMergePayNum, txrules.DefaultRelayFeePerKb, 0)
+	return api.wt.SendPairs(pairs, waddrmgr.AccountMergePayNum, txrules.DefaultRelayFeePerKb, 0, byAddress)
 }
 
 //SendToAddress handles a sendtoaddress RPC request by creating a new
@@ -352,14 +352,14 @@ func (api *API) SendToAddress(addressStr string, amount float64, coin string) (s
 //payment address.  Leftover inputs not sent to the payment address or a fee
 //for the miner are sent back to a new address in the wallet.  Upon success,
 //the TxID for the created transaction is returned.
-func (api *API) SendLockedToAddress(addressStr string, amount float64, coin string, lockHeight uint64) (string, error) {
+func (api *API) SendLockedToAddress(addressStr string, amount float64, coin types.CoinID, lockHeight uint64) (string, error) {
 
 	// Check that signed integer parameters are positive.
 	if amount < 0 {
 		return "", qitmeerjson.ErrNeedPositiveAmount
 	}
 
-	id, err := api.wt.CoinID(coin)
+	id, err := api.wt.CoinID(types.CoinID(coin))
 	if err != nil {
 		return "", err
 	}
@@ -373,17 +373,17 @@ func (api *API) SendLockedToAddress(addressStr string, amount float64, coin stri
 		addressStr: *amt,
 	}
 
-	return api.wt.SendPairs(pairs, waddrmgr.AccountMergePayNum, txrules.DefaultRelayFeePerKb, lockHeight)
+	return api.wt.SendPairs(pairs, waddrmgr.AccountMergePayNum, txrules.DefaultRelayFeePerKb, lockHeight, "")
 }
 
-func (api *API) SendToMany(addAmounts map[string]float64, coin string) (string, error) {
+func (api *API) SendToMany(addAmounts map[string]float64, coin types.CoinID, byAddress string) (string, error) {
 
 	pairs := make(map[string]types.Amount)
 	for addr, amount := range addAmounts {
 		if amount < 0 {
 			return "", qitmeerjson.ErrNeedPositiveAmount
 		}
-		coinID, err := api.wt.CoinID(coin)
+		coinID, err := api.wt.CoinID(types.CoinID(coin))
 		if err != nil {
 			return "", err
 		}
@@ -392,11 +392,11 @@ func (api *API) SendToMany(addAmounts map[string]float64, coin string) (string, 
 		pairs[addr] = amt
 	}
 
-	return api.wt.SendPairs(pairs, waddrmgr.AccountMergePayNum, txrules.DefaultRelayFeePerKb, 0)
+	return api.wt.SendPairs(pairs, waddrmgr.AccountMergePayNum, txrules.DefaultRelayFeePerKb, 0, byAddress)
 }
 
 // SendToAddressByAccount by account
-func (api *API) SendToAddressByAccount(accountName string, addressStr string, amount float64, coin string, comment string, commentTo string) (string, error) {
+func (api *API) SendToAddressByAccount(accountName string, addressStr string, amount float64, coin types.CoinID, comment string, commentTo string) (string, error) {
 
 	accountNum, err := api.wt.AccountNumber(waddrmgr.KeyScopeBIP0044, accountName)
 	if err != nil {
@@ -408,7 +408,7 @@ func (api *API) SendToAddressByAccount(accountName string, addressStr string, am
 		return "", qitmeerjson.ErrNeedPositiveAmount
 	}
 
-	coinID, err := api.wt.CoinID(coin)
+	coinID, err := api.wt.CoinID(types.CoinID(coin))
 	if err != nil {
 		return "", nil
 	}
@@ -419,11 +419,11 @@ func (api *API) SendToAddressByAccount(accountName string, addressStr string, am
 		addressStr: amt,
 	}
 
-	return api.wt.SendPairs(pairs, int64(accountNum), txrules.DefaultRelayFeePerKb, 0)
+	return api.wt.SendPairs(pairs, int64(accountNum), txrules.DefaultRelayFeePerKb, 0, "")
 }
 
 //GetBalanceByAddr get balance by address
-func (api *API) GetBalanceByAddr(addrStr, coin string) (map[string]Value, error) {
+func (api *API) GetBalanceByAddr(addrStr string, coin types.CoinID) (map[string]Value, error) {
 	m, err := api.wt.GetBalanceByCoin(addrStr, coin)
 	if err != nil {
 		return nil, err
