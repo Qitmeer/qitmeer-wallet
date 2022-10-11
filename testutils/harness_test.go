@@ -104,7 +104,7 @@ func TestSyncUnConfirmedCoinBase(t *testing.T) {
 	}
 	GenerateBlock(t, h, 10)
 	time.Sleep(10 * time.Second)
-	b, err := h.wallet.Balance(types.MEERID)
+	b, err := h.wallet.Balance(types.MEERA)
 	if err != nil {
 		t.Errorf("test failed:%v", err)
 		return
@@ -147,7 +147,7 @@ func TestSyncConfirmedCoinBase(t *testing.T) {
 
 	GenerateBlock(t, h, 1)
 	time.Sleep(10 * time.Second)
-	b, err := h.wallet.Balance(types.MEERID)
+	b, err := h.wallet.Balance(types.MEERA)
 	if err != nil {
 		t.Errorf("test failed : %v", err)
 		return
@@ -193,16 +193,16 @@ func TestSpent(t *testing.T) {
 	time.Sleep(10 * time.Second)
 	GenerateBlock(t, h, 1)
 	time.Sleep(10 * time.Second)
-	b, err := h.wallet.Balance(types.MEERID)
+	b, err := h.wallet.Balance(types.MEERA)
 	if err != nil {
 		t.Errorf("test failed : %v", err)
 		return
 	}
-	_, err = h.wallet.SendToAddress("RmV7i7JoomcHuQCVMN66SiTYUCkRtzQ6fSf", types.MEERID, 1000)
+	_, err = h.wallet.SendToAddress("RmV7i7JoomcHuQCVMN66SiTYUCkRtzQ6fSf", types.MEERA, 1000)
 	if err != nil {
 		t.Errorf("test failed, %v", err)
 	}
-	b, err = h.wallet.Balance(types.MEERID)
+	b, err = h.wallet.Balance(types.MEERA)
 	if err != nil {
 		t.Errorf("test failed : %v", err)
 		return
@@ -212,7 +212,7 @@ func TestSpent(t *testing.T) {
 		return
 	}
 	GenerateBlock(t, h, 1)
-	b, err = h.wallet.BalanceByAddr(types.MEERID, "RmV7i7JoomcHuQCVMN66SiTYUCkRtzQ6fSf")
+	b, err = h.wallet.BalanceByAddr(types.MEERA, "RmV7i7JoomcHuQCVMN66SiTYUCkRtzQ6fSf")
 	if err != nil {
 		t.Errorf("test failed : %v", err)
 		return

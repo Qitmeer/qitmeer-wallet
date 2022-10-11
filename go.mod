@@ -92,3 +92,5 @@ require (
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 	lukechampine.com/blake3 v1.1.6 // indirect
 )
+
+replace github.com/ethereum/go-ethereum v1.10.21 => github.com/Qitmeer/go-ethereum v1.10.21-q.1

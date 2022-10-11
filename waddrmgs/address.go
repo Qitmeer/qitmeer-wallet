@@ -3,16 +3,16 @@ package waddrmgr
 import (
 	"encoding/hex"
 	"fmt"
-	"github.com/Qitmeer/qng/qx"
-	"sync"
-
 	"github.com/Qitmeer/qitmeer-wallet/internal/zero"
 	"github.com/Qitmeer/qitmeer-wallet/walletdb"
 	"github.com/Qitmeer/qng/common/hash"
 	addr "github.com/Qitmeer/qng/core/address"
 	"github.com/Qitmeer/qng/core/types"
 	"github.com/Qitmeer/qng/crypto/bip32"
+	ecc1 "github.com/Qitmeer/qng/crypto/ecc"
 	ecc "github.com/Qitmeer/qng/crypto/ecc/secp256k1"
+	"github.com/Qitmeer/qng/qx"
+	"sync"
 )
 
 // AddressType represents the various address types waddrmgr is currently able
@@ -351,7 +351,7 @@ func newManagedAddressWithoutPrivKey(m *ScopedKeyManager,
 	switch addrType {
 
 	case PubKeyHash:
-		address, err = addr.NewPubKeyHashAddressByNetId(pubKeyHash, m.rootManager.chainParams.PubKeyHashAddrID)
+		address, err = addr.NewPubKeyHashAddress(pubKeyHash, m.rootManager.chainParams, ecc1.ECDSA_Secp256k1)
 		if err != nil {
 			return nil, err
 		}
