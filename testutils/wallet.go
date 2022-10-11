@@ -103,7 +103,7 @@ func (w *Wallet) SendToAddress(addr string, coin types.CoinID, amount uint64) (s
 		return "", qitmeerjson.ErrNeedPositiveAmount
 	}
 
-	coinId, err := w.wallet.CoinID(types.MEERID)
+	coinId, err := w.wallet.CoinID(types.MEERA)
 	if err != nil {
 		return "", err
 	}
