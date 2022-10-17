@@ -59,6 +59,9 @@ const (
 	InsecurePubPassphrase   = "public"
 	webUpdateBlockTicker    = 30
 	defaultNewAddressNumber = 1
+	ImportTxID              = "0000000000000000000000000000000000000000000000000000000000000000"
+	ImportTxIndex           = types.SupperPrevOutIndex
+	ImportTxSequence        = types.TxTypeCrossChainImport
 )
 
 var (
@@ -2385,6 +2388,71 @@ func (w *Wallet) SendPairs(amounts map[string]types.Amount,
 		}
 	}
 	return *tx, nil
+}
+
+//EVMToUTXO send the amount to utxo account
+func (w *Wallet) EVMToUTXO(amounts map[string]types.Amount,
+	account int64, feeSatPerKb int64, lockHeight uint64, byAddress string) (string, error) {
+	//check, err := w.HttpClient.CheckSyncUpdate(int64(w.Manager.SyncedTo().Order))
+	log.Debug("EVMToUTXO", "amounts", amounts, "byAddress", byAddress)
+	/*if check == false {
+		return "", err
+	}*/
+	txInputs := []qx.Input{}
+	txOutputs := []qx.Output{}
+	txInputs = append(txInputs, qx.Input{
+		TxID:      ImportTxID,
+		OutIndex:  ImportTxIndex,
+		InputType: types.TxTypeCrossChainImport,
+	})
+	var pkhAddr types.Address
+	priKeyList := make([]string, 0)
+	for addr, output := range amounts {
+		txOutputs = append(txOutputs, qx.Output{
+			TargetAddress:  addr,
+			OutputType:     types.TxTypeCrossChainImport,
+			Amount:         output,
+			TargetLockTime: int64(lockHeight),
+		})
+		addr1, _ := address.DecodeAddress(addr)
+		pkhAddr = addr1
+		switch addr1.(type) {
+		case *address.SecpPubKeyAddress:
+			pkaddr := addr1.(*address.SecpPubKeyAddress)
+			pkhAddr = pkaddr.PKHAddress()
+		default:
+		}
+		wm, err := w.getPrivateKey(pkhAddr)
+		if err != nil {
+			return "", err
+		}
+		priKey, err := wm.PrivKey()
+		if err != nil {
+			return "", err
+		}
+		priKeyList = append(priKeyList, hex.EncodeToString(priKey.Serialize()))
+	}
+	raw, err := qx.TxEncode(1, uint32(lockHeight), nil, txInputs, txOutputs)
+	if err != nil {
+		return "", err
+	}
+	signedRaw, err := qx.TxSign(priKeyList, raw, config.Cfg.Network)
+	if err != nil {
+		return "", err
+	}
+	log.Trace(fmt.Sprintf("signTx size:%v", len(signedRaw)), "signTx", signedRaw)
+	msg, err := w.HttpClient.SendRawTransaction(signedRaw, true)
+	if err != nil {
+		log.Trace("SendRawTransaction txSign err ", "err", err.Error())
+		return "", err
+	} else {
+		fmt.Println(msg)
+		msg = strings.ReplaceAll(msg, "\"", "")
+		log.Trace("SendRawTransaction txSign response msg", "msg", msg)
+	}
+
+	txId, _ := hash.NewHashFromStr(msg)
+	return txId.String(), nil
 }
 
 func (w *Wallet) CoinID(coin types.CoinID) (types.CoinID, error) {

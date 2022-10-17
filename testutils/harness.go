@@ -150,13 +150,13 @@ func (h *Harness) teardown() error {
 // The args is the arguments list that are used when setup a qitmeer node. In the most
 // case, it should be set to nil if no extra args need to add on the default starting up.
 func NewHarness(t *testing.T, params *params.Params, args ...string) (*Harness, error) {
-	return NewHarnessWithMnemonic(t, "", "", params, args...)
+	return NewHarnessWithMnemonic(t, "", "", false, params, args...)
 }
 
 // NewHarness func creates an new instance of test harness with provided network params.
 // The args is the arguments list that are used when setup a qitmeer node. In the most
 // case, it should be set to nil if no extra args need to add on the default starting up.
-func NewHarnessWithMnemonic(t *testing.T, mnemonic, path string, params *params.Params, args ...string) (*Harness, error) {
+func NewHarnessWithMnemonic(t *testing.T, mnemonic, path string, usePkAddr bool, params *params.Params, args ...string) (*Harness, error) {
 	harnessStateMutex.Lock()
 	defer harnessStateMutex.Unlock()
 	id := len(harnessInstances)
@@ -195,7 +195,7 @@ func NewHarnessWithMnemonic(t *testing.T, mnemonic, path string, params *params.
 	if err != nil {
 		return nil, err
 	}
-	address, err := wallet.GenerateAddress()
+	address, err := wallet.GenerateAddress(usePkAddr)
 	if err != nil {
 		return nil, err
 	}

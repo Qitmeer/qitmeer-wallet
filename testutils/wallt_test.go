@@ -2,11 +2,13 @@ package testutils
 
 import (
 	"context"
+	"fmt"
 	"github.com/Qitmeer/qitmeer-wallet/config"
 	waddrmgr "github.com/Qitmeer/qitmeer-wallet/waddrmgs"
 	"github.com/Qitmeer/qng/core/types"
 	"github.com/Qitmeer/qng/params"
 	"github.com/shopspring/decimal"
+	"math/big"
 	"testing"
 	"time"
 )
@@ -97,7 +99,7 @@ func TestCreateWallet(t *testing.T) {
 
 func TestExportAmountToEvm(t *testing.T) {
 	args := []string{"--modules=miner", "--modules=qitmeer", "--notls"}
-	h, err := NewHarnessWithMnemonic(t, mnemonic, path, params.PrivNetParam.Params, args...)
+	h, err := NewHarnessWithMnemonic(t, mnemonic, path, true, params.PrivNetParam.Params, args...)
 	defer h.Teardown()
 
 	if err != nil {
@@ -163,5 +165,23 @@ func TestExportAmountToEvm(t *testing.T) {
 	baD = baD.Div(decimal.NewFromFloat(1e18))
 	if baD.Cmp(decimal.NewFromFloat(500)) != 0 {
 		t.Errorf("failed to get account balance expect 500 , but got %s ", baD.String())
+	}
+	_, err = h.wallet.EvmToAddress(addrs[1].String(), types.MEERA, 499)
+	if err != nil {
+		t.Errorf("failed to EvmToAddress, %v", err)
+		return
+	}
+	GenerateBlock(t, h, 1)
+	time.Sleep(5 * time.Second)
+	ba1, err := h.wallet.Balance(types.MEERA)
+	if err != nil {
+		t.Errorf("failed to GetBalance, %v", err)
+		return
+	}
+	fmt.Println(ba1.TotalAmount.Value)
+	ba, _ = h.evmClient.BalanceAt(context.Background(), addrs1[0], nil)
+	t.Logf("after balance %s", ba.String())
+	if ba.Cmp(big.NewInt(0)) != 0 {
+		t.Errorf("failed to EVM TO MEER")
 	}
 }

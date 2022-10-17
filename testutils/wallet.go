@@ -60,7 +60,7 @@ func (w *Wallet) Stop() {
 	w.wallet.Stop()
 }
 
-func (w *Wallet) GenerateAddress() (string, error) {
+func (w *Wallet) GenerateAddress(usePkAddr bool) (string, error) {
 	account, err := w.wallet.AccountNumber(waddrmgr.KeyScopeBIP0044, "imported")
 	if err != nil {
 		return "", err
@@ -73,6 +73,9 @@ func (w *Wallet) GenerateAddress() (string, error) {
 		return "", fmt.Errorf("wrong address")
 	}
 	w.address = addrs[0].String()
+	if usePkAddr {
+		w.address = addrs[1].String()
+	}
 	return w.address, nil
 }
 
@@ -118,6 +121,26 @@ func (w *Wallet) SendToAddress(addr string, coin types.CoinID, amount uint64) (s
 	}
 
 	return w.wallet.SendPairs(pairs, waddrmgr.AccountMergePayNum, txrules.DefaultRelayFeePerKb, 0, "")
+}
+
+func (w *Wallet) EvmToAddress(addr string, coin types.CoinID, amount uint64) (string, error) {
+	// Check that signed integer parameters are positive.
+	if amount < 0 {
+		return "", qitmeerjson.ErrNeedPositiveAmount
+	}
+
+	coinId, err := w.wallet.CoinID(coin)
+	if err != nil {
+		return "", err
+	}
+	amt := types.Amount{Value: int64(amount * types.AtomsPerCoin), Id: coinId}
+
+	// Mock up map of address and amount pairs.
+	pairs := map[string]types.Amount{
+		addr: amt,
+	}
+
+	return w.wallet.EVMToUTXO(pairs, waddrmgr.AccountMergePayNum, txrules.DefaultRelayFeePerKb, 0, "")
 }
 
 func networkDir(dataDir string, chainParams *chaincfg.Params) string {
