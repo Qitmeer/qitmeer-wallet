@@ -387,6 +387,23 @@ func (c *Console) Interactive() {
 					coinID, err := strconv.Atoi(arg2)
 					sendToAddress(arg1, float64(f32), types.CoinID(coinID))
 					break
+				case "evmtomeer":
+					if arg1 == "" {
+						fmt.Println("evmtomeer err : Please enter the receipt address.")
+						break
+					}
+					if arg2 == "" {
+						fmt.Println("evmtomeer err : Please enter the amount of transfer.")
+						break
+					}
+					f32, err := strconv.ParseFloat(arg2, 32)
+					if err != nil {
+						fmt.Println("evmtomeer err :", err.Error())
+						break
+					}
+					coinID, err := strconv.Atoi(arg2)
+					evmToMeer(arg1, float64(f32), types.CoinID(coinID))
+					break
 				case "updateblock":
 					updateblock(0)
 					break

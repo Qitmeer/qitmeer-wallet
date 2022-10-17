@@ -28,6 +28,7 @@ func AddQcCommand() {
 	QcCmd.AddCommand(updateblockCmd)
 	QcCmd.AddCommand(syncheightCmd)
 	QcCmd.AddCommand(sendToAddressCmd)
+	QcCmd.AddCommand(evmToMeerCmd)
 	QcCmd.AddCommand(sendLockedToAddressCmd)
 	QcCmd.AddCommand(newImportPrivKeyCmd())
 	QcCmd.AddCommand(getAddressesByAccountCmd)
@@ -259,7 +260,7 @@ var sendToAddressCmd = &cobra.Command{
 	Use:   "sendtoaddress {address} {amount} {pripassword} ",
 	Short: "send transaction ",
 	Example: `
-		sendtoaddress TmWMuY9q5dUutUTGikhqTVKrnDMG34dEgb5 MEER 10 pripassword
+		sendtoaddress TmWMuY9q5dUutUTGikhqTVKrnDMG34dEgb5 0 10 pripassword
 		`,
 	Args: cobra.MinimumNArgs(4),
 	Run: func(cmd *cobra.Command, args []string) {
@@ -284,6 +285,38 @@ var sendToAddressCmd = &cobra.Command{
 			return
 		}
 		sendToAddress(args[0], float64(f32), types.CoinID(coinID))
+	},
+}
+
+var evmToMeerCmd = &cobra.Command{
+	Use:   "evmtomeer {address} {amount} {pripassword} ",
+	Short: "send evm transaction ",
+	Example: `
+		evmtomeer Tk6uJDaurxqPrg2bZqBa9XSpUcakebZ6EU1u9qqHNDcNW2MyeTtbX 0 10 pripassword
+		`,
+	Args: cobra.MinimumNArgs(4),
+	Run: func(cmd *cobra.Command, args []string) {
+		err := OpenWallet()
+		if err != nil {
+			fmt.Println(err.Error())
+			return
+		}
+		f32, err := strconv.ParseFloat(args[2], 32)
+		if err != nil {
+			log.Error("evmtomeer ", "error", err.Error())
+			return
+		}
+		err = UnLock(args[3])
+		if err != nil {
+			fmt.Println(err.Error())
+			return
+		}
+		coinID, err := strconv.Atoi(args[1])
+		if err != nil {
+			fmt.Println(err.Error())
+			return
+		}
+		evmToMeer(args[0], float64(f32), types.CoinID(coinID))
 	},
 }
 

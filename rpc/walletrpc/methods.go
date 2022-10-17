@@ -273,6 +273,37 @@ func SendToAddress(iCmd interface{}, w *wallet.Wallet) (interface{}, error) {
 	return w.SendPairs(pairs, int64(waddrmgr.AccountMergePayNum), txrules.DefaultRelayFeePerKb, 0, "")
 }
 
+//EvmToMeer handles a evm to meer RPC request by creating a new
+func EvmToMeer(iCmd interface{}, w *wallet.Wallet) (interface{}, error) {
+	cmd := iCmd.(*qitmeerjson.EvmToMeerCmd)
+
+	var amt *types.Amount
+	var err error
+	amt, err = types.NewAmount(cmd.Amount)
+	amt.Id, err = w.CoinID(types.CoinID(cmd.Coin))
+	if err != nil {
+		return nil, err
+	}
+	if amt.Id != types.CoinID(cmd.Coin) {
+		return nil, fmt.Errorf("%d does not exist", cmd.Coin)
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	// Check that signed integer parameters are positive.
+	if amt.Value < 0 {
+		return nil, qitmeerjson.ErrNeedPositiveAmount
+	}
+
+	// Mock up map of address and amount pairs.
+	pairs := map[string]types.Amount{
+		cmd.Address: *amt,
+	}
+
+	return w.EVMToUTXO(pairs, int64(waddrmgr.AccountMergePayNum), txrules.DefaultRelayFeePerKb, 0, "")
+}
+
 func SendLockedToAddress(iCmd interface{}, w *wallet.Wallet) (interface{}, error) {
 	cmd := iCmd.(*qitmeerjson.SendLockedToAddressCmd)
 
