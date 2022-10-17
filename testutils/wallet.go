@@ -12,8 +12,11 @@ import (
 	"github.com/Qitmeer/qng/core/protocol"
 	"github.com/Qitmeer/qng/core/types"
 	"github.com/Qitmeer/qng/crypto/bip32"
+	"github.com/Qitmeer/qng/crypto/bip39"
 	"github.com/Qitmeer/qng/crypto/ecc/secp256k1"
 	chaincfg "github.com/Qitmeer/qng/params"
+	"github.com/Qitmeer/qng/qx"
+	wallet2 "github.com/Qitmeer/qng/wallet"
 	"os"
 	"path/filepath"
 	"time"
@@ -24,7 +27,7 @@ type Wallet struct {
 	address string
 }
 
-func NewWallet(cfg *config.Config, net protocol.Network) (*Wallet, error) {
+func NewWallet(cfg *config.Config, net protocol.Network, mnemonic, path string) (*Wallet, error) {
 	activParams := chaincfg.PrivNetParams
 	switch net {
 	case protocol.MainNet:
@@ -41,7 +44,7 @@ func NewWallet(cfg *config.Config, net protocol.Network) (*Wallet, error) {
 	if err := clearWallet(cfg, &activParams); err != nil {
 		return nil, err
 	}
-	w, err := createWallet(cfg, &activParams, cfg.WalletPass)
+	w, err := createWallet(cfg, &activParams, cfg.WalletPass, mnemonic, path)
 	if err != nil {
 		return nil, err
 	}
@@ -103,7 +106,7 @@ func (w *Wallet) SendToAddress(addr string, coin types.CoinID, amount uint64) (s
 		return "", qitmeerjson.ErrNeedPositiveAmount
 	}
 
-	coinId, err := w.wallet.CoinID(types.MEERA)
+	coinId, err := w.wallet.CoinID(coin)
 	if err != nil {
 		return "", err
 	}
@@ -123,7 +126,7 @@ func networkDir(dataDir string, chainParams *chaincfg.Params) string {
 	return filepath.Join(dataDir, netname)
 }
 
-func createWallet(cfg *config.Config, params *chaincfg.Params, pass string) (*wallet.Wallet, error) {
+func createWallet(cfg *config.Config, params *chaincfg.Params, pass, mnemonic, path string) (*wallet.Wallet, error) {
 	dbDir := networkDir(cfg.AppDataDir, params)
 	loader := wallet.NewLoader(params, dbDir, 250, &config.Config{})
 
@@ -156,6 +159,12 @@ func createWallet(cfg *config.Config, params *chaincfg.Params, pass string) (*wa
 	if err != nil {
 		return nil, err
 	}
+	if mnemonic != "" {
+		seed, err = bip39.NewSeedWithErrorChecking(mnemonic, "")
+		if err != nil {
+			return nil, err
+		}
+	}
 	seedKey, err := bip32.NewMasterKey(seed)
 	if err != nil {
 		return nil, err
@@ -164,7 +173,18 @@ func createWallet(cfg *config.Config, params *chaincfg.Params, pass string) (*wa
 	if err != nil {
 		return nil, err
 	}
-	pri, _ := secp256k1.PrivKeyFromBytes(seedKey.Key)
+	var ck = seedKey
+	if path != "" {
+		derivePath := qx.DerivePathFlag{Path: wallet2.DerivationPath{}}
+		derivePath.Set(path)
+		for _, i := range derivePath.Path {
+			ck, err = ck.NewChildKey(i)
+			if err != nil {
+				return nil, err
+			}
+		}
+	}
+	pri, _ := secp256k1.PrivKeyFromBytes(ck.Key)
 	wif, err := utils.NewWIF(pri, w.ChainParams(), true)
 	if err != nil {
 		return nil, err
@@ -178,6 +198,7 @@ func createWallet(cfg *config.Config, params *chaincfg.Params, pass string) (*wa
 	if err != nil {
 		return nil, err
 	}
+
 	w.SetConfig(cfg)
 	w.HttpClient, err = wallet.NewHtpc(cfg)
 	if err != nil {

@@ -7,6 +7,7 @@ require (
 	github.com/Qitmeer/qng v1.0.17
 	github.com/davecgh/go-spew v1.1.1
 	github.com/deckarep/golang-set v1.8.0
+	github.com/ethereum/go-ethereum v1.10.21
 	github.com/jessevdk/go-flags v1.5.0
 	github.com/jrick/logrotate v1.0.0
 	github.com/julienschmidt/httprouter v1.3.0
@@ -14,6 +15,7 @@ require (
 	github.com/peterh/liner v1.2.2
 	github.com/rakyll/statik v0.1.7
 	github.com/samuel/go-socks v0.0.0-20130725190102-f6c5f6a06ef6
+	github.com/shopspring/decimal v1.3.1
 	github.com/spf13/cobra v1.5.0
 	github.com/spf13/viper v1.13.0
 	go.etcd.io/bbolt v1.3.6
@@ -32,7 +34,6 @@ require (
 	github.com/cpuguy83/go-md2man/v2 v2.0.2 // indirect
 	github.com/dchest/blake256 v1.1.0 // indirect
 	github.com/decred/dcrd/dcrec/secp256k1/v4 v4.0.1 // indirect
-	github.com/ethereum/go-ethereum v1.10.21 // indirect
 	github.com/fsnotify/fsnotify v1.5.4 // indirect
 	github.com/go-ole/go-ole v1.2.1 // indirect
 	github.com/go-stack/stack v1.8.1 // indirect

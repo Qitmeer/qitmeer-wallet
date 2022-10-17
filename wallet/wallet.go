@@ -15,7 +15,9 @@ import (
 	"github.com/Qitmeer/qitmeer-wallet/json/qitmeerjson"
 	"github.com/Qitmeer/qitmeer-wallet/util"
 	"github.com/Qitmeer/qng/common/marshal"
+	"github.com/Qitmeer/qng/meerevm/common"
 	"github.com/Qitmeer/qng/qx"
+	common2 "github.com/ethereum/go-ethereum/common"
 	"io/ioutil"
 	"os"
 	"sort"
@@ -2008,6 +2010,29 @@ func (w *Wallet) AccountAddresses(account uint32) (addrs []types.Address, err er
 	return
 }
 
+// AccountEVMAddresses returns the addresses for every created address for an
+// account.
+func (w *Wallet) AccountEVMAddresses(account uint32) (addrs []common2.Address, err error) {
+	err = walletdb.View(w.db, func(tx walletdb.ReadTx) error {
+		addrMgrNs := tx.ReadBucket(waddrmgrNamespaceKey)
+		return w.Manager.ForEachAccountAddress(addrMgrNs, account, func(mAddr waddrmgr.ManagedAddress) error {
+			// Get private key from wallet if it exists.
+			pka, ok := mAddr.(waddrmgr.ManagedPubKeyAddress)
+			if !ok {
+				return fmt.Errorf("address %s is not a key type", mAddr.Address())
+			}
+			pkaddr, err := common.NewMeerEVMAddress(hex.EncodeToString(pka.PubKey().SerializeCompressed()))
+			if err != nil {
+				log.Error("PubKey Create Failed", mAddr.Address())
+				return err
+			}
+			addrs = append(addrs, pkaddr)
+			return nil
+		})
+	})
+	return
+}
+
 // AccountOfAddress finds the account that an address is associated with.
 func (w *Wallet) AccountOfAddress(a types.Address) (uint32, error) {
 	var account uint32
@@ -2337,11 +2362,11 @@ func (w *Wallet) SendPairs(amounts map[string]types.Amount,
 	/*if check == false {
 		return "", err
 	}*/
-	outputs, coinId, err := makeOutputs(amounts, lockHeight)
+	outputs, _, err := makeOutputs(amounts, lockHeight)
 	if err != nil {
 		return "", err
 	}
-	tx, err := w.SendOutputs(outputs, coinId, account, feeSatPerKb, byAddress)
+	tx, err := w.SendOutputs(outputs, types.MEERA, account, feeSatPerKb, byAddress)
 	if err != nil {
 		if err == txrules.ErrAmountNegative {
 			return "", qitmeerjson.ErrNeedPositiveAmount
