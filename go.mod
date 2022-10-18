@@ -4,10 +4,10 @@ go 1.18
 
 require (
 	github.com/BurntSushi/toml v1.2.0
-	github.com/Qitmeer/qng v1.0.17
+	github.com/Qitmeer/qng v1.0.18-0.20221018032325-8478fc9d0302
 	github.com/davecgh/go-spew v1.1.1
 	github.com/deckarep/golang-set v1.8.0
-	github.com/ethereum/go-ethereum v1.10.21
+	github.com/ethereum/go-ethereum v1.10.21-qng
 	github.com/jessevdk/go-flags v1.5.0
 	github.com/jrick/logrotate v1.0.0
 	github.com/julienschmidt/httprouter v1.3.0
@@ -94,4 +94,4 @@ require (
 	lukechampine.com/blake3 v1.1.6 // indirect
 )
 
-replace github.com/ethereum/go-ethereum v1.10.21 => github.com/Qitmeer/go-ethereum v1.10.21-q.1
+replace github.com/ethereum/go-ethereum v1.10.21-qng => github.com/Qitmeer/go-ethereum v1.10.21-q.1
