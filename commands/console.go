@@ -370,6 +370,20 @@ func sendToAddress(address string, amount float64, coin types.CoinID) (interface
 	fmt.Printf("%s\n", msg)
 	return msg, nil
 }
+func evmToMeer(address string, amount float64, coin types.CoinID) (interface{}, error) {
+	cmd := &qitmeerjson.EvmToMeerCmd{
+		Address: address,
+		Amount:  amount,
+		Coin:    coin,
+	}
+	msg, err := walletrpc.EvmToMeer(cmd, w)
+	if err != nil {
+		fmt.Println("evmToMeer:", "error", err.Error())
+		return nil, err
+	}
+	fmt.Printf("%s\n", msg)
+	return msg, nil
+}
 func sendLockedToAddress(address string, amount float64, lockedHeight uint64, coin types.CoinID) (interface{}, error) {
 	cmd := &qitmeerjson.SendLockedToAddressCmd{
 		Address:      address,

@@ -232,6 +232,13 @@ type SendToAddressCmd struct {
 	CommentTo *string
 }
 
+// SendToAddressCmd defines the sendtoaddress JSON-RPC command.
+type EvmToMeerCmd struct {
+	Address string
+	Amount  float64
+	Coin    types.CoinID
+}
+
 type SendLockedToAddressCmd struct {
 	Address      string
 	Amount       float64

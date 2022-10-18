@@ -19,18 +19,20 @@ import (
 
 // the configuration of the node
 type nodeConfig struct {
-	program   string
-	listen    string
-	rpclisten string
-	rpcuser   string
-	rpcpass   string
-	rpcnotls  bool
-	homeDir   string
-	dataDir   string
-	logDir    string
-	keyFile   string
-	certFile  string
-	extraArgs []string
+	program     string
+	listen      string
+	rpclisten   string
+	evmlisten   string
+	evmWSlisten string
+	rpcuser     string
+	rpcpass     string
+	rpcnotls    bool
+	homeDir     string
+	dataDir     string
+	logDir      string
+	keyFile     string
+	certFile    string
+	extraArgs   []string
 }
 
 func newNodeConfig(homeDir string, extraArgs []string) *nodeConfig {
@@ -61,6 +63,9 @@ func (n *nodeConfig) args() []string {
 	if n.rpclisten != "" {
 		args = append(args, fmt.Sprintf("--rpclisten=%s", n.rpclisten))
 	}
+	if n.evmlisten != "" {
+		args = append(args, fmt.Sprintf(`--evmenv="--http --http.port=%s --ws --ws.port=%s"`, n.evmlisten, n.evmWSlisten))
+	}
 	if n.rpcuser != "" {
 		args = append(args, fmt.Sprintf("--rpcuser=%s", n.rpcuser))
 	}
@@ -77,6 +82,7 @@ func (n *nodeConfig) args() []string {
 		args = append(args, fmt.Sprintf("--logdir=%s", n.logDir))
 	}
 	args = append(args, n.extraArgs...)
+	fmt.Println(args)
 	return args
 }
 
