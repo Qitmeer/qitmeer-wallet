@@ -133,23 +133,17 @@ func (w *Wallet) Start() {
 	go w.walletLocker()
 
 	go func() {
-
 		//updateBlockTicker := time.NewTicker(webUpdateBlockTicker * time.Second)
-		updateBlockTicker := time.NewTicker(5 * time.Second)
 		for {
-			select {
-			case <-updateBlockTicker.C:
-				if w.UploadRun == false {
-					log.Trace("Updateblock start")
-					w.UploadRun = true
-					err := w.UpdateBlock(0)
-					if err != nil {
-						log.Error("Start.Updateblock err", "err", err.Error())
-					}
-					w.UploadRun = false
+			if w.UploadRun == false {
+				log.Trace("Updateblock start")
+				w.UploadRun = true
+				err := w.UpdateBlock(0)
+				if err != nil {
+					log.Error("Start.Updateblock err", "err", err.Error())
 				}
+				w.UploadRun = false
 			}
-
 		}
 
 	}()
@@ -1351,7 +1345,7 @@ func (w *Wallet) UpdateBlock(toOrder uint64) error {
 		return err
 	}
 
-	if err := w.notifyNewTransaction(); err != nil {
+	if err = w.notifyNewTransaction(); err != nil {
 		return err
 	}
 
@@ -1378,15 +1372,11 @@ func (w *Wallet) notifyScanTxByAddr(addrs []string) {
 			return
 		case <-w.scanEnd:
 			if !w.syncAll && (startScan || w.getToOrder() <= w.getSyncOrder()+1) {
-				fmt.Fprintf(os.Stdout, "update history block:%d/%d\n", w.getSyncOrder(), w.getToOrder()-1)
+				fmt.Fprintf(os.Stdout, "startScan update history block0:%d/%d\n", w.getSyncOrder(), w.getToOrder()-1)
 				w.notificationRpc.Shutdown()
-				return
+				continue
 			} else {
 				startScan = true
-				if err := w.updateSyncToOrder(0); err != nil {
-					w.stopSync()
-					break
-				}
 				if w.getToOrder() > w.getSyncOrder()+1 {
 					w.syncLatest = false
 					log.Info("notification rescan block", "start", w.getSyncOrder(), "end", w.getToOrder()-1)
@@ -1396,12 +1386,19 @@ func (w *Wallet) notifyScanTxByAddr(addrs []string) {
 					}
 				} else {
 					w.syncLatest = true
-					fmt.Fprintf(os.Stdout, "update history block:%d/%d\r", w.getSyncOrder(), w.getToOrder()-1)
-					return
+					fmt.Fprintf(os.Stdout, "syncLatest update history block1:%d/%d\r", w.getSyncOrder(), w.getToOrder()-1)
+					continue
 				}
 			}
 		default:
-			time.Sleep(time.Second * 5)
+			go func() {
+				err := w.updateSyncToOrder(0)
+				if err != nil {
+					return
+				}
+				w.setOrder(w.Manager.SyncedTo().Order)
+				w.scanEnd <- struct{}{}
+			}()
 		}
 	}
 }
@@ -1472,10 +1469,6 @@ func (w *Wallet) OnBlockConnected(hash *hash.Hash, height int64, order int64, t 
 }
 
 func (w *Wallet) OnRescanFinish(rescanFinish *cmds.RescanFinishedNtfn) {
-	defer func() {
-		w.scanEnd <- struct{}{}
-	}()
-
 	hash, err := w.HttpClient.getBlockHashByOrder(int64(w.getToOrder() - 1))
 	if err != nil {
 		log.Warn("get block hash by order", "error", err)
