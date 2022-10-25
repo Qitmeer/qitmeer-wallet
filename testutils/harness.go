@@ -10,6 +10,7 @@ import (
 	"github.com/Qitmeer/qng/params"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"io/ioutil"
+	"log"
 	"net"
 	"os"
 	"strconv"
@@ -70,6 +71,15 @@ func (h *Harness) Setup() error {
 	// setup the rpc client
 	if err := h.connectRPCClient(); err != nil {
 		return err
+	}
+
+	for {
+		if _, err := h.Client.BlockCount(); err != nil {
+			log.Println("BlockCount Error", err)
+			time.Sleep(3 * time.Second)
+			continue
+		}
+		break
 	}
 	if err := h.wallet.Start(); err != nil {
 		return err

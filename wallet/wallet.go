@@ -133,6 +133,7 @@ func (w *Wallet) Start() {
 	go w.walletLocker()
 
 	go func() {
+		time.Sleep(5 * time.Second)
 		//updateBlockTicker := time.NewTicker(webUpdateBlockTicker * time.Second)
 		for {
 			if w.UploadRun == false {
@@ -141,6 +142,7 @@ func (w *Wallet) Start() {
 				err := w.UpdateBlock(0)
 				if err != nil {
 					log.Error("Start.Updateblock err", "err", err.Error())
+					time.Sleep(5 * time.Second)
 				}
 				w.UploadRun = false
 			}
@@ -1355,6 +1357,9 @@ func (w *Wallet) UpdateBlock(toOrder uint64) error {
 	w.syncWg.Add(1)
 	go w.notifyScanTxByAddr(addrs)
 
+	w.syncWg.Add(1)
+	go w.updateOrderTimer()
+
 	w.notificationRpc.WaitForShutdown()
 	w.syncWg.Wait()
 	log.Info("Stop notify sync process")
@@ -1364,7 +1369,6 @@ func (w *Wallet) UpdateBlock(toOrder uint64) error {
 func (w *Wallet) notifyScanTxByAddr(addrs []string) {
 	defer w.syncWg.Done()
 	var startScan bool
-
 	for {
 		select {
 		case <-w.syncQuit:
@@ -1390,15 +1394,26 @@ func (w *Wallet) notifyScanTxByAddr(addrs []string) {
 					continue
 				}
 			}
-		default:
-			go func() {
-				err := w.updateSyncToOrder(0)
-				if err != nil {
-					return
-				}
-				w.setOrder(w.Manager.SyncedTo().Order)
-				w.scanEnd <- struct{}{}
-			}()
+		}
+	}
+}
+
+func (w *Wallet) updateOrderTimer() {
+	defer w.syncWg.Done()
+	t := time.NewTicker(5 * time.Second)
+	defer t.Stop()
+	for {
+		select {
+		case <-w.syncQuit:
+			log.Info("Stop scan block")
+			return
+		case <-t.C:
+			err := w.updateSyncToOrder(0)
+			if err != nil {
+				return
+			}
+			w.setOrder(w.Manager.SyncedTo().Order)
+			w.scanEnd <- struct{}{}
 		}
 	}
 }
