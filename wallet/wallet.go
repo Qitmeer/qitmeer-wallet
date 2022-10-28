@@ -106,6 +106,7 @@ type Wallet struct {
 	toOrder    uint32
 	syncQuit   chan struct{}
 	syncWg     *sync.WaitGroup
+	startScan  bool
 	scanEnd    chan struct{}
 	orderMutex sync.RWMutex
 }
@@ -1368,26 +1369,26 @@ func (w *Wallet) UpdateBlock(toOrder uint64) error {
 
 func (w *Wallet) notifyScanTxByAddr(addrs []string) {
 	defer w.syncWg.Done()
-	var startScan bool
 	for {
 		select {
 		case <-w.syncQuit:
 			log.Info("Stop scan block")
 			return
 		case <-w.scanEnd:
-			if !w.syncAll && (startScan || w.getToOrder() <= w.getSyncOrder()+1) {
+			if !w.syncAll && (w.startScan || w.getToOrder() <= w.getSyncOrder()+1) {
 				fmt.Fprintf(os.Stdout, "startScan update history block0:%d/%d\n", w.getSyncOrder(), w.getToOrder()-1)
 				w.notificationRpc.Shutdown()
 				continue
 			} else {
-				startScan = true
 				if w.getToOrder() > w.getSyncOrder()+1 {
+					w.startScan = true
 					w.syncLatest = false
 					log.Info("notification rescan block", "start", w.getSyncOrder(), "end", w.getToOrder()-1)
 					err := w.notificationRpc.Rescan(uint64(w.getSyncOrder()), uint64(w.getToOrder()), addrs, nil)
 					if err != nil {
 						return
 					}
+					w.startScan = false
 				} else {
 					w.syncLatest = true
 					fmt.Fprintf(os.Stdout, "syncLatest update history block1:%d/%d\r", w.getSyncOrder(), w.getToOrder()-1)
@@ -1412,8 +1413,9 @@ func (w *Wallet) updateOrderTimer() {
 			if err != nil {
 				return
 			}
-			w.setOrder(w.Manager.SyncedTo().Order)
-			w.scanEnd <- struct{}{}
+			if !w.startScan {
+				w.scanEnd <- struct{}{}
+			}
 		}
 	}
 }
@@ -1493,6 +1495,7 @@ func (w *Wallet) OnRescanFinish(rescanFinish *cmds.RescanFinishedNtfn) {
 	if err != nil {
 		return
 	}
+	fmt.Println("OnRescanFinish", w.getToOrder()-1)
 	w.setOrder(w.getToOrder() - 1)
 }
 
