@@ -1499,9 +1499,6 @@ func (w *Wallet) OnRescanFinish(rescanFinish *cmds.RescanFinishedNtfn) {
 		return
 	}
 	fmt.Println("OnRescanFinish", w.getToOrder()-1, rescanFinish.Order)
-	if uint32(rescanFinish.Order) > w.syncOrder {
-		w.setOrder(uint32(rescanFinish.Order))
-	}
 }
 
 func (w *Wallet) OnNodeExit(nodeExit *cmds.NodeExitNtfn) {
@@ -2023,9 +2020,6 @@ func (w *Wallet) AccountAddresses(account uint32) (addrs []types.Address, err er
 				return err
 			}
 			addrs = append(addrs, pkaddr)
-			//ad, _ := address.DecodeAddress("Mk6qYKzQA18twXDHeaHvwTqTeKfmju2XQcSqq8rN1HbwTmcKFfndn")
-			//
-			//addrs = append(addrs, ad)
 			return nil
 		})
 	})
