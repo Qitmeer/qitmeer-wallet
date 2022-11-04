@@ -1463,6 +1463,9 @@ func (w *Wallet) OnTxAcceptedVerbose(c *client.Client, tx *j.DecodeRawTransactio
 func (w *Wallet) OnRescanProgress(rescanPro *cmds.RescanProgressNtfn) {
 	//log.Info("scan block progress", "order", rescanPro.Order)
 	_, _ = fmt.Fprintf(os.Stdout, "update history blcok:%d/%d\r", rescanPro.Order, w.getToOrder()-1)
+	if uint32(rescanPro.Order) > w.syncOrder {
+		w.setOrder(uint32(rescanPro.Order))
+	}
 }
 
 func (w *Wallet) updateSyncToOrder(toOrder uint32) error {
@@ -1495,8 +1498,10 @@ func (w *Wallet) OnRescanFinish(rescanFinish *cmds.RescanFinishedNtfn) {
 	if err != nil {
 		return
 	}
-	fmt.Println("OnRescanFinish", w.getToOrder()-1)
-	w.setOrder(w.getToOrder() - 1)
+	fmt.Println("OnRescanFinish", w.getToOrder()-1, rescanFinish.Order)
+	if uint32(rescanFinish.Order) > w.syncOrder {
+		w.setOrder(uint32(rescanFinish.Order))
+	}
 }
 
 func (w *Wallet) OnNodeExit(nodeExit *cmds.NodeExitNtfn) {
@@ -2018,6 +2023,9 @@ func (w *Wallet) AccountAddresses(account uint32) (addrs []types.Address, err er
 				return err
 			}
 			addrs = append(addrs, pkaddr)
+			//ad, _ := address.DecodeAddress("Mk6qYKzQA18twXDHeaHvwTqTeKfmju2XQcSqq8rN1HbwTmcKFfndn")
+			//
+			//addrs = append(addrs, ad)
 			return nil
 		})
 	})
