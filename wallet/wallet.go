@@ -1489,16 +1489,19 @@ func (w *Wallet) OnBlockConnected(hash *hash.Hash, height int64, order int64, t 
 }
 
 func (w *Wallet) OnRescanFinish(rescanFinish *cmds.RescanFinishedNtfn) {
-	hash, err := w.HttpClient.getBlockHashByOrder(int64(w.getToOrder() - 1))
+	if uint32(rescanFinish.Order) > w.syncOrder {
+		w.setOrder(uint32(rescanFinish.Order))
+	}
+	hash, err := w.HttpClient.getBlockHashByOrder(int64(rescanFinish.Order))
 	if err != nil {
 		log.Warn("get block hash by order", "error", err)
 		return
 	}
-	err = w.updateBlockTemp(*hash, w.getToOrder()-1)
+	err = w.updateBlockTemp(*hash, uint32(rescanFinish.Order))
 	if err != nil {
 		return
 	}
-	fmt.Println("OnRescanFinish", w.getToOrder()-1, rescanFinish.Order)
+	//fmt.Println("OnRescanFinish", w.getToOrder()-1, rescanFinish.Order)
 }
 
 func (w *Wallet) OnNodeExit(nodeExit *cmds.NodeExitNtfn) {
