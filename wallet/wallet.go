@@ -12,12 +12,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/Qitmeer/qitmeer-wallet/json/qitmeerjson"
-	"github.com/Qitmeer/qitmeer-wallet/util"
-	"github.com/Qitmeer/qng/common/marshal"
-	"github.com/Qitmeer/qng/meerevm/common"
-	"github.com/Qitmeer/qng/qx"
-	common2 "github.com/ethereum/go-ethereum/common"
 	"io/ioutil"
 	"os"
 	"sort"
@@ -26,13 +20,20 @@ import (
 	"sync"
 	"time"
 
+	"github.com/Qitmeer/qitmeer-wallet/json/qitmeerjson"
+	"github.com/Qitmeer/qitmeer-wallet/util"
+	"github.com/Qitmeer/qng/common/marshal"
+	"github.com/Qitmeer/qng/engine/txscript"
+	"github.com/Qitmeer/qng/meerevm/common"
+	"github.com/Qitmeer/qng/qx"
+	common2 "github.com/ethereum/go-ethereum/common"
+
 	wt "github.com/Qitmeer/qitmeer-wallet/types"
 	"github.com/Qitmeer/qng/common/hash"
 	"github.com/Qitmeer/qng/core/address"
 	corejson "github.com/Qitmeer/qng/core/json"
 	j "github.com/Qitmeer/qng/core/json"
 	"github.com/Qitmeer/qng/core/types"
-	"github.com/Qitmeer/qng/engine/txscript"
 	"github.com/Qitmeer/qng/log"
 	chaincfg "github.com/Qitmeer/qng/params"
 	"github.com/Qitmeer/qng/rpc/client"
@@ -41,7 +42,7 @@ import (
 	"github.com/Qitmeer/qitmeer-wallet/config"
 	clijson "github.com/Qitmeer/qitmeer-wallet/json"
 	"github.com/Qitmeer/qitmeer-wallet/utils"
-	"github.com/Qitmeer/qitmeer-wallet/waddrmgs"
+	waddrmgr "github.com/Qitmeer/qitmeer-wallet/waddrmgs"
 	"github.com/Qitmeer/qitmeer-wallet/wallet/txrules"
 	"github.com/Qitmeer/qitmeer-wallet/walletdb"
 	"github.com/Qitmeer/qitmeer-wallet/wtxmgr"
@@ -761,7 +762,8 @@ const (
 	FilterAll       = 2
 )
 
-/**
+/*
+*
 request all the transactions that affect a specific address,
 a transaction can have MULTIPLE payments and affect MULTIPLE addresses
 
@@ -1920,12 +1922,12 @@ func (w *Wallet) Unlock(passphrase []byte, lock <-chan time.Time) error {
 	return <-err
 }
 
-//// Lock locks the wallet's address manager.
+// // Lock locks the wallet's address manager.
 func (w *Wallet) Lock() {
 	w.lockRequests <- struct{}{}
 }
 
-//// Locked returns whether the account manager for a wallet is locked.
+// // Locked returns whether the account manager for a wallet is locked.
 func (w *Wallet) Locked() bool {
 	return <-w.lockState
 }
@@ -2191,7 +2193,7 @@ func (w *Wallet) createTx(addrs []types.Address, coin2outputs []*TxOutput, coinI
 				Value: output.Amount.Value,
 				Id:    output.Amount.Id,
 			},
-			OutputType: types.TxTypeRegular,
+			OutputType: txscript.PubKeyHashTy,
 		})
 	}
 
@@ -2216,7 +2218,7 @@ func (w *Wallet) createTx(addrs []types.Address, coin2outputs []*TxOutput, coinI
 					Id:    coinId,
 				},
 				TargetAddress: uxtoList[0].Address,
-				OutputType:    types.TxTypeRegular,
+				OutputType:    txscript.PubKeyHashTy,
 			})
 		}
 	}
@@ -2232,11 +2234,11 @@ func (w *Wallet) createTx(addrs []types.Address, coin2outputs []*TxOutput, coinI
 		addr, _ := address.DecodeAddress(utxo.Address)
 
 		vinPkScript = append(vinPkScript, utxo.PkScript)
-		typ := types.TxTypeRegular
+		typ := txscript.PubKeyHashTy
 		pkhAddr := addr
 		switch addr.(type) {
 		case *address.SecpPubKeyAddress:
-			typ = types.TxTypeCrossChainExport
+			typ = txscript.PubKeyTy
 			pkaddr := addr.(*address.SecpPubKeyAddress)
 			pkhAddr = pkaddr.PKHAddress()
 		default:
@@ -2355,9 +2357,9 @@ func (w *Wallet) multiAddressMergeSign(redeemTx types.Transaction, txInPkScript 
 	return mtxHex, nil
 }
 
-//sendPairs creates and sends payment transactions.
-//It returns the transaction hash in string format upon success
-//All errors are returned in btcjson.RPCError format
+// sendPairs creates and sends payment transactions.
+// It returns the transaction hash in string format upon success
+// All errors are returned in btcjson.RPCError format
 func (w *Wallet) SendPairs(amounts map[string]types.Amount,
 	account int64, feeSatPerKb int64, lockHeight uint64, byAddress string) (string, error) {
 	//check, err := w.HttpClient.CheckSyncUpdate(int64(w.Manager.SyncedTo().Order))
@@ -2390,7 +2392,7 @@ func (w *Wallet) SendPairs(amounts map[string]types.Amount,
 	return *tx, nil
 }
 
-//EVMToUTXO send the amount to utxo account
+// EVMToUTXO send the amount to utxo account
 func (w *Wallet) EVMToUTXO(amounts map[string]types.Amount,
 	account int64, feeSatPerKb int64, lockHeight uint64, byAddress string) (string, error) {
 	//check, err := w.HttpClient.CheckSyncUpdate(int64(w.Manager.SyncedTo().Order))
@@ -2401,27 +2403,30 @@ func (w *Wallet) EVMToUTXO(amounts map[string]types.Amount,
 	txInputs := []qx.Input{}
 	txOutputs := []qx.Output{}
 	txInputs = append(txInputs, qx.Input{
-		TxID:      ImportTxID,
-		OutIndex:  ImportTxIndex,
-		InputType: types.TxTypeCrossChainImport,
+		TxID:     ImportTxID,
+		OutIndex: ImportTxIndex,
 	})
 	var pkhAddr types.Address
 	priKeyList := make([]string, 0)
 	for addr, output := range amounts {
-		txOutputs = append(txOutputs, qx.Output{
-			TargetAddress:  addr,
-			OutputType:     types.TxTypeCrossChainImport,
-			Amount:         output,
-			TargetLockTime: int64(lockHeight),
-		})
 		addr1, _ := address.DecodeAddress(addr)
 		pkhAddr = addr1
+		otype := txscript.PubKeyHashTy
 		switch addr1.(type) {
 		case *address.SecpPubKeyAddress:
+			otype = txscript.PubKeyTy
 			pkaddr := addr1.(*address.SecpPubKeyAddress)
 			pkhAddr = pkaddr.PKHAddress()
 		default:
 		}
+
+		txOutputs = append(txOutputs, qx.Output{
+			TargetAddress:  addr,
+			OutputType:     otype,
+			Amount:         output,
+			TargetLockTime: int64(lockHeight),
+		})
+
 		wm, err := w.getPrivateKey(pkhAddr)
 		if err != nil {
 			return "", err
