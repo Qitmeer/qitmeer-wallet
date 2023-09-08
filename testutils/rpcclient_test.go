@@ -5,16 +5,16 @@
 package testutils
 
 import (
-	"github.com/Qitmeer/qng/config"
-	"github.com/Qitmeer/qng/core/event"
-	"github.com/Qitmeer/qng/rpc"
-	"github.com/Qitmeer/qng/services/mempool"
-	"github.com/Qitmeer/qng/testutils"
 	"io/ioutil"
 	"path/filepath"
 	"reflect"
 	"testing"
 	"time"
+
+	"github.com/Qitmeer/qng/config"
+	"github.com/Qitmeer/qng/rpc"
+	"github.com/Qitmeer/qng/services/mempool"
+	"github.com/Qitmeer/qng/testutils"
 )
 
 const (
@@ -34,7 +34,6 @@ const (
 	defaultMiningStateSync        = false
 	defaultMaxInboundPeersPerHost = 10 // The default max total of inbound peer for host
 	defaultTrickleInterval        = 10 * time.Second
-	defaultCacheInvalidTx         = false
 	defaultSigCacheMaxSize        = 100000
 )
 
@@ -74,7 +73,6 @@ var (
 		DAGType:              defaultDAGType,
 		Banning:              false,
 		MaxInbound:           defaultMaxInboundPeersPerHost,
-		CacheInvalidTx:       defaultCacheInvalidTx,
 		NTP:                  false,
 		RPCListeners:         []string{"127.0.0.1:5555"},
 		RPCUser:              "test",
@@ -83,7 +81,7 @@ var (
 )
 
 func newTestServer(t *testing.T) *rpc.RpcServer {
-	server, err := rpc.NewRPCServer(&cfg, &event.Feed{})
+	server, err := rpc.NewRPCServer(&cfg, nil)
 	if err != nil {
 		t.Errorf("failed to initialize rpc server: %v", err)
 	}
