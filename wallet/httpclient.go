@@ -6,14 +6,15 @@ import (
 	"crypto/x509"
 	"encoding/json"
 	"fmt"
-	clijson "github.com/Qitmeer/qitmeer-wallet/json"
-	"github.com/Qitmeer/qng/common/hash"
-	"github.com/Qitmeer/qng/log"
 	"io/ioutil"
 	"net"
 	"net/http"
 	"strconv"
 	"strings"
+
+	clijson "github.com/Qitmeer/qitmeer-wallet/json"
+	"github.com/Qitmeer/qng/common/hash"
+	"github.com/Qitmeer/qng/log"
 
 	qJson "github.com/Qitmeer/qng/core/json"
 
@@ -348,7 +349,7 @@ func (e RPCError) Error() string {
 	return fmt.Sprintf("%d: %s", e.Code, e.Message)
 }
 
-//Request json req
+// Request json req
 type Request struct {
 	Jsonrpc string            `json:"jsonrpc"`
 	Method  string            `json:"method"`
@@ -356,7 +357,7 @@ type Request struct {
 	ID      interface{}       `json:"id"`
 }
 
-//makeRequestData
+// makeRequestData
 func makeRequestData(rpcVersion string, id interface{}, method string, params []interface{}) ([]byte, error) {
 	// default to JSON-RPC 1.0 if RPC type is not specified
 	if rpcVersion != "2.0" && rpcVersion != "1.0" {
@@ -390,7 +391,7 @@ func makeRequestData(rpcVersion string, id interface{}, method string, params []
 	return reqData, nil
 }
 
-//IsValidIDType id string number
+// IsValidIDType id string number
 func IsValidIDType(id interface{}) bool {
 	switch id.(type) {
 	case int, int8, int16, int32, int64,
