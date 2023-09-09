@@ -2186,6 +2186,17 @@ func (w *Wallet) createTx(addrs []types.Address, coin2outputs []*TxOutput, coinI
 			return "", 0, nil, err
 		}
 		payAmount.Value += output.Amount.Value
+		typ := txscript.PubKeyHashTy
+		addrD, err := address.DecodeAddress(output.Address)
+		if err != nil {
+			return "", 0, nil, err
+		}
+		switch addrD.(type) {
+		case *address.SecpPubKeyAddress:
+			typ = txscript.PubKeyTy
+		default:
+		}
+
 		outputs = append(outputs, qx.Output{
 			TargetLockTime: int64(output.LockHeight),
 			TargetAddress:  output.Address,
@@ -2193,7 +2204,7 @@ func (w *Wallet) createTx(addrs []types.Address, coin2outputs []*TxOutput, coinI
 				Value: output.Amount.Value,
 				Id:    output.Amount.Id,
 			},
-			OutputType: txscript.PubKeyHashTy,
+			OutputType: typ,
 		})
 	}
 
