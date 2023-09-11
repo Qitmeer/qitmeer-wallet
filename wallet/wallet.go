@@ -137,18 +137,20 @@ func (w *Wallet) Start() {
 	go func() {
 
 		//updateBlockTicker := time.NewTicker(webUpdateBlockTicker * time.Second)
-		updateBlockTicker := time.NewTicker(5 * time.Second)
+		updateBlockTicker := time.NewTicker(1 * time.Second)
 		for {
 			select {
+			case <-w.quit:
+				return
 			case <-updateBlockTicker.C:
 				if w.UploadRun == false {
 					log.Trace("Updateblock start")
 					w.UploadRun = true
 					err := w.UpdateBlock(0)
 					if err != nil {
-						log.Error("Start.Updateblock err", "err", err.Error())
+						w.UploadRun = false
+						log.Warn("Start.Updateblock err", "err", err.Error())
 					}
-					w.UploadRun = false
 				}
 			}
 
@@ -657,7 +659,6 @@ func (w *Wallet) getAddrAndAddrTxOutputByAddr(addr string) (*AddrAndAddrTxOutput
 		var UnconfirmedAmount = NewAmount(0, types.CoinID(token.CoinId))
 		var totalAmount = NewAmount(0, types.CoinID(token.CoinId))
 		var lockAmount = NewAmount(0, types.CoinID(token.CoinId))
-
 		for _, txOut := range txOuts {
 			if txOut.Status == wtxmgr.TxStatusConfirmed {
 				if txOut.Spend == wtxmgr.SpendStatusSpend {
@@ -1380,6 +1381,8 @@ func (w *Wallet) notifyScanTxByAddr(addrs []string) {
 			log.Info("Stop scan block")
 			return
 		case <-w.scanEnd:
+
+		default:
 			if !w.syncAll && (startScan || w.getToOrder() <= w.getSyncOrder()+1) {
 				fmt.Fprintf(os.Stdout, "update history block:%d/%d\n", w.getSyncOrder(), w.getToOrder()-1)
 				w.notificationRpc.Shutdown()
@@ -1387,8 +1390,8 @@ func (w *Wallet) notifyScanTxByAddr(addrs []string) {
 			} else {
 				startScan = true
 				if err := w.updateSyncToOrder(0); err != nil {
-					w.stopSync()
-					break
+					// w.stopSync()
+					time.Sleep(time.Second * 1)
 				}
 				if w.getToOrder() > w.getSyncOrder()+1 {
 					w.syncLatest = false
@@ -1403,8 +1406,7 @@ func (w *Wallet) notifyScanTxByAddr(addrs []string) {
 					return
 				}
 			}
-		default:
-			time.Sleep(time.Second * 5)
+			time.Sleep(time.Second * 1)
 		}
 	}
 }
@@ -1497,7 +1499,9 @@ func (w *Wallet) OnNodeExit(nodeExit *cmds.NodeExitNtfn) {
 }
 
 func (w *Wallet) stopSync() {
-	close(w.syncQuit)
+	if w.syncQuit != nil {
+		close(w.syncQuit)
+	}
 }
 
 func (w *Wallet) updateBlockTemp(hash hash.Hash, localOrder uint32) error {
@@ -1552,7 +1556,7 @@ func (w *Wallet) notifyNewTransaction() error {
 func (w *Wallet) notifyTxConfirmed() {
 	defer w.syncWg.Done()
 
-	t := time.NewTicker(time.Second * 10)
+	t := time.NewTicker(time.Second * 1)
 	for {
 		select {
 		case <-w.syncQuit:

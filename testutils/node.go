@@ -7,14 +7,15 @@ package testutils
 import (
 	"bufio"
 	"fmt"
-	"github.com/Qitmeer/qng/params"
-	"github.com/Qitmeer/qng/rpc"
 	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"sync"
 	"testing"
+
+	"github.com/Qitmeer/qng/params"
+	"github.com/Qitmeer/qng/rpc"
 )
 
 // the configuration of the node

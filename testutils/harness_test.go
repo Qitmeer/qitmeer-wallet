@@ -6,11 +6,12 @@ package testutils
 
 import (
 	"fmt"
-	"github.com/Qitmeer/qng/core/types"
-	"github.com/Qitmeer/qng/params"
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/Qitmeer/qng/core/types"
+	"github.com/Qitmeer/qng/params"
 )
 
 func TestHarness(t *testing.T) {
@@ -100,7 +101,6 @@ func TestSyncUnConfirmedCoinBase(t *testing.T) {
 			t.Errorf("test failed, expect %v , but got %v", expect, info.Network)
 			return
 		}
-
 	}
 	GenerateBlock(t, h, 10)
 	time.Sleep(10 * time.Second)
@@ -142,18 +142,15 @@ func TestSyncConfirmedCoinBase(t *testing.T) {
 		}
 
 	}
-	GenerateBlock(t, h, 20)
-	time.Sleep(10 * time.Second)
-
-	GenerateBlock(t, h, 1)
+	GenerateBlock(t, h, 18)
 	time.Sleep(10 * time.Second)
 	b, err := h.wallet.Balance(types.MEERA)
 	if err != nil {
 		t.Errorf("test failed : %v", err)
 		return
 	}
-	if b.UnspentAmount.Value != 250000000000 {
-		t.Errorf("test failed, expect unspent balance %d, but got %d", 250000000000, b.UnspentAmount.Value)
+	if b.UnspentAmount.Value != 100000000000 {
+		t.Errorf("test failed, expect unspent balance %d, but got %d", 100000000000, b.UnspentAmount.Value)
 		return
 	}
 	if b.UnconfirmedAmount.Value != 800000000000 {
@@ -189,26 +186,26 @@ func TestSpent(t *testing.T) {
 		}
 
 	}
-	GenerateBlock(t, h, 20)
-	time.Sleep(10 * time.Second)
-	GenerateBlock(t, h, 1)
+	GenerateBlock(t, h, 18)
 	time.Sleep(10 * time.Second)
 	b, err := h.wallet.Balance(types.MEERA)
 	if err != nil {
 		t.Errorf("test failed : %v", err)
 		return
 	}
-	_, err = h.wallet.SendToAddress("RmV7i7JoomcHuQCVMN66SiTYUCkRtzQ6fSf", types.MEERA, 1000)
+	_, err = h.wallet.SendToAddress("RmV7i7JoomcHuQCVMN66SiTYUCkRtzQ6fSf", types.MEERA, 498)
 	if err != nil {
 		t.Errorf("test failed, %v", err)
 	}
+	GenerateBlock(t, h, 1)
+	time.Sleep(10 * time.Second)
 	b, err = h.wallet.Balance(types.MEERA)
 	if err != nil {
 		t.Errorf("test failed : %v", err)
 		return
 	}
-	if b.SpendAmount.Value != 150000000000 {
-		t.Errorf("test failed, expect spent balance %d, but got %d", 200000000000, b.UnspentAmount.Value)
+	if b.SpendAmount.Value != 50000000000 {
+		t.Errorf("test failed, expect spent balance %d, but got %d", 50000000000, b.SpendAmount.Value)
 		return
 	}
 	GenerateBlock(t, h, 1)

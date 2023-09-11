@@ -6,16 +6,18 @@ package testutils
 
 import (
 	"fmt"
-	"github.com/Qitmeer/qng/core/protocol"
-	"github.com/Qitmeer/qng/params"
-	"github.com/ethereum/go-ethereum/ethclient"
 	"io/ioutil"
+	"math/rand"
 	"net"
 	"os"
 	"strconv"
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/Qitmeer/qng/core/protocol"
+	"github.com/Qitmeer/qng/params"
+	"github.com/ethereum/go-ethereum/ethclient"
 )
 
 const DefaultMaxRpcConnRetries = 10
@@ -161,7 +163,7 @@ func NewHarnessWithMnemonic(t *testing.T, mnemonic, path string, usePkAddr bool,
 	defer harnessStateMutex.Unlock()
 	id := len(harnessInstances)
 	// create temporary folder
-	testDir, err := ioutil.TempDir("", "test-harness-"+strconv.Itoa(id)+"-*")
+	testDir, err := ioutil.TempDir("", "test-harness-"+strconv.Itoa(int(time.Now().UnixNano())+id)+"-*")
 	if err != nil {
 		return nil, err
 	}
@@ -264,8 +266,10 @@ const (
 func genListenArgs() (string, string, string, string) {
 	localhost := "127.0.0.1"
 	genPort := func(min, max int) string {
-		port := min + len(harnessInstances) + (42 * harnessMainProcessId % (max - min))
-		return strconv.Itoa(port)
+		rand.Seed(time.Now().Unix() + int64(len(harnessInstances)))
+		return fmt.Sprintf("%d", rand.Intn(max-min)+min)
+		// port := min + len(harnessInstances) + (42 * harnessMainProcessId % (max - min))
+		// return strconv.Itoa(port)
 	}
 	p2p := net.JoinHostPort(localhost, genPort(minP2PPort, maxP2PPort))
 	rpc := net.JoinHostPort(localhost, genPort(minRPCPort, maxRPCPort))

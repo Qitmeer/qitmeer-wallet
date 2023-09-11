@@ -2,6 +2,7 @@ package testutils
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"math/big"
 	"testing"
@@ -125,15 +126,17 @@ func TestExportAmountToEvm(t *testing.T) {
 		}
 
 	}
-	GenerateBlock(t, h, 20)
+	GenerateBlock(t, h, 18)
 	time.Sleep(10 * time.Second)
 	b, err := h.wallet.Balance(types.MEERA)
 	if err != nil {
 		t.Errorf("test failed:%v", err)
 		return
 	}
-	if b.UnspentAmount.Value != 200000000000 {
-		t.Errorf("test failed, expect balance %d, but got %d", 200000000000, b.UnspentAmount.Value)
+	b1, _ := json.Marshal(b)
+
+	if b.UnspentAmount.Value != 100000000000 {
+		t.Errorf("test failed, expect balance %d, but got %d | %v", 100000000000, b.UnspentAmount.Value, string(b1))
 		return
 	}
 	account, err := h.wallet.wallet.AccountNumber(waddrmgr.KeyScopeBIP0044, "imported")
