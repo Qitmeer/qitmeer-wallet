@@ -61,7 +61,7 @@ const (
 	InsecurePubPassphrase   = "public"
 	webUpdateBlockTicker    = 30
 	defaultNewAddressNumber = 1
-	ImportTxID              = "000000000000000000000000000000000000000000000000000000000000000"
+	ImportTxID              = "0000000000000000000000000000000000000000000000000000000000000000"
 	ImportTxIndex           = types.SupperPrevOutIndex
 	ImportTxSequence        = types.TxTypeCrossChainImport
 )

@@ -127,16 +127,13 @@ func TestExportAmountToEvm(t *testing.T) {
 	}
 	GenerateBlock(t, h, 20)
 	time.Sleep(10 * time.Second)
-
-	GenerateBlock(t, h, 1)
-	time.Sleep(5 * time.Second)
 	b, err := h.wallet.Balance(types.MEERA)
 	if err != nil {
 		t.Errorf("test failed:%v", err)
 		return
 	}
-	if b.UnspentAmount.Value != 250000000000 {
-		t.Errorf("test failed, expect balance %d, but got %d", 250000000000, b.UnspentAmount.Value)
+	if b.UnspentAmount.Value != 200000000000 {
+		t.Errorf("test failed, expect balance %d, but got %d", 200000000000, b.UnspentAmount.Value)
 		return
 	}
 	account, err := h.wallet.wallet.AccountNumber(waddrmgr.KeyScopeBIP0044, "imported")
