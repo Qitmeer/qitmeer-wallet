@@ -21,9 +21,9 @@ jobs:
     - name: Check out code into the Go module directory
       uses: actions/checkout@v2
 
-    - name: Get dependencies
+    - name: Get qng v1.0.24 dependencies
       run: |
-        git clone https://github.com/Qitmeer/qng.git
+        git clone -b v1.0.24 https://github.com/Qitmeer/qng.git
         cd qng && make && pwd && cp ./build/bin/qng /usr/local/bin/
         cd ..
         go get -v -t -d ./...

@@ -26,6 +26,7 @@ import (
 	"github.com/Qitmeer/qng/engine/txscript"
 	"github.com/Qitmeer/qng/meerevm/common"
 	"github.com/Qitmeer/qng/qx"
+	"github.com/Qitmeer/qng/qx/scriptbasetypes"
 	common2 "github.com/ethereum/go-ethereum/common"
 
 	wt "github.com/Qitmeer/qitmeer-wallet/types"
@@ -60,7 +61,7 @@ const (
 	InsecurePubPassphrase   = "public"
 	webUpdateBlockTicker    = 30
 	defaultNewAddressNumber = 1
-	ImportTxID              = "0000000000000000000000000000000000000000000000000000000000000000"
+	ImportTxID              = "000000000000000000000000000000000000000000000000000000000000000"
 	ImportTxIndex           = types.SupperPrevOutIndex
 	ImportTxSequence        = types.TxTypeCrossChainImport
 )
@@ -2221,6 +2222,11 @@ func (w *Wallet) createTx(addrs []types.Address, coin2outputs []*TxOutput, coinI
 			Value: change,
 			Id:    coinId,
 		}, addrScript)
+		typ := txscript.PubKeyHashTy
+		switch addr.(type) {
+		case *address.SecpPubKeyAddress:
+			typ = txscript.PubKeyTy
+		}
 		if err := txrules.CheckOutput(changeOut, satPerKb); err == nil {
 			outputs = append(outputs, qx.Output{
 				TargetLockTime: 0,
@@ -2229,7 +2235,7 @@ func (w *Wallet) createTx(addrs []types.Address, coin2outputs []*TxOutput, coinI
 					Id:    coinId,
 				},
 				TargetAddress: uxtoList[0].Address,
-				OutputType:    txscript.PubKeyHashTy,
+				OutputType:    typ,
 			})
 		}
 	}
@@ -2411,11 +2417,13 @@ func (w *Wallet) EVMToUTXO(amounts map[string]types.Amount,
 	/*if check == false {
 		return "", err
 	}*/
-	txInputs := []qx.Input{}
+	txInputs := []Input{}
 	txOutputs := []qx.Output{}
-	txInputs = append(txInputs, qx.Input{
-		TxID:     ImportTxID,
-		OutIndex: ImportTxIndex,
+	txInputs = append(txInputs, Input{
+		TxID:      ImportTxID,
+		OutIndex:  ImportTxIndex,
+		Sequence:  uint32(ImportTxSequence),
+		InputType: scriptbasetypes.SPECIAL_CROSS_VAL,
 	})
 	var pkhAddr types.Address
 	priKeyList := make([]string, 0)
@@ -2448,7 +2456,7 @@ func (w *Wallet) EVMToUTXO(amounts map[string]types.Amount,
 		}
 		priKeyList = append(priKeyList, hex.EncodeToString(priKey.Serialize()))
 	}
-	raw, err := qx.TxEncode(1, uint32(lockHeight), nil, txInputs, txOutputs)
+	raw, err := TxEncode(1, uint32(lockHeight), nil, txInputs, txOutputs)
 	if err != nil {
 		return "", err
 	}
@@ -2456,7 +2464,6 @@ func (w *Wallet) EVMToUTXO(amounts map[string]types.Amount,
 	if err != nil {
 		return "", err
 	}
-	log.Trace(fmt.Sprintf("signTx size:%v", len(signedRaw)), "signTx", signedRaw)
 	msg, err := w.HttpClient.SendRawTransaction(signedRaw, true)
 	if err != nil {
 		log.Trace("SendRawTransaction txSign err ", "err", err.Error())
@@ -2535,4 +2542,109 @@ func littleHexToUint64(hexStr string) (uint64, error) {
 	bytesBuffer := bytes.NewBuffer(dst)
 	err = binary.Read(bytesBuffer, binary.LittleEndian, &number)
 	return number, err
+}
+
+type Input struct {
+	TxID       string
+	OutIndex   uint32
+	SignScript []byte
+	Sequence   uint32
+	InputType  txscript.ScriptClass
+	LockTime   int64
+}
+
+func TxEncode(version uint32, lockTime uint32, timestamp *time.Time, inputs []Input, outputs []qx.Output) (string, error) {
+	mtx := types.NewTransaction()
+	mtx.Version = version
+	if lockTime != 0 {
+		mtx.LockTime = lockTime
+	}
+	if timestamp != nil {
+		mtx.Timestamp = *timestamp
+	}
+
+	txtypes := &qx.ScriptTypeIndex{}
+	for i, vin := range inputs {
+		txtypes.InputTypeSet(i, vin.InputType, vin.LockTime)
+		txHash, err := hash.NewHashFromStr(vin.TxID)
+		if err != nil {
+			return "", err
+		}
+		prevOut := types.NewOutPoint(txHash, vin.OutIndex)
+		txIn := types.NewTxInput(prevOut, []byte{})
+		if vin.Sequence > 0 {
+			txIn.Sequence = vin.Sequence
+		}
+
+		// check sequence and lockTime
+		// see https://github.com/bitcoin/bips/blob/master/bip-0065.mediawiki
+		if vin.Sequence == types.MaxTxInSequenceNum-1 && lockTime <= 0 {
+			return "", errors.New("unlock cltvpubkeyhash script,locktime must > 0")
+		}
+		mtx.AddTxIn(txIn)
+	}
+
+	for i := 0; i < len(outputs); i++ {
+		o := outputs[i]
+		txtypes.OutputTypeSet(i, o.OutputType)
+		addr, err := address.DecodeAddress(o.TargetAddress)
+		if err != nil {
+			return "", fmt.Errorf("could not decode "+
+				"address: %v", err)
+		}
+		var pkScript []byte
+		switch addr.(type) {
+		case *address.PubKeyHashAddress:
+		case *address.SecpPubKeyAddress:
+		case *address.ScriptHashAddress:
+		default:
+			return "", fmt.Errorf("unsupport address type: %T", addr)
+		}
+		// if coinID is meerB the out address must be SecpPubKeyAddress
+		if o.Amount.Id == types.MEERB {
+			if _, ok := addr.(*address.SecpPubKeyAddress); !ok {
+				return "", fmt.Errorf("out coinid is %v but the out address is: %v , not the SecpPubKeyAddress", o.Amount.Id, addr)
+			}
+		}
+		switch o.OutputType {
+		case txscript.CLTVPubKeyHashTy:
+			if o.TargetLockTime <= 0 {
+				return "", fmt.Errorf("can not set CLTVPubKeyHashTy ADDRESS:AMOUNT:COINID:SCRIPTTYPE:LOCKTIME")
+			}
+			if _, ok := addr.(*address.PubKeyHashAddress); !ok {
+				return "", fmt.Errorf("locktype is %v but the out address is: %v , not the PubKeyHashAddress", o.OutputType.String(), addr)
+			}
+			pkScript, err = txscript.PayToCLTVPubKeyHashScript(addr.Script(), o.TargetLockTime)
+			if err != nil {
+				return "", err
+			}
+		case txscript.PubKeyTy:
+			if _, ok := addr.(*address.SecpPubKeyAddress); !ok {
+				return "", fmt.Errorf("locktype is %v but the out address is: %v , not the SecpPubKeyAddress", o.OutputType.String(), addr)
+			}
+			pkScript, err = txscript.PayToAddrScript(addr)
+			if err != nil {
+				return "", err
+			}
+		default: // pubkeyhash standard
+			if _, ok := addr.(*address.PubKeyHashAddress); !ok {
+				return "", fmt.Errorf("locktype is %v but the out address is: %v , not the PubKeyHashAddress", o.OutputType.String(), addr)
+			}
+			pkScript, err = txscript.PayToAddrScript(addr)
+			if err != nil {
+				return "", err
+			}
+		}
+		txOut := types.NewTxOutput(o.Amount, pkScript)
+		mtx.AddTxOut(txOut)
+	}
+	mtxHex, err := mtx.Serialize()
+	if err != nil {
+		return "", err
+	}
+	typeIndex, err := txtypes.Encode()
+	if err != nil {
+		return "", err
+	}
+	return hex.EncodeToString(mtxHex) + qx.MTX_STR_SEPERATE + typeIndex, nil
 }
