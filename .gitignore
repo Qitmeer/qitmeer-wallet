@@ -38,3 +38,4 @@ config.toml
 ca.cert
 linux-wallet
 testutils/mainnet/
+testutils/privnet/
