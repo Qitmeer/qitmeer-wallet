@@ -1333,7 +1333,7 @@ func (w *Wallet) UpdateBlock(toOrder uint64) error {
 		return err
 	}
 	w.setOrder(w.Manager.SyncedTo().Order)
-	w.scanEnd <- struct{}{}
+	// w.scanEnd <- struct{}{}
 	ntfnHandlers := client.NotificationHandlers{
 		OnBlockConnected:    w.OnBlockConnected,
 		OnTxConfirm:         w.OnTxConfirm,
@@ -1373,39 +1373,38 @@ func (w *Wallet) UpdateBlock(toOrder uint64) error {
 
 func (w *Wallet) notifyScanTxByAddr(addrs []string) {
 	defer w.syncWg.Done()
-	var startScan bool
+	// var startScan bool
 
 	for {
 		select {
 		case <-w.syncQuit:
 			log.Info("Stop scan block")
 			return
-		case <-w.scanEnd:
+		// case <-w.scanEnd:
 
 		default:
-			if !w.syncAll && (startScan || w.getToOrder() <= w.getSyncOrder()+1) {
-				fmt.Fprintf(os.Stdout, "update history block:%d/%d\n", w.getSyncOrder(), w.getToOrder()-1)
-				w.notificationRpc.Shutdown()
-				return
-			} else {
-				startScan = true
-				if err := w.updateSyncToOrder(0); err != nil {
-					// w.stopSync()
-					time.Sleep(time.Second * 1)
-				}
-				if w.getToOrder() > w.getSyncOrder()+1 {
-					w.syncLatest = false
-					log.Info("notification rescan block", "start", w.getSyncOrder(), "end", w.getToOrder()-1)
-					err := w.notificationRpc.Rescan(uint64(w.getSyncOrder()), uint64(w.getToOrder()), addrs, nil)
-					if err != nil {
-						return
-					}
-				} else {
-					w.syncLatest = true
-					fmt.Fprintf(os.Stdout, "update history block:%d/%d\r", w.getSyncOrder(), w.getToOrder()-1)
+			// if !w.syncAll && (startScan || w.getToOrder() <= w.getSyncOrder()+1) {
+			// 	fmt.Fprintf(os.Stdout, "update history block:%d/%d\n", w.getSyncOrder(), w.getToOrder()-1)
+			// 	w.notificationRpc.Shutdown()
+			// 	return
+			// } else {
+			// startScan = true
+			if err := w.updateSyncToOrder(0); err != nil {
+				// w.stopSync()
+				log.Warn(err.Error())
+			}
+			if w.getToOrder() > w.getSyncOrder()+1 {
+				w.syncLatest = false
+				log.Info("notification rescan block", "start", w.getSyncOrder(), "end", w.getToOrder()-1)
+				err := w.notificationRpc.Rescan(uint64(w.getSyncOrder()), uint64(w.getToOrder()), addrs, nil)
+				if err != nil {
 					return
 				}
+			} else {
+				w.syncLatest = true
+				fmt.Fprintf(os.Stdout, "update history block:%d/%d\r", w.getSyncOrder(), w.getToOrder()-1)
 			}
+			// }
 			time.Sleep(time.Second * 1)
 		}
 	}
@@ -1478,7 +1477,7 @@ func (w *Wallet) OnBlockConnected(hash *hash.Hash, height int64, order int64, t 
 
 func (w *Wallet) OnRescanFinish(rescanFinish *cmds.RescanFinishedNtfn) {
 	defer func() {
-		w.scanEnd <- struct{}{}
+		// w.scanEnd <- struct{}{}
 	}()
 
 	hash, err := w.HttpClient.getBlockHashByOrder(int64(w.getToOrder() - 1))
