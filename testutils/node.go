@@ -7,14 +7,16 @@ package testutils
 import (
 	"bufio"
 	"fmt"
-	"github.com/Qitmeer/qng/params"
-	"github.com/Qitmeer/qng/rpc"
 	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"sync"
 	"testing"
+
+	"github.com/Qitmeer/qng/params"
+	"github.com/Qitmeer/qng/rpc"
 )
 
 // the configuration of the node
@@ -59,6 +61,8 @@ func (n *nodeConfig) args() []string {
 	args := []string{}
 	if n.listen != "" {
 		args = append(args, fmt.Sprintf("--listen=%s", n.listen))
+		port := strings.Split(n.listen, ":")[1]
+		args = append(args, fmt.Sprintf("--port=%s", port))
 	}
 	if n.rpclisten != "" {
 		args = append(args, fmt.Sprintf("--rpclisten=%s", n.rpclisten))

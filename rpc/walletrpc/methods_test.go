@@ -4,6 +4,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+
 	"github.com/Qitmeer/qitmeer-wallet/config"
 	"github.com/Qitmeer/qng/log"
 
@@ -44,8 +45,8 @@ func TestGetSyncHeight(t *testing.T) {
 }
 
 func openWallet() (*wallet.Wallet, error) {
-	dbpath := "/Users/luoshan/Library/Application Support/Qitwallet/testnet"
-	tomlpath := "/Users/luoshan/GolandProjects/qitmeer-wallet/config.toml"
+	dbpath := "/Qitwallet/testnet"
+	tomlpath := "/qitmeer-wallet/config.toml"
 	pubpass := "public"
 	dbpass := "123456"
 	err := config.LoadConfig(tomlpath)
@@ -77,7 +78,7 @@ func openWallet() (*wallet.Wallet, error) {
 
 func test_wallet_createNewAccount(w *wallet.Wallet) error {
 	cmd := &qitmeerjson.CreateNewAccountCmd{
-		Account: "luoshan4",
+		Account: "test1",
 	}
 	msg, err := CreateNewAccount(cmd, w)
 	if err != nil {
