@@ -6,16 +6,18 @@ package testutils
 
 import (
 	"fmt"
-	"github.com/Qitmeer/qng/core/protocol"
-	"github.com/Qitmeer/qng/params"
-	"github.com/ethereum/go-ethereum/ethclient"
 	"io/ioutil"
+	"math/rand"
 	"net"
 	"os"
 	"strconv"
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/Qitmeer/qng/core/protocol"
+	"github.com/Qitmeer/qng/params"
+	"github.com/ethereum/go-ethereum/ethclient"
 )
 
 const DefaultMaxRpcConnRetries = 10
@@ -161,7 +163,7 @@ func NewHarnessWithMnemonic(t *testing.T, mnemonic, path string, usePkAddr bool,
 	defer harnessStateMutex.Unlock()
 	id := len(harnessInstances)
 	// create temporary folder
-	testDir, err := ioutil.TempDir("", "test-harness-"+strconv.Itoa(id)+"-*")
+	testDir, err := ioutil.TempDir("", "test-harness-"+strconv.Itoa(int(time.Now().UnixNano())+id)+"-*")
 	if err != nil {
 		return nil, err
 	}
@@ -248,24 +250,30 @@ func AllHarnesses() []*Harness {
 
 const (
 	// the minimum and maximum p2p and rpc port numbers used by a test harness.
-	minP2PPort   = 28200               // 28200 The min is inclusive
-	maxP2PPort   = minP2PPort + 10000  // 38199 The max is exclusive
-	minRPCPort   = maxP2PPort          // 38200
-	maxRPCPort   = minRPCPort + 10000  // 48199
-	minEVMPort   = maxRPCPort          // 48200
-	maxEVMPort   = minEVMPort + 2000   // 53199
-	minEVMWSPort = maxEVMPort          // 53200
-	maxEVMWSPort = minEVMWSPort + 2000 // 58199
+	minP2PPort   = 18200               // 18200 The min is inclusive
+	maxP2PPort   = minP2PPort + 1000   // 19199 The max is exclusive
+	minRPCPort   = maxP2PPort          // 19200
+	maxRPCPort   = minRPCPort + 1000   // 30199
+	minEVMPort   = maxRPCPort          // 30200
+	maxEVMPort   = minEVMPort + 1000   // 31199
+	minEVMWSPort = maxEVMPort          // 31200
+	maxEVMWSPort = minEVMWSPort + 1000 // 32199
 )
+
+var argsLock sync.Mutex
 
 // GenListenArgs returns auto generated args for p2p listen and rpc listen in the format of
 // ["--listen=127.0.0.1:12345", --rpclisten=127.0.0.1:12346"].
 // in order to support multiple test node running at the same time.
 func genListenArgs() (string, string, string, string) {
+	argsLock.Lock()
+	defer argsLock.Unlock()
 	localhost := "127.0.0.1"
 	genPort := func(min, max int) string {
-		port := min + len(harnessInstances) + (42 * harnessMainProcessId % (max - min))
-		return strconv.Itoa(port)
+		rand.Seed(time.Now().UnixNano() + int64(len(harnessInstances)))
+		return fmt.Sprintf("%d", rand.Intn(max-min)+min)
+		// port := min + len(harnessInstances) + (42 * harnessMainProcessId % (max - min))
+		// return strconv.Itoa(port)
 	}
 	p2p := net.JoinHostPort(localhost, genPort(minP2PPort, maxP2PPort))
 	rpc := net.JoinHostPort(localhost, genPort(minRPCPort, maxRPCPort))

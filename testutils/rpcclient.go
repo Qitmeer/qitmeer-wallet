@@ -12,7 +12,6 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"github.com/Qitmeer/qng/rpc/client/cmds"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -20,6 +19,8 @@ import (
 	"reflect"
 	"sync"
 	"sync/atomic"
+
+	"github.com/Qitmeer/qng/rpc/client/cmds"
 )
 
 // Dial connects to a JSON-RPC server at the specified url,

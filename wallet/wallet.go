@@ -26,6 +26,7 @@ import (
 	"github.com/Qitmeer/qng/engine/txscript"
 	"github.com/Qitmeer/qng/meerevm/common"
 	"github.com/Qitmeer/qng/qx"
+	"github.com/Qitmeer/qng/qx/scriptbasetypes"
 	common2 "github.com/ethereum/go-ethereum/common"
 
 	wt "github.com/Qitmeer/qitmeer-wallet/types"
@@ -136,18 +137,20 @@ func (w *Wallet) Start() {
 	go func() {
 
 		//updateBlockTicker := time.NewTicker(webUpdateBlockTicker * time.Second)
-		updateBlockTicker := time.NewTicker(5 * time.Second)
+		updateBlockTicker := time.NewTicker(1 * time.Second)
 		for {
 			select {
+			case <-w.quit:
+				return
 			case <-updateBlockTicker.C:
 				if w.UploadRun == false {
 					log.Trace("Updateblock start")
 					w.UploadRun = true
 					err := w.UpdateBlock(0)
 					if err != nil {
-						log.Error("Start.Updateblock err", "err", err.Error())
+						w.UploadRun = false
+						log.Warn("Start.Updateblock err", "err", err.Error())
 					}
-					w.UploadRun = false
 				}
 			}
 
@@ -656,7 +659,6 @@ func (w *Wallet) getAddrAndAddrTxOutputByAddr(addr string) (*AddrAndAddrTxOutput
 		var UnconfirmedAmount = NewAmount(0, types.CoinID(token.CoinId))
 		var totalAmount = NewAmount(0, types.CoinID(token.CoinId))
 		var lockAmount = NewAmount(0, types.CoinID(token.CoinId))
-
 		for _, txOut := range txOuts {
 			if txOut.Status == wtxmgr.TxStatusConfirmed {
 				if txOut.Spend == wtxmgr.SpendStatusSpend {
@@ -1331,7 +1333,7 @@ func (w *Wallet) UpdateBlock(toOrder uint64) error {
 		return err
 	}
 	w.setOrder(w.Manager.SyncedTo().Order)
-	w.scanEnd <- struct{}{}
+	// w.scanEnd <- struct{}{}
 	ntfnHandlers := client.NotificationHandlers{
 		OnBlockConnected:    w.OnBlockConnected,
 		OnTxConfirm:         w.OnTxConfirm,
@@ -1371,44 +1373,45 @@ func (w *Wallet) UpdateBlock(toOrder uint64) error {
 
 func (w *Wallet) notifyScanTxByAddr(addrs []string) {
 	defer w.syncWg.Done()
-	var startScan bool
+	// var startScan bool
 
 	for {
 		select {
 		case <-w.syncQuit:
 			log.Info("Stop scan block")
 			return
-		case <-w.scanEnd:
-			if !w.syncAll && (startScan || w.getToOrder() <= w.getSyncOrder()+1) {
-				fmt.Fprintf(os.Stdout, "update history block:%d/%d\n", w.getSyncOrder(), w.getToOrder()-1)
-				w.notificationRpc.Shutdown()
-				return
-			} else {
-				startScan = true
-				if err := w.updateSyncToOrder(0); err != nil {
-					w.stopSync()
-					break
-				}
-				if w.getToOrder() > w.getSyncOrder()+1 {
-					w.syncLatest = false
-					log.Info("notification rescan block", "start", w.getSyncOrder(), "end", w.getToOrder()-1)
-					err := w.notificationRpc.Rescan(uint64(w.getSyncOrder()), uint64(w.getToOrder()), addrs, nil)
-					if err != nil {
-						return
-					}
-				} else {
-					w.syncLatest = true
-					fmt.Fprintf(os.Stdout, "update history block:%d/%d\r", w.getSyncOrder(), w.getToOrder()-1)
+		// case <-w.scanEnd:
+
+		default:
+			// if !w.syncAll && (startScan || w.getToOrder() <= w.getSyncOrder()+1) {
+			// 	fmt.Fprintf(os.Stdout, "update history block:%d/%d\n", w.getSyncOrder(), w.getToOrder()-1)
+			// 	w.notificationRpc.Shutdown()
+			// 	return
+			// } else {
+			// startScan = true
+			if err := w.updateSyncToOrder(0); err != nil {
+				// w.stopSync()
+				log.Warn(err.Error())
+			}
+			if w.getToOrder() > w.getSyncOrder()+1 {
+				w.syncLatest = false
+				log.Info("notification rescan block", "start", w.getSyncOrder(), "end", w.getToOrder()-1)
+				err := w.notificationRpc.Rescan(uint64(w.getSyncOrder()), uint64(w.getToOrder()), addrs, nil)
+				if err != nil {
 					return
 				}
+			} else {
+				w.syncLatest = true
+				fmt.Fprintf(os.Stdout, "update history block:%d/%d\r", w.getSyncOrder(), w.getToOrder()-1)
 			}
-		default:
-			time.Sleep(time.Second * 5)
+			// }
+			time.Sleep(time.Second * 1)
 		}
 	}
 }
 
 func (w *Wallet) OnTxConfirm(txConfirm *cmds.TxConfirmResult) {
+	log.Info("OnTxConfirm", "tx", txConfirm)
 	if err := w.updateTxConfirm(txConfirm); err != nil {
 		log.Warn("updateTxConfirm", "error", err)
 	}
@@ -1475,7 +1478,7 @@ func (w *Wallet) OnBlockConnected(hash *hash.Hash, height int64, order int64, t 
 
 func (w *Wallet) OnRescanFinish(rescanFinish *cmds.RescanFinishedNtfn) {
 	defer func() {
-		w.scanEnd <- struct{}{}
+		// w.scanEnd <- struct{}{}
 	}()
 
 	hash, err := w.HttpClient.getBlockHashByOrder(int64(w.getToOrder() - 1))
@@ -1496,7 +1499,9 @@ func (w *Wallet) OnNodeExit(nodeExit *cmds.NodeExitNtfn) {
 }
 
 func (w *Wallet) stopSync() {
-	close(w.syncQuit)
+	if w.syncQuit != nil {
+		close(w.syncQuit)
+	}
 }
 
 func (w *Wallet) updateBlockTemp(hash hash.Hash, localOrder uint32) error {
@@ -1551,7 +1556,7 @@ func (w *Wallet) notifyNewTransaction() error {
 func (w *Wallet) notifyTxConfirmed() {
 	defer w.syncWg.Done()
 
-	t := time.NewTicker(time.Second * 10)
+	t := time.NewTicker(time.Second * 1)
 	for {
 		select {
 		case <-w.syncQuit:
@@ -1584,7 +1589,7 @@ func (w *Wallet) notifyTxConfirmed() {
 				log.Error(err.Error())
 				continue
 			}
-
+			log.Info("notify tx count", "txs", len(unTxs))
 			if len(unTxs) > 0 {
 				err := w.notificationRpc.NotifyTxsConfirmed(unTxs)
 				if err != nil {
@@ -2186,6 +2191,17 @@ func (w *Wallet) createTx(addrs []types.Address, coin2outputs []*TxOutput, coinI
 			return "", 0, nil, err
 		}
 		payAmount.Value += output.Amount.Value
+		typ := txscript.PubKeyHashTy
+		addrD, err := address.DecodeAddress(output.Address)
+		if err != nil {
+			return "", 0, nil, err
+		}
+		switch addrD.(type) {
+		case *address.SecpPubKeyAddress:
+			typ = txscript.PubKeyTy
+		default:
+		}
+
 		outputs = append(outputs, qx.Output{
 			TargetLockTime: int64(output.LockHeight),
 			TargetAddress:  output.Address,
@@ -2193,7 +2209,7 @@ func (w *Wallet) createTx(addrs []types.Address, coin2outputs []*TxOutput, coinI
 				Value: output.Amount.Value,
 				Id:    output.Amount.Id,
 			},
-			OutputType: txscript.PubKeyHashTy,
+			OutputType: typ,
 		})
 	}
 
@@ -2210,6 +2226,11 @@ func (w *Wallet) createTx(addrs []types.Address, coin2outputs []*TxOutput, coinI
 			Value: change,
 			Id:    coinId,
 		}, addrScript)
+		typ := txscript.PubKeyHashTy
+		switch addr.(type) {
+		case *address.SecpPubKeyAddress:
+			typ = txscript.PubKeyTy
+		}
 		if err := txrules.CheckOutput(changeOut, satPerKb); err == nil {
 			outputs = append(outputs, qx.Output{
 				TargetLockTime: 0,
@@ -2218,7 +2239,7 @@ func (w *Wallet) createTx(addrs []types.Address, coin2outputs []*TxOutput, coinI
 					Id:    coinId,
 				},
 				TargetAddress: uxtoList[0].Address,
-				OutputType:    txscript.PubKeyHashTy,
+				OutputType:    typ,
 			})
 		}
 	}
@@ -2400,11 +2421,13 @@ func (w *Wallet) EVMToUTXO(amounts map[string]types.Amount,
 	/*if check == false {
 		return "", err
 	}*/
-	txInputs := []qx.Input{}
+	txInputs := []Input{}
 	txOutputs := []qx.Output{}
-	txInputs = append(txInputs, qx.Input{
-		TxID:     ImportTxID,
-		OutIndex: ImportTxIndex,
+	txInputs = append(txInputs, Input{
+		TxID:      ImportTxID,
+		OutIndex:  ImportTxIndex,
+		Sequence:  uint32(ImportTxSequence),
+		InputType: scriptbasetypes.SPECIAL_CROSS_VAL,
 	})
 	var pkhAddr types.Address
 	priKeyList := make([]string, 0)
@@ -2437,7 +2460,7 @@ func (w *Wallet) EVMToUTXO(amounts map[string]types.Amount,
 		}
 		priKeyList = append(priKeyList, hex.EncodeToString(priKey.Serialize()))
 	}
-	raw, err := qx.TxEncode(1, uint32(lockHeight), nil, txInputs, txOutputs)
+	raw, err := TxEncode(1, uint32(lockHeight), nil, txInputs, txOutputs)
 	if err != nil {
 		return "", err
 	}
@@ -2445,7 +2468,6 @@ func (w *Wallet) EVMToUTXO(amounts map[string]types.Amount,
 	if err != nil {
 		return "", err
 	}
-	log.Trace(fmt.Sprintf("signTx size:%v", len(signedRaw)), "signTx", signedRaw)
 	msg, err := w.HttpClient.SendRawTransaction(signedRaw, true)
 	if err != nil {
 		log.Trace("SendRawTransaction txSign err ", "err", err.Error())
@@ -2524,4 +2546,109 @@ func littleHexToUint64(hexStr string) (uint64, error) {
 	bytesBuffer := bytes.NewBuffer(dst)
 	err = binary.Read(bytesBuffer, binary.LittleEndian, &number)
 	return number, err
+}
+
+type Input struct {
+	TxID       string
+	OutIndex   uint32
+	SignScript []byte
+	Sequence   uint32
+	InputType  txscript.ScriptClass
+	LockTime   int64
+}
+
+func TxEncode(version uint32, lockTime uint32, timestamp *time.Time, inputs []Input, outputs []qx.Output) (string, error) {
+	mtx := types.NewTransaction()
+	mtx.Version = version
+	if lockTime != 0 {
+		mtx.LockTime = lockTime
+	}
+	if timestamp != nil {
+		mtx.Timestamp = *timestamp
+	}
+
+	txtypes := &qx.ScriptTypeIndex{}
+	for i, vin := range inputs {
+		txtypes.InputTypeSet(i, vin.InputType, vin.LockTime)
+		txHash, err := hash.NewHashFromStr(vin.TxID)
+		if err != nil {
+			return "", err
+		}
+		prevOut := types.NewOutPoint(txHash, vin.OutIndex)
+		txIn := types.NewTxInput(prevOut, []byte{})
+		if vin.Sequence > 0 {
+			txIn.Sequence = vin.Sequence
+		}
+
+		// check sequence and lockTime
+		// see https://github.com/bitcoin/bips/blob/master/bip-0065.mediawiki
+		if vin.Sequence == types.MaxTxInSequenceNum-1 && lockTime <= 0 {
+			return "", errors.New("unlock cltvpubkeyhash script,locktime must > 0")
+		}
+		mtx.AddTxIn(txIn)
+	}
+
+	for i := 0; i < len(outputs); i++ {
+		o := outputs[i]
+		txtypes.OutputTypeSet(i, o.OutputType)
+		addr, err := address.DecodeAddress(o.TargetAddress)
+		if err != nil {
+			return "", fmt.Errorf("could not decode "+
+				"address: %v", err)
+		}
+		var pkScript []byte
+		switch addr.(type) {
+		case *address.PubKeyHashAddress:
+		case *address.SecpPubKeyAddress:
+		case *address.ScriptHashAddress:
+		default:
+			return "", fmt.Errorf("unsupport address type: %T", addr)
+		}
+		// if coinID is meerB the out address must be SecpPubKeyAddress
+		if o.Amount.Id == types.MEERB {
+			if _, ok := addr.(*address.SecpPubKeyAddress); !ok {
+				return "", fmt.Errorf("out coinid is %v but the out address is: %v , not the SecpPubKeyAddress", o.Amount.Id, addr)
+			}
+		}
+		switch o.OutputType {
+		case txscript.CLTVPubKeyHashTy:
+			if o.TargetLockTime <= 0 {
+				return "", fmt.Errorf("can not set CLTVPubKeyHashTy ADDRESS:AMOUNT:COINID:SCRIPTTYPE:LOCKTIME")
+			}
+			if _, ok := addr.(*address.PubKeyHashAddress); !ok {
+				return "", fmt.Errorf("locktype is %v but the out address is: %v , not the PubKeyHashAddress", o.OutputType.String(), addr)
+			}
+			pkScript, err = txscript.PayToCLTVPubKeyHashScript(addr.Script(), o.TargetLockTime)
+			if err != nil {
+				return "", err
+			}
+		case txscript.PubKeyTy:
+			if _, ok := addr.(*address.SecpPubKeyAddress); !ok {
+				return "", fmt.Errorf("locktype is %v but the out address is: %v , not the SecpPubKeyAddress", o.OutputType.String(), addr)
+			}
+			pkScript, err = txscript.PayToAddrScript(addr)
+			if err != nil {
+				return "", err
+			}
+		default: // pubkeyhash standard
+			if _, ok := addr.(*address.PubKeyHashAddress); !ok {
+				return "", fmt.Errorf("locktype is %v but the out address is: %v , not the PubKeyHashAddress", o.OutputType.String(), addr)
+			}
+			pkScript, err = txscript.PayToAddrScript(addr)
+			if err != nil {
+				return "", err
+			}
+		}
+		txOut := types.NewTxOutput(o.Amount, pkScript)
+		mtx.AddTxOut(txOut)
+	}
+	mtxHex, err := mtx.Serialize()
+	if err != nil {
+		return "", err
+	}
+	typeIndex, err := txtypes.Encode()
+	if err != nil {
+		return "", err
+	}
+	return hex.EncodeToString(mtxHex) + qx.MTX_STR_SEPERATE + typeIndex, nil
 }

@@ -1,6 +1,6 @@
 module github.com/Qitmeer/qitmeer-wallet
 
-go 1.18
+go 1.19
 
 require (
 	github.com/BurntSushi/toml v1.2.0
@@ -78,7 +78,7 @@ require (
 	github.com/kr/pretty v0.3.1 // indirect
 	github.com/kr/text v0.2.0 // indirect
 	github.com/libp2p/go-buffer-pool v0.1.0 // indirect
-	github.com/libp2p/go-libp2p v0.27.8 // indirect
+	github.com/libp2p/go-libp2p v0.27.1 // indirect
 	github.com/magiconair/properties v1.8.6 // indirect
 	github.com/mattn/go-isatty v0.0.18 // indirect
 	github.com/mattn/go-runewidth v0.0.13 // indirect
@@ -142,4 +142,5 @@ require (
 )
 
 replace github.com/ethereum/go-ethereum v1.11.5 => github.com/Qitmeer/go-ethereum v1.11.5-q.3
+
 replace github.com/karalabe/usb v0.0.2 => github.com/dindinw/karalabe-usb v0.0.0-20230613095851-cd69a62c9c30

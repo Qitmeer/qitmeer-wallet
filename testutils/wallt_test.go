@@ -2,15 +2,17 @@ package testutils
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"math/big"
+	"testing"
+	"time"
+
 	"github.com/Qitmeer/qitmeer-wallet/config"
 	waddrmgr "github.com/Qitmeer/qitmeer-wallet/waddrmgs"
 	"github.com/Qitmeer/qng/core/types"
 	"github.com/Qitmeer/qng/params"
 	"github.com/shopspring/decimal"
-	"math/big"
-	"testing"
-	"time"
 )
 
 var walletCfg = &config.Config{
@@ -113,6 +115,7 @@ func TestExportAmountToEvm(t *testing.T) {
 	}
 
 	h.WaitWalletInit()
+	time.Sleep(10 * time.Second)
 	if info, err := h.Client.NodeInfo(); err != nil {
 		t.Errorf("test failed : %v", err)
 		return
@@ -124,18 +127,17 @@ func TestExportAmountToEvm(t *testing.T) {
 		}
 
 	}
-	GenerateBlock(t, h, 20)
-	time.Sleep(10 * time.Second)
-
-	GenerateBlock(t, h, 1)
-	time.Sleep(5 * time.Second)
+	GenerateBlock(t, h, 18)
+	time.Sleep(20 * time.Second)
 	b, err := h.wallet.Balance(types.MEERA)
 	if err != nil {
 		t.Errorf("test failed:%v", err)
 		return
 	}
-	if b.UnspentAmount.Value != 250000000000 {
-		t.Errorf("test failed, expect balance %d, but got %d", 250000000000, b.UnspentAmount.Value)
+	b1, _ := json.Marshal(b)
+
+	if b.UnspentAmount.Value != 100000000000 {
+		t.Errorf("test failed, expect balance %d, but got %d | %v", 100000000000, b.UnspentAmount.Value, string(b1))
 		return
 	}
 	account, err := h.wallet.wallet.AccountNumber(waddrmgr.KeyScopeBIP0044, "imported")
@@ -172,7 +174,6 @@ func TestExportAmountToEvm(t *testing.T) {
 		return
 	}
 	GenerateBlock(t, h, 1)
-	time.Sleep(5 * time.Second)
 	ba1, err := h.wallet.Balance(types.MEERA)
 	if err != nil {
 		t.Errorf("failed to GetBalance, %v", err)

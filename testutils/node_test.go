@@ -11,6 +11,7 @@ import (
 	"os/exec"
 	"reflect"
 	"regexp"
+	"strings"
 	"testing"
 	"time"
 )
@@ -29,6 +30,7 @@ func TestNewNodeCmdArgs(t *testing.T) {
 	args := []string{
 		"qng",
 		"--listen=127.0.0.1:38130",
+		"--port=38130",
 		"--rpclisten=127.0.0.1:38131",
 		"--rpcuser=testuser",
 		"--rpcpass=testpass",
@@ -53,7 +55,7 @@ func TestNewNodeCmdArgs(t *testing.T) {
 }
 
 func TestNodeStartStop(t *testing.T) {
-	found, err := exec.LookPath("qitmeer")
+	found, err := exec.LookPath("qng")
 	if err != nil {
 		t.Skip(fmt.Sprintf("skip the test since: %v", err))
 	} else {
@@ -84,6 +86,7 @@ func TestGenListenArgs(t *testing.T) {
 	c.listen, c.rpclisten, c.evmlisten, c.evmWSlisten = a1, a2, a3, a4
 	args := []string{
 		"--listen=" + a1,
+		"--port=" + strings.Split(a1, ":")[1],
 		"--rpclisten=" + a2,
 		fmt.Sprintf(`--evmenv="--http --http.port=%s --ws --ws.port=%s"`, a3, a4),
 		"--rpcuser=testuser",
